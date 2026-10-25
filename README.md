@@ -2,7 +2,7 @@
 
 JoyPainting is a cute drawing app for Android and iOS phones and tablets, built with Flutter, with a web version too. All of them come from the same code in this repository.
 
-**Try it in a browser:** https://leonfighter1.github.io/JoyPainting/ (on iPhone or iPad: open it in Safari, then Share → Add to Home Screen).
+**Try it in a browser:** https://leonfighter1.github.io/JoyPainting/ (any capitals work, also `/joypainting`, and the old `/JingyaoPaint/` forwards) (on iPhone or iPad: open it in Safari, then Share → Add to Home Screen).
 The app starts in English and asks for a language, a theme and the little artist's name on first launch; Simplified Chinese and English can be switched any time in Settings. Until v2.1 the app was called JingyaoPaint (靖瑶的画板); the repository moved to https://github.com/leonfighter1/JoyPainting (the old JingyaoPaint repository and web address forward here).
 
 What it does:
@@ -213,6 +213,7 @@ Published to GitHub Pages by `.github/workflows/web.yml` on every push to `main`
 - **Differences from the apps**: "Save to album" downloads the picture; background music starts at the first tap (browsers block sound before that), and added music lasts until the page reloads.
 - The rendering engine is served from the site itself, not Google's CDN.
 - **One-time setup** (already needed once per repository): Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+- **Any capitals**: GitHub Pages matches paths letter for letter, so the account's root site, https://github.com/leonfighter1/leonfighter1.github.io, catches every other spelling in its `404.html` and forwards `/joypainting` or `/jingyaopaint` (any capitals) here; its front page opens the app too.
 - **Custom domain later**: build with `--base-href /` and set the domain under Settings → Pages.
 
 ## iOS
