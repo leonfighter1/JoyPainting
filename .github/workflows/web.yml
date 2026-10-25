@@ -1,5 +1,5 @@
 # Publishes the web version to GitHub Pages on every push to main:
-#   https://leonfighter1.github.io/JingyaoPaint/
+#   https://leonfighter1.github.io/JoyPainting/
 # On iPhone or iPad: open it in Safari, then Share → Add to Home Screen.
 #
 # One-time setup in the repository: Settings → Pages → Build and deployment
@@ -47,7 +47,7 @@ jobs:
       # The rendering engine (CanvasKit) is served from this site too, not
       # from Google's CDN, so the app loads wherever GitHub Pages does.
       - name: Build
-        run: flutter build web --release --base-href /JingyaoPaint/ --no-web-resources-cdn
+        run: flutter build web --release --base-href /JoyPainting/ --no-web-resources-cdn
 
       - uses: actions/upload-pages-artifact@v5
         with:

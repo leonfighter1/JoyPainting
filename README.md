@@ -2,8 +2,8 @@
 
 JoyPainting is a cute drawing app for Android and iOS phones and tablets, built with Flutter, with a web version too. All of them come from the same code in this repository.
 
-**Try it in a browser:** https://leonfighter1.github.io/JingyaoPaint/ (on iPhone or iPad: open it in Safari, then Share → Add to Home Screen).
-The app starts in English and asks for a language, a theme and the little artist's name on first launch; Simplified Chinese and English can be switched any time in Settings. Until v2.1 the app was called JingyaoPaint (靖瑶的画板); the repository and web address keep that name.
+**Try it in a browser:** https://leonfighter1.github.io/JoyPainting/ (on iPhone or iPad: open it in Safari, then Share → Add to Home Screen).
+The app starts in English and asks for a language, a theme and the little artist's name on first launch; Simplified Chinese and English can be switched any time in Settings. Until v2.1 the app was called JingyaoPaint (靖瑶的画板); the repository moved to https://github.com/leonfighter1/JoyPainting (the old JingyaoPaint repository and web address forward here).
 
 What it does:
 
@@ -132,8 +132,8 @@ If an emulator shows a black screen, cold-boot it:
 Get the code and open the repository folder itself in VS Code:
 
 ```powershell
-git clone https://github.com/leonfighter1/JingyaoPaint.git
-code JingyaoPaint
+git clone https://github.com/leonfighter1/JoyPainting.git
+code JoyPainting
 ```
 
 Press **F5**. `.vscode/launch.json` offers three configurations:
@@ -206,7 +206,7 @@ To release a new version:
 
 ## Web version
 
-Published to GitHub Pages by `.github/workflows/web.yml` on every push to `main`: https://leonfighter1.github.io/JingyaoPaint/
+Published to GitHub Pages by `.github/workflows/web.yml` on every push to `main`: https://leonfighter1.github.io/JoyPainting/
 
 - **iPhone/iPad**: open the link in Safari, tap Share → **Add to Home Screen**. It then opens full screen from its own icon, with no signing and no expiry.
 - **Paintings** are saved in the browser (IndexedDB, hundreds of MB) on that device only. Deleting Safari's website data deletes them. Send a painting as a `.jypaint` file to keep a copy.
