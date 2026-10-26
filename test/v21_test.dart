@@ -167,8 +167,9 @@ void main() {
 
       expect(app.settings.kids.map((k) => k.name), ['靖瑶', '小明']);
       expect(app.settings.kidName, '小明');
-      expect(await app.session.store.list(), isEmpty,
-          reason: "小明 starts with no paintings");
+      expect([for (final m in await app.session.store.list()) m.name],
+          ['快乐的一天'],
+          reason: "小明 starts with only the sample, none of 靖瑶's");
 
       // Back to 靖瑶: her painting is still there.
       await tester.tap(find.widgetWithText(ListTile, '靖瑶'));
@@ -254,17 +255,23 @@ void main() {
       addTearDown(player.dispose);
       app.settings.musicOn = true;
       await player.settled;
-      expect(app.engine.loop, isTrue, reason: 'repeat one by default');
+      expect(app.engine.loop, isFalse, reason: 'shuffle by default');
 
-      app.settings.musicMode = MusicMode.sequence;
+      app.settings.musicMode = MusicMode.repeatOne;
+      await player.settled;
+      expect(app.engine.loop, isTrue);
+
+      app.settings
+        ..musicTrack = 'builtin:clouds'
+        ..musicMode = MusicMode.sequence;
       await player.settled;
       expect(app.engine.loop, isFalse);
       app.engine.finishTrack();
       await player.settled;
-      expect(app.settings.musicTrack, 'builtin:twinkle');
+      expect(app.settings.musicTrack, 'builtin:sunny', reason: 'wraps around');
       app.engine.finishTrack();
       await player.settled;
-      expect(app.settings.musicTrack, 'builtin:sunny', reason: 'wraps around');
+      expect(app.settings.musicTrack, 'builtin:twinkle');
 
       await app.music.add('mine.mp3', tinyPng);
       app.settings.musicMode = MusicMode.shuffle;

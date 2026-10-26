@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -119,10 +120,16 @@ class PaintApp extends StatelessWidget {
         ],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         // Browsers only allow sound after a touch or click; the first one
-        // starts music that was switched on.
+        // starts music that was switched on. A mouse counts when its button
+        // goes down, a finger or pen only when it lifts.
         builder: (context, child) => Listener(
           behavior: HitTestBehavior.translucent,
-          onPointerDown: (_) => player?.userTouched(),
+          onPointerDown: (e) {
+            if (e.kind == PointerDeviceKind.mouse) player?.userTouched();
+          },
+          onPointerUp: (e) {
+            if (e.kind != PointerDeviceKind.mouse) player?.userTouched();
+          },
           child: child,
         ),
         // A new install (or a reset) starts with the setup page.
@@ -173,6 +180,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     widget.session.onSaveError = _showSaveError;
     widget.player?.onError = _showMusicError;
+    // Right after the first-start setup (other times it's already there).
+    widget.session.addSampleOnce();
     // After the first frame, so the snackbar and translations are ready.
     WidgetsBinding.instance.addPostFrameCallback(
         (_) => IncomingFiles.listen(_openIncoming));

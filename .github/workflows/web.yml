@@ -49,6 +49,17 @@ jobs:
       - name: Build
         run: flutter build web --release --base-href /JoyPainting/ --no-web-resources-cdn
 
+      # GitHub Pages lets browsers keep files for 10 minutes. A release
+      # number on the code's address means a browser that gets the new page
+      # also gets the new code, never a cached older copy of it.
+      - name: Tag the code with this release
+        run: |
+          v="${{ github.run_number }}"
+          sed -i "s|\"mainJsPath\":\"main.dart.js\"|\"mainJsPath\":\"main.dart.js?v=$v\"|" build/web/flutter_bootstrap.js
+          sed -i "s|src=\"flutter_bootstrap.js\"|src=\"flutter_bootstrap.js?v=$v\"|" build/web/index.html
+          grep -q "main.dart.js?v=$v" build/web/flutter_bootstrap.js
+          grep -q "flutter_bootstrap.js?v=$v" build/web/index.html
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: build/web

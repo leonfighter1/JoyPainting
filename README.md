@@ -26,25 +26,28 @@ What it does:
 - **Paintings**:
   - Autosave, and a gallery (我的画作) with names, dates and a year filter.
   - Export: check paintings (the year filter helps) and export one as its `.jypaint` or several as one `.zip`. Import reads both.
-  - Every painting gets a name ("My painting 1" / "我的画作 1"); rename it from the title or its gallery card.
+  - Every painting gets a name ("My painting 1" / "我的画作 1"); rename or copy it from the title or its gallery card.
+  - A sample painting (快乐的一天 / A Happy Day) to start with, for each kid.
   - Send as PNG, JPG, PDF or an editable `.jypaint` file, named after the painting. In a browser it goes to an email as an attachment.
   - Print from an in-app preview with a big close button (Android's own print screen has none).
   - Open `.jypaint` files received from other apps.
 - **Background music**:
-  - Plays while you draw and pauses in the background. On/off in the ⋮ menu; volume, track and play order (repeat one, in order, shuffle) in Settings.
-  - Two built-in tracks, or add your own (MP3, M4A/AAC, WAV, OGG/Opus, FLAC, MIDI…).
+  - Plays while you draw and pauses in the background. On/off in the ⋮ menu; volume, track and play order (shuffle by default, in order, repeat one) in Settings.
+  - Five calm built-in tracks (阳光散步, 小星星摇篮曲, 欢乐颂, 两只老虎, 云朵飘飘), or add your own (MP3, M4A/AAC, WAV, OGG/Opus, FLAC, MIDI…).
+- **Keyboard** (browser, computer, iPad keyboard): Ctrl/⌘+Z undo, Ctrl+Y redo, Ctrl+S save, Ctrl+P print, Ctrl+C/X/V/D copy, cut, paste and duplicate the selection, Ctrl+A select all, Delete, Ctrl +/−/0/1 zoom, Space to move the paper, P/E/T/V tools, [ ] size, Esc. Press ? for the list.
 - **Look**:
   - 5 portable JSON themes checked against WCAG contrast.
   - 4 bundled cute fonts.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **2.1.1**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **2.2.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **2.1.1** | 2026-10-25 | Import/export buttons, export several paintings as a zip, paper up to 4× the screen, pinned palette (slim strip on phones), ✋ move the paper, web loading text in English until the language is set |
+| **2.2.0** | 2026-10-25 | Keyboard shortcuts (Ctrl+Z, Ctrl+C/V, Delete, zoom, tool keys; ? lists them), a bigger paper shows at real size, music that copes with old settings and browsers, five calm built-in tracks with shuffle by default, the sample painting 快乐的一天, copying paintings, default kid name 靖瑶 / Athena |
+| 2.1.1 | 2026-10-25 | Import/export buttons, export several paintings as a zip, paper up to 4× the screen, pinned palette (slim strip on phones), ✋ move the paper, web loading text in English until the language is set |
 | 2.1.0 | 2026-10-25 | Renamed JoyPainting (快乐涂鸦). First-start setup (language, theme, name), several kids with their own paintings, painting names and renaming, music play order, email sending from the web, texts that fit each device, grown-up check for adding/deleting kids and resetting |
 | 2.0.0 | 2026-10-25 | First iOS (iPhone and iPad) version. Box-select several strokes; copy, resize, turn, recolor and fade the selection; looping background music (built-in or your own, with volume); print preview with an easy way out |
 | 1.6.0 | 2026-10-25 | Draggable corner controls, move tool, round eraser |
@@ -171,6 +174,7 @@ What the tests cover:
 - **`test/ios_test.dart`**: the app running as iOS (scrolling, transitions and text editing differ per platform), Apple's music formats and the iPad share-sheet anchor.
 - **`test/v21_test.dart`**: first-start setup, painting names, kids and the grown-up check, reset, music play order, texts per device.
 - **`test/v211_test.dart`**: zip export/import, choosing paintings to export, paper size, the pinned palette and strip, moving the paper.
+- **`test/v22_test.dart`**: the bigger paper at real size, keyboard shortcuts, copying paintings, the sample painting, the default kid name.
 - **`test/web_store_test.dart`**: saving paintings in the browser (IndexedDB), moving old localStorage data over. Browser only: `flutter test --platform chrome test/web_store_test.dart` (the Web workflow runs it).
 - **`test/model_test.dart`**: the painting store, autosave and import.
 - **`test/export_test.dart`**: real PNG, JPEG and PDF output, and `.jypaint` round trips.

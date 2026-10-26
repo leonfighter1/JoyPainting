@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -47,6 +48,8 @@ class TestApp {
 const testDefaults = <String, Object>{
   'flutter.language': 'zh',
   'flutter.onboarded': true,
+  // Most tests want an empty My Paintings; v22_test covers the sample.
+  'flutter.sampleAdded': true,
 };
 
 Future<TestApp> createTestApp({
@@ -123,12 +126,20 @@ class FakeMusicEngine implements MusicEngine {
   /// Makes the next [play] fail, like an unplayable file.
   bool failNext = false;
 
+  /// Makes the next [play] never finish, like a browser that hasn't been
+  /// touched yet.
+  bool hangNext = false;
+
   @override
   Future<void> play(MusicSource source, double volume,
       {bool loop = true}) async {
     if (failNext) {
       failNext = false;
       throw Exception('cannot play');
+    }
+    if (hangNext) {
+      hangNext = false;
+      return Completer<void>().future;
     }
     this.source = source;
     this.volume = volume;

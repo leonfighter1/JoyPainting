@@ -11,6 +11,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 
 import '../app_theme.dart';
+import '../device.dart';
 import '../image_saver.dart';
 import '../l10n.dart';
 import '../painting_session.dart';
@@ -251,14 +252,36 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
       _zoomAt(Offset(_room.width / 2, _room.height / 2), factor);
 
   /// Back to the whole paper on screen.
-  void resetView() {
+  void resetView() => _animateView(Matrix4.identity());
+
+  /// Zooms so the paper shows at its real size (one paper point per screen
+  /// point), from its top-left corner. After picking a bigger paper this is
+  /// what makes it look bigger: fitted to the screen, a 4× sheet looks just
+  /// like the 1× one, only with everything drawn smaller. The paper grows
+  /// to the right and down, so what's drawn stays where it was, at the
+  /// size it was, with new room beyond the screen's edges.
+  void showActualSize() {
+    final room = _room;
+    final size = widget.session.canvasSize;
+    if (room.isEmpty || size.isEmpty) return;
+    final fitted = math.min(room.width / size.width, room.height / size.height);
+    final zoom = (1 / fitted).clamp(minZoom, maxZoom);
+    // The fitted sheet is centered: its top-left corner on screen.
+    final corner = Offset(
+      (room.width - size.width * fitted) / 2,
+      (room.height - size.height * fitted) / 2,
+    );
+    _animateView(_scaledAround(Matrix4.identity(), corner, zoom));
+  }
+
+  void _animateView(Matrix4 end) {
     if (!_animate) {
-      view.value = Matrix4.identity();
+      view.value = end;
       return;
     }
     final tween = Matrix4Tween(
       begin: view.value.clone(),
-      end: Matrix4.identity(),
+      end: end,
     );
     final curve = CurvedAnimation(
       parent: _viewReset,
@@ -291,15 +314,166 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
 
   void _updatePanning() => _panning.value = panMode.value || _spaceHeld;
 
+  // --- Keyboard shortcuts ---------------------------------------------------
+
+  /// Whether keys are for this page: the paper is the tab showing (the tab
+  /// stack keeps hidden tabs built, but invisible) and no dialog or sheet
+  /// is on top.
+  bool get _keysForMe =>
+      mounted &&
+      Visibility.of(context) &&
+      (ModalRoute.of(context)?.isCurrent ?? true);
+
   bool _onKey(KeyEvent e) {
-    if (e.logicalKey != LogicalKeyboardKey.space) return false;
-    // Typing a space in a text field isn't a request to move the paper.
+    // Keys typed into a text field are for the text.
     final typing = FocusManager.instance.primaryFocus?.context
         ?.findAncestorWidgetOfExactType<EditableText>();
     if (typing != null) return false;
-    _spaceHeld = e is! KeyUpEvent;
-    _updatePanning();
-    return false;
+    if (e.logicalKey == LogicalKeyboardKey.space) {
+      _spaceHeld = e is! KeyUpEvent;
+      _updatePanning();
+      return false;
+    }
+    if (e is KeyUpEvent || !_keysForMe) return false;
+    final keys = HardwareKeyboard.instance;
+    if (keys.isAltPressed) return false;
+    final key = e.logicalKey;
+    // Handled keys return true, which also stops the browser's own action
+    // (Ctrl+S would otherwise save the web page, Ctrl+P print it).
+    bool run(VoidCallback action) {
+      action();
+      return true;
+    }
+
+    if (keys.isControlPressed || keys.isMetaPressed) {
+      final shift = keys.isShiftPressed;
+      if (key == LogicalKeyboardKey.keyZ) {
+        return run(shift ? _drawing.redo : _drawing.undo);
+      }
+      if (key == LogicalKeyboardKey.keyY) return run(_drawing.redo);
+      // Holding these down repeats them; the rest act once per press.
+      if (key == LogicalKeyboardKey.equal ||
+          key == LogicalKeyboardKey.add ||
+          key == LogicalKeyboardKey.numpadAdd) {
+        return run(() => _zoomCenter(1.25));
+      }
+      if (key == LogicalKeyboardKey.minus ||
+          key == LogicalKeyboardKey.numpadSubtract) {
+        return run(() => _zoomCenter(0.8));
+      }
+      if (e is KeyRepeatEvent) return false;
+      if (key == LogicalKeyboardKey.digit0 ||
+          key == LogicalKeyboardKey.numpad0) {
+        return run(resetView);
+      }
+      if (key == LogicalKeyboardKey.digit1 ||
+          key == LogicalKeyboardKey.numpad1) {
+        return run(showActualSize);
+      }
+      if (key == LogicalKeyboardKey.keyS) {
+        return run(() {
+          if (_hasPainting) _savePainting();
+        });
+      }
+      if (key == LogicalKeyboardKey.keyP) {
+        return run(() => printPainting(context, widget.session.currentDoc()));
+      }
+      if (key == LogicalKeyboardKey.keyA) return run(_selectAll);
+      if (key == LogicalKeyboardKey.keyV) return run(_paste);
+      // Copying needs something selected; otherwise the key is left alone.
+      if (selected.value.isEmpty) return false;
+      if (key == LogicalKeyboardKey.keyC) return run(_copySelection);
+      if (key == LogicalKeyboardKey.keyX) {
+        return run(() {
+          _copySelection();
+          _deleteSelection();
+        });
+      }
+      if (key == LogicalKeyboardKey.keyD) return run(_duplicateSelection);
+      return false;
+    }
+
+    if (key == LogicalKeyboardKey.bracketLeft ||
+        key == LogicalKeyboardKey.bracketRight) {
+      final step = key == LogicalKeyboardKey.bracketLeft ? -2 : 2;
+      return run(() =>
+          _settings.size = (_settings.size + step).clamp(1, 60).toDouble());
+    }
+    if (e is KeyRepeatEvent) return false;
+    if (e.character == '?') return run(_showShortcuts);
+    if (key == LogicalKeyboardKey.delete ||
+        key == LogicalKeyboardKey.backspace) {
+      if (selected.value.isEmpty) return false;
+      return run(_deleteSelection);
+    }
+    if (key == LogicalKeyboardKey.escape) {
+      // One thing at a time: the selection, then the tools, then ✋.
+      if (selected.value.isNotEmpty) return run(() => _select(const []));
+      if (_toolsShown) return run(_closeTools);
+      if (panMode.value) return run(() => panMode.value = false);
+      return false;
+    }
+    if (key == LogicalKeyboardKey.keyH) {
+      return run(() => panMode.value = !panMode.value);
+    }
+    final brush = switch (e.character?.toLowerCase()) {
+      'p' => BrushType.pen,
+      'e' => BrushType.eraser,
+      't' => BrushType.text,
+      'v' || 'm' => BrushType.move,
+      _ => null,
+    };
+    if (brush == null) return false;
+    return run(() => _settings.brush = brush);
+  }
+
+  /// The ⌘ key on Apple keyboards, Ctrl elsewhere.
+  static String get commandKey =>
+      defaultTargetPlatform == TargetPlatform.macOS ||
+              defaultTargetPlatform == TargetPlatform.iOS
+          ? '⌘'
+          : 'Ctrl';
+
+  /// The list of keyboard shortcuts (the ? key, or the ⋮ menu).
+  Future<void> _showShortcuts() {
+    final s = S.of(context);
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+          title: Text(s.keyboardShortcuts),
+          content: SingleChildScrollView(
+            child: Table(
+              columnWidths: const {0: IntrinsicColumnWidth()},
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                for (final (keys, what) in s.shortcuts(commandKey))
+                  TableRow(children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 4, 16, 4),
+                      child: Text(
+                        keys,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    Text(what),
+                  ]),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(s.confirm),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _onDown(PointerDownEvent e) {
@@ -612,6 +786,42 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     _select(const []);
   }
 
+  /// Copied strokes (Ctrl+C), kept while the app is open, so they can be
+  /// pasted into another painting too.
+  List<Stroke> _clipboard = const [];
+
+  /// How many times the clipboard was pasted: each paste lands a step
+  /// further down and right, so copies don't hide each other.
+  int _pastes = 0;
+
+  void _copySelection() {
+    _clipboard = selected.value;
+    _pastes = 0;
+  }
+
+  /// Adds a copy of the clipboard, selected with the move tool, so it can
+  /// be dragged into place right away.
+  void _paste() {
+    if (_clipboard.isEmpty) return;
+    _pastes++;
+    final copies = [
+      for (final s in _clipboard) s.moved(const Offset(24, 24) * _pastes.toDouble()),
+    ];
+    _settings.brush = BrushType.move;
+    _drawing.addAll(copies);
+    _select(copies);
+  }
+
+  /// Everything on the paper, with the move tool (eraser strokes are
+  /// invisible, so they're never selected).
+  void _selectAll() {
+    _settings.brush = BrushType.move;
+    _select([
+      for (final s in _drawing.strokes)
+        if (s.brush != BrushType.eraser) s,
+    ]);
+  }
+
   /// Recolors the selection. Rainbow strokes keep their own colors.
   void _recolorSelection(Color color) {
     final sel = selected.value;
@@ -892,7 +1102,24 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
         );
       },
     );
-    if (picked != null) _drawing.setPaperScale(picked);
+    if (picked == null || picked == current || !mounted) return;
+    _drawing.setPaperScale(picked);
+    if (picked < current) {
+      resetView();
+      return;
+    }
+    // Shows the new room right away (after the paper has been laid out at
+    // its new size), and how to get around it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showActualSize();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(s.paperBiggerHint),
+          duration: const Duration(seconds: 6),
+        ));
+    });
   }
 
   Future<void> _confirmClear() async {
@@ -973,6 +1200,13 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
             checked: panMode.value,
             onSelected: () => panMode.value = !panMode.value,
           ),
+          // Only where there's a keyboard to use them with.
+          if (Device.current.desktopOs)
+            DropMenuItem(
+              icon: Icons.keyboard_rounded,
+              label: s.keyboardShortcuts,
+              onSelected: _showShortcuts,
+            ),
         ],
       ),
       DropMenuSection(

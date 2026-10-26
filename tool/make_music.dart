@@ -1,28 +1,34 @@
-// Makes the built-in background music: two seamless music-box loops, written
-// as 16-bit mono WAV files to assets/music/.
+// Makes the built-in background music: five calm, seamless music-box loops,
+// written as 16-bit mono WAV files to assets/music/.
 //
 //   dart run tool/make_music.dart
 //
-// The tunes are synthesized here (an original melody, and "Twinkle Twinkle
-// Little Star", which is in the public domain), so the app can ship them
-// without any license questions.
+// The tunes are synthesized here (two original melodies, and "Twinkle
+// Twinkle Little Star", "Ode to Joy" and "Frère Jacques" (两只老虎), which
+// are in the public domain), so the app can ship them without any license
+// questions.
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-const sampleRate = 16000;
+/// Samples per second. The highest partial (4.2× D6, about 4.9 kHz) is
+/// below half of this, so nothing audible is lost.
+const sampleRate = 12000;
 
 void main() {
   _write('assets/music/sunny_walk.wav', _sunnyWalk());
   _write('assets/music/twinkle_lullaby.wav', _twinkle());
+  _write('assets/music/ode_to_joy.wav', _odeToJoy());
+  _write('assets/music/two_tigers.wav', _twoTigers());
+  _write('assets/music/floating_clouds.wav', _clouds());
 }
 
 /// A note: name like 'C5', start and length in beats, loudness.
 typedef Note = (String, double, double, double);
 
-/// "阳光散步": a bouncy tune in C major, 8 bars at 112 bpm.
+/// "阳光散步": an easy-going tune in C major, 8 bars at 80 bpm.
 Float64List _sunnyWalk() {
-  const bpm = 112.0;
+  const bpm = 80.0;
   // Melody in eighth notes, bar by bar.
   const melody = [
     ['E5', 1], ['G5', 1], ['C6', 2], ['B5', 1], ['A5', 1], ['G5', 2], //
@@ -54,14 +60,15 @@ Float64List _sunnyWalk() {
       ..add(('${third}4', at + 1, 0.5, 0.28))
       ..add(('${fifth}4', at + 1.5, 0.5, 0.28));
   }
-  return _render(notes, beats: 32, bpm: bpm, decay: 0.7);
+  return _render(notes, beats: 32, bpm: bpm, decay: 0.9);
 }
 
 /// "小星星摇篮曲": Twinkle Twinkle as a slow lullaby over broken chords,
-/// 12 bars at 84 bpm.
+/// 12 bars at 66 bpm.
 Float64List _twinkle() {
-  const bpm = 84.0;
-  const tune = 'C C G G A A G- F F E E D D C- G G F F E E D- '
+  const bpm = 66.0;
+  const tune =
+      'C C G G A A G- F F E E D D C- G G F F E E D- '
       'G G F F E E D- C C G G A A G- F F E E D D C-';
   const chords = [
     'C', 'C', 'F', 'C', 'F', 'C', 'G', 'C', //
@@ -80,21 +87,128 @@ Float64List _twinkle() {
     final (root, third, fifth) = _chord(chord);
     final at = i * 2.0;
     // Root, fifth, third, fifth in eighths: a gentle rocking.
-    for (final (k, tone) in ['${root}3', '${fifth}3', '${third}4', '${fifth}3']
-        .indexed) {
+    for (final (k, tone) in [
+      '${root}3',
+      '${fifth}3',
+      '${third}4',
+      '${fifth}3',
+    ].indexed) {
       notes.add((tone, at + k * 0.5, 0.5, k == 0 ? 0.42 : 0.26));
     }
   }
-  return _render(notes, beats: 48, bpm: bpm, decay: 1.1);
+  return _render(notes, beats: 48, bpm: bpm, decay: 1.3);
+}
+
+/// "欢乐颂": Beethoven's Ode to Joy, slow and soft, 16 bars at 72 bpm.
+Float64List _odeToJoy() {
+  const bpm = 72.0;
+  const a = 'E E F G G F E D C C D E ';
+  const tune =
+      '$a'
+      'E. d D- '
+      '$a'
+      'D. c C- '
+      'D D E C D e f E C D e f E D C D G4- '
+      '$a'
+      'D. c C-';
+  // One chord per half bar.
+  const chords = [
+    'C', 'C', 'G', 'G', 'C', 'C', 'G', 'G', //
+    'C', 'C', 'G', 'G', 'C', 'C', 'G', 'C',
+    'G', 'C', 'G', 'C', 'G', 'G', 'C', 'G',
+    'C', 'C', 'G', 'G', 'C', 'C', 'G', 'C',
+  ];
+  final notes = _tune(tune, loudness: 0.85);
+  for (final (i, chord) in chords.indexed) {
+    final (root, third, fifth) = _chord(chord);
+    final at = i * 2.0;
+    notes
+      ..add(('${root}3', at, 1, 0.45))
+      ..add(('${third}4', at + 1, 1, 0.2))
+      ..add(('${fifth}3', at + 1.5, 0.5, 0.16));
+  }
+  return _render(notes, beats: 64, bpm: bpm, decay: 1.2);
+}
+
+/// "两只老虎" (Frère Jacques) as a gentle round: a second, lower and softer
+/// voice follows two bars behind, and since it is a round, its tail wraps
+/// to the start of the loop without a seam. 8 bars at 72 bpm.
+Float64List _twoTigers() {
+  const bpm = 72.0;
+  const tune =
+      'C D E C C D E C E F G- E F G- '
+      'g a g f E C g a g f E C C G3 C- C G3 C-';
+  final notes = <Note>[
+    ..._tune(tune, loudness: 0.85),
+    for (final (name, start, length, _) in _tune(tune, loudness: 0))
+      (_octaveDown(name), (start + 8) % 32, length, 0.38),
+  ];
+  for (var bar = 0; bar < 8; bar++) {
+    notes
+      ..add(('C3', bar * 4.0, 2, 0.4))
+      ..add(('G3', bar * 4.0 + 2, 2, 0.26));
+  }
+  return _render(notes, beats: 32, bpm: bpm, decay: 1.2);
+}
+
+/// "云朵飘飘": an original lullaby of long notes over slow arpeggios,
+/// 8 bars at 60 bpm.
+Float64List _clouds() {
+  const bpm = 60.0;
+  const tune =
+      'E- G- A-- G F- A- G--- '
+      'E- C D E- A4- C D B4- C---';
+  // One chord per half bar.
+  const chords = [
+    'C', 'C', 'Am', 'Am', 'F', 'F', 'G', 'G', //
+    'C', 'C', 'Am', 'Am', 'F', 'G', 'C', 'C',
+  ];
+  final notes = _tune(tune, loudness: 0.8);
+  for (final (i, chord) in chords.indexed) {
+    final (root, third, fifth) = _chord(chord);
+    final at = i * 2.0;
+    // Root, fifth, third, fifth: one tone every half beat, rocking.
+    for (final (k, tone) in [
+      '${root}3',
+      '${fifth}3',
+      '${third}4',
+      '${fifth}3',
+    ].indexed) {
+      notes.add((tone, at + k * 0.5, 0.5, k == 0 ? 0.36 : 0.2));
+    }
+  }
+  return _render(notes, beats: 32, bpm: bpm, decay: 1.6);
+}
+
+String _octaveDown(String note) =>
+    '${note[0]}${int.parse(note.substring(1)) - 1}';
+
+/// Reads a tune written as words: a note letter (capital: one beat, small:
+/// half a beat), an optional octave (default 5), and a dash for each extra
+/// beat or a dot for half a beat more.
+List<Note> _tune(String tune, {required double loudness}) {
+  final notes = <Note>[];
+  var beat = 0.0;
+  for (final word in tune.trim().split(RegExp(r'\s+'))) {
+    final letter = word[0];
+    final small = letter != letter.toUpperCase();
+    final octave = RegExp(r'\d').firstMatch(word)?.group(0) ?? '5';
+    var length = small ? 0.5 : 1.0;
+    length += '-'.allMatches(word).length;
+    if (word.endsWith('.')) length += 0.5;
+    notes.add(('${letter.toUpperCase()}$octave', beat, length, loudness));
+    beat += length;
+  }
+  return notes;
 }
 
 (String, String, String) _chord(String name) => switch (name) {
-      'C' => ('C', 'E', 'G'),
-      'F' => ('F', 'A', 'C'),
-      'G' => ('G', 'B', 'D'),
-      'Am' => ('A', 'C', 'E'),
-      _ => throw ArgumentError(name),
-    };
+  'C' => ('C', 'E', 'G'),
+  'F' => ('F', 'A', 'C'),
+  'G' => ('G', 'B', 'D'),
+  'Am' => ('A', 'C', 'E'),
+  _ => throw ArgumentError(name),
+};
 
 double _frequency(String note) {
   const steps = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11};
@@ -105,12 +219,23 @@ double _frequency(String note) {
 /// Plays every note as a music-box tine: a quick attack, then partials that
 /// die away (the higher ones faster). Tails that run past the end wrap to
 /// the start, so the loop has no seam.
-Float64List _render(List<Note> notes,
-    {required double beats, required double bpm, required double decay}) {
+Float64List _render(
+  List<Note> notes, {
+  required double beats,
+  required double bpm,
+  required double decay,
+}) {
+  final end = notes.map((n) => n.$2 + n.$3).reduce(math.max);
+  if (end > beats) throw StateError('notes run to beat $end of $beats');
   final secondsPerBeat = 60 / bpm;
   final total = (beats * secondsPerBeat * sampleRate).round();
   final out = Float64List(total);
-  const partials = [(1.0, 1.0, 1.0), (2.0, 0.32, 0.5), (3.0, 0.1, 0.3), (4.2, 0.05, 0.18)];
+  const partials = [
+    (1.0, 1.0, 1.0),
+    (2.0, 0.32, 0.5),
+    (3.0, 0.1, 0.3),
+    (4.2, 0.05, 0.18),
+  ];
   for (final (name, start, length, loudness) in notes) {
     final f = _frequency(name);
     final tau = decay * (0.6 + 0.4 * length.clamp(0, 2) / 2);
@@ -121,7 +246,10 @@ Float64List _render(List<Note> notes,
       final attack = math.min(1.0, t / 0.004);
       var v = 0.0;
       for (final (mult, amp, speed) in partials) {
-        v += amp * math.exp(-t / (tau * speed)) * math.sin(2 * math.pi * f * mult * t);
+        v +=
+            amp *
+            math.exp(-t / (tau * speed)) *
+            math.sin(2 * math.pi * f * mult * t);
       }
       out[(first + i) % total] += loudness * attack * v;
     }
@@ -159,12 +287,17 @@ void _write(String path, Float64List samples) {
   ascii(36, 'data');
   data.setUint32(40, samples.length * 2, Endian.little);
   for (final (i, v) in samples.indexed) {
-    data.setInt16(44 + i * 2, (v * 32767).round().clamp(-32768, 32767),
-        Endian.little);
+    data.setInt16(
+      44 + i * 2,
+      (v * 32767).round().clamp(-32768, 32767),
+      Endian.little,
+    );
   }
   File(path)
     ..createSync(recursive: true)
     ..writeAsBytesSync(data.buffer.asUint8List());
-  stdout.writeln('$path: ${(samples.length / sampleRate).toStringAsFixed(1)} s, '
-      '${(data.lengthInBytes / 1024).round()} KB');
+  stdout.writeln(
+    '$path: ${(samples.length / sampleRate).toStringAsFixed(1)} s, '
+    '${(data.lengthInBytes / 1024).round()} KB',
+  );
 }

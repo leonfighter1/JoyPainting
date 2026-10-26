@@ -80,6 +80,9 @@ class MusicLibrary extends ChangeNotifier {
   static const builtIn = [
     MusicTrack.builtIn('sunny', AssetMusic('music/sunny_walk.wav')),
     MusicTrack.builtIn('twinkle', AssetMusic('music/twinkle_lullaby.wav')),
+    MusicTrack.builtIn('joy', AssetMusic('music/ode_to_joy.wav')),
+    MusicTrack.builtIn('tigers', AssetMusic('music/two_tigers.wav')),
+    MusicTrack.builtIn('clouds', AssetMusic('music/floating_clouds.wav')),
   ];
 
   /// File types Android, Windows and browsers can generally play.

@@ -181,6 +181,16 @@ class _GalleryPageState extends State<GalleryPage> {
 
   /// Sends or prints a saved painting. The open one is taken live from the
   /// canvas, so unsaved strokes are included.
+  /// Copies a painting; the copy shows up in the list, named "… 副本".
+  Future<void> _duplicate(PaintingMeta meta) async {
+    final s = S.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final name = s.copyName(meta.name);
+    final copy = await widget.session.duplicate(meta.id, name);
+    messenger.showSnackBar(SnackBar(
+        content: Text(copy == null ? s.copyFailed : s.paintingCopied(name))));
+  }
+
   Future<void> _withDoc(
     PaintingMeta meta,
     Future<void> Function(BuildContext, PaintingDoc) action,
@@ -313,6 +323,7 @@ class _GalleryPageState extends State<GalleryPage> {
                               onOpen: () => _open(shown[i]),
                               onDelete: () => _confirmDelete(shown[i]),
                               onRename: () => _rename(shown[i]),
+                              onDuplicate: () => _duplicate(shown[i]),
                               onSend: () => _withDoc(shown[i], showSendSheet),
                               onPrint: () => _withDoc(shown[i], printPainting),
                               selecting: _selecting,
@@ -481,6 +492,7 @@ class _PaintingCard extends StatefulWidget {
     required this.onOpen,
     required this.onDelete,
     required this.onRename,
+    required this.onDuplicate,
     required this.onSend,
     required this.onPrint,
     required this.selecting,
@@ -495,6 +507,7 @@ class _PaintingCard extends StatefulWidget {
   final VoidCallback onOpen;
   final VoidCallback onDelete;
   final VoidCallback onRename;
+  final VoidCallback onDuplicate;
   final VoidCallback onSend;
   final VoidCallback onPrint;
 
@@ -674,6 +687,13 @@ class _PaintingCardState extends State<_PaintingCard> {
                               Icons.drive_file_rename_outline_rounded,
                             ),
                             title: Text(s.rename),
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: widget.onDuplicate,
+                          child: ListTile(
+                            leading: const Icon(Icons.copy_rounded),
+                            title: Text(s.duplicatePainting),
                           ),
                         ),
                         PopupMenuItem(

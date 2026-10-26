@@ -33,12 +33,23 @@ class S {
   String get welcomeBody => _t('选一种语言和喜欢的主题，再写下小画家的名字。',
       "Pick a language and a theme you like, then tell us the little artist's name.");
   String get kidNameLabel => _t('小画家的名字', "Little artist's name");
-  String get kidNameHint => _t('例如：靖瑶', 'For example: Jingyao');
+  String get kidNameHint => _t('例如：靖瑶', 'For example: Athena');
+
+  /// The name the first-start setup suggests, in each language.
+  String get defaultKidName => _t('靖瑶', 'Athena');
   String get startDrawing => _t('开始画画', 'Start drawing');
 
   // Painting names
   String defaultPaintingName(int n) => _t('我的画作 $n', 'My painting $n');
   String get rename => _t('重命名', 'Rename');
+  String get duplicatePainting => _t('复制一份', 'Make a copy');
+  String copyName(String name) =>
+      _t('$name 副本', '$name (copy)');
+  String paintingCopied(String name) =>
+      _t('已复制为“$name”', 'Copied as "$name"');
+  String get copyFailed => _t('没能复制，再试一次', "Couldn't copy it. Try again");
+  String get samplePaintingName => _t('快乐的一天', 'A Happy Day');
+  String get sampleGreeting => _t('你好呀！', 'Hello!');
   String get renameTitle => _t('给画作起个名字', 'Name this painting');
   String get nameLabel => _t('名字', 'Name');
   String get save => _t('保存', 'Save');
@@ -300,6 +311,9 @@ class S {
   String trackName(String id) => switch (id) {
         'sunny' => _t('阳光散步', 'Sunny Walk'),
         'twinkle' => _t('小星星摇篮曲', 'Twinkle Lullaby'),
+        'joy' => _t('欢乐颂', 'Ode to Joy'),
+        'tigers' => _t('两只老虎', 'Frère Jacques'),
+        'clouds' => _t('云朵飘飘', 'Floating Clouds'),
         _ => id,
       };
   String musicAdded(String name) => _t('已添加“$name”', 'Added "$name"');
@@ -343,6 +357,32 @@ class S {
   String get zoomOut => _t('缩小画布', 'Zoom out');
   String get fitScreen => _t('适应屏幕', 'Fit to screen');
   String get panCanvas => _t('拖动画板', 'Move the paper');
+  String get keyboardShortcuts => _t('键盘快捷键', 'Keyboard shortcuts');
+
+  /// The keyboard shortcuts: keys, and what they do. [command] is Ctrl or ⌘.
+  List<(String, String)> shortcuts(String command) => [
+        ('$command+Z', _t('撤销', 'Undo')),
+        ('$command+Shift+Z · $command+Y', _t('重做', 'Redo')),
+        ('$command+S', _t('保存', 'Save')),
+        ('$command+P', _t('打印', 'Print')),
+        ('$command+C · $command+X',
+            _t('复制、剪切选中的部分', 'Copy or cut what is selected')),
+        ('$command+V',
+            _t('粘贴（也能贴到别的画里）', 'Paste (into another painting too)')),
+        ('$command+D', _t('把选中的部分复制一份', 'Duplicate what is selected')),
+        ('$command+A', _t('全部选中', 'Select everything')),
+        ('Delete', _t('删除选中的部分', 'Delete what is selected')),
+        ('$command + / $command −', _t('放大 / 缩小', 'Zoom in / out')),
+        ('$command+0', _t('适应屏幕', 'Fit to screen')),
+        ('$command+1', _t('实际大小', 'Real size')),
+        (_t('按住空格', 'Hold Space'), _t('拖动画板', 'Move the paper')),
+        ('H', _t('✋ 拖动画板 开 / 关', '✋ Move the paper on / off')),
+        ('P · E · T · V',
+            _t('画笔 · 橡皮 · 文字 · 移动', 'Pen · Eraser · Text · Move')),
+        ('[  ]', _t('笔变细 / 变粗', 'Thinner / thicker brush')),
+        ('Esc', _t('取消选中，关上工具栏', 'Deselect, close the tools')),
+        ('?', _t('显示这张表', 'Show this list')),
+      ];
   String get pinchHint => _device.desktopOs
       ? _t('双指捏合可以放大缩小画布，双指拖动可以移动画布；用鼠标时，滚动滚轮缩放，按住空格键或点 ✋ 拖动画板',
           'Pinch with two fingers to zoom, drag with two fingers to move; with a mouse, scroll the wheel to zoom, and hold Space or tap ✋ to move the paper')
@@ -352,14 +392,19 @@ class S {
   String get mirror => _t('对称绘画', 'Mirror drawing');
   String get paperColor => _t('画纸颜色', 'Paper color');
   String get paperSize => _t('画纸大小', 'Paper size');
+  String get paperBiggerHint => _device.desktopOs
+      ? _t('画纸变大啦！按住空格键或点 ✋ 拖动，去画其他地方；点“适应屏幕”看整张',
+          'The paper is bigger! Hold Space or tap ✋ and drag to get to the rest; tap "Fit to screen" to see all of it')
+      : _t('画纸变大啦！用两根手指或点 ✋ 拖动，去画其他地方；点“适应屏幕”看整张',
+          'The paper is bigger! Drag with two fingers or tap ✋ to get to the rest; tap "Fit to screen" to see all of it');
   String paperSizeName(double scale) => switch (scale) {
         1 => _t('1倍 · 刚好一屏', '1× · one screen'),
         4 => _t('4倍 · 宽和高都是 2 倍', '4× · twice as wide and tall'),
         _ => _t('${scale.round()}倍', '${scale.round()}×'),
       };
   String get paperSizeHint => _t(
-      '画纸越大，能画的地方越多。整张纸会缩小放进屏幕，双指放大就能画细节。画好的部分不会被裁掉。',
-      'Bigger paper means more room to draw. The whole sheet shrinks to fit the screen; pinch to zoom in for details. Nothing drawn is ever cut off.');
+      '画纸越大，能画的地方越多。选好后画纸按真实大小显示，拖动去画其他地方，点“适应屏幕”看整张。画好的部分不会被裁掉。',
+      'Bigger paper means more room to draw. It then shows at its real size: drag to get around, and tap "Fit to screen" to see all of it. Nothing drawn is ever cut off.');
   List<String> get paperNames => _zh
       ? const ['纯白', '奶油', '樱花', '天空', '薄荷', '薰衣草']
       : const ['White', 'Cream', 'Blossom', 'Sky', 'Mint', 'Lavender'];

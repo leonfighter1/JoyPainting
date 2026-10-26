@@ -1,5 +1,14 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-25: v2.2.0 (shortcuts, bigger paper, music, sample painting, copying)
+- Asked: common keyboard shortcuts in the browser; the bigger paper "not implemented"; music problems with settings from earlier versions (fine in incognito); five calm tracks with shuffle as default; then a sample painting, copying paintings, Ctrl+C for selected strokes, and default kid names 靖瑶 / Athena.
+- Causes found: the bigger paper worked but was shrunk to fit the screen, so nothing looked different. Music: with music already on from an earlier visit, the web player tried to start before any touch; the browser's audio start then never finished, and the player's queue waited on it forever. Incognito starts with music off, so it began only after a tap.
+- Done: see FEATURES v2.2.0. The two old tracks were regenerated slower, at 12 kHz.
+- Mistakes: MISTAKES rules 39 to 42.
+- Harness: PASS (analyze 0 issues, 244 tests, build web ok).
+- Emulator (2560×1600 tablet, x86_64 release APK 2.2.0 installed over 2.1.1): existing paintings and settings kept; 快乐的一天 added with 你好呀！; 复制一份 made 快乐的一天 副本; 4× paper zoomed to 200% with the drawing in place, the hint, and 适应屏幕 showing the whole sheet; no 键盘快捷键 item on Android.
+- Not tested: music in real browsers (iPhone Safari, desktop Chrome with old settings); shortcuts in a real browser (Ctrl+P / Ctrl+S overriding the browser; tests cover the key handling); the tracks by ear beyond the generator's checks.
+
 ## 2026-10-25: v2.1.1 (import/export, bigger paper, pinned palette, moving the paper)
 - Asked, in steps: an obvious import button; export from My Paintings with checkmarks, multi-select and the filter, several as a zip and one as its own file; import reading both; the web loading text English until the language is set; a paper up to 4× bigger; a pinned palette, which on small screens became a slim strip; ✋ move-the-paper; dragging outside the paper moves it with one finger.
 - Clarified: "锁住调色板" means pinning it on screen (not a parental lock).

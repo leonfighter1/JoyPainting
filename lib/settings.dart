@@ -43,7 +43,7 @@ enum MusicMode {
   shuffle;
 
   static MusicMode fromName(String? name) =>
-      values.firstWhere((m) => m.name == name, orElse: () => repeatOne);
+      values.firstWhere((m) => m.name == name, orElse: () => shuffle);
 }
 
 /// User choices that survive app restarts: language, theme, brush, colors,
@@ -217,7 +217,7 @@ class AppSettings extends ChangeNotifier {
     _musicOn = false;
     _musicVolume = defaultMusicVolume;
     _musicTrack = defaultMusicTrack;
-    _musicMode = MusicMode.repeatOne;
+    _musicMode = MusicMode.shuffle;
     _customColors.clear();
     _kids = [const Kid(Kid.firstId, '')];
     _currentKidId = Kid.firstId;
@@ -425,6 +425,16 @@ class AppSettings extends ChangeNotifier {
     _prefs.setString(_kMusicTrack, id);
     notifyListeners();
   }
+
+  /// Whether the current kid has been given the sample painting (once:
+  /// deleting it doesn't bring it back).
+  bool get sampleAdded => _prefs.getBool(_sampleKey) ?? false;
+
+  set sampleAdded(bool value) => _prefs.setBool(_sampleKey, value);
+
+  String get _sampleKey => _currentKidId == Kid.firstId
+      ? 'sampleAdded'
+      : 'sampleAdded.$_currentKidId';
 
   set lastPaintingId(String? id) {
     if (id == null) {

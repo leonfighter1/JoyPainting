@@ -114,8 +114,19 @@ class BackgroundMusic with WidgetsBindingObserver {
   /// music then switches back to the first built-in track.
   void Function(Object error)? onError;
 
+  /// How long a player call may take. A browser that hasn't been touched yet
+  /// can leave a start pending forever; without a limit that would hold up
+  /// every later change.
+  static const callTimeout = Duration(seconds: 8);
+
+  /// On the web, how many failed starts after touches count as "the browser
+  /// still says no" (a finger landing isn't enough for some browsers, only
+  /// lifting it is) before a real error is reported.
+  static const touchRetries = 3;
+
   bool _foreground = true;
   bool _touched = false;
+  int _failedAfterTouch = 0;
   bool _waitingForTouch = false;
   bool _playing = false;
   String? _loaded;
@@ -128,6 +139,19 @@ class BackgroundMusic with WidgetsBindingObserver {
     settings.addListener(_sync);
     library.addListener(_sync);
     engine.onComplete = _next;
+    // A saved choice can point to a track that's gone (an upload on the web
+    // lasts only until the page is reloaded): back to a bundled one.
+    if (!library.tracks.any((t) => t.id == settings.musicTrack)) {
+      settings.musicTrack = MusicLibrary.builtIn.first.id;
+    }
+    // Shuffle starts somewhere new each time the app opens.
+    if (settings.musicMode == MusicMode.shuffle && library.tracks.length > 1) {
+      settings.musicTrack =
+          library.tracks[_random.nextInt(library.tracks.length)].id;
+    }
+    // Browsers refuse sound before the first touch, and a start tried then
+    // can hang: wait for the touch instead of trying.
+    if (needsTouchToPlay) _waitingForTouch = true;
     _sync();
   }
 
@@ -196,6 +220,11 @@ class BackgroundMusic with WidgetsBindingObserver {
     }
     // Blocked by the browser: only a touch can start it (userTouched).
     if (_waitingForTouch) return;
+    if (!library.tracks.any((t) => t.id == settings.musicTrack)) {
+      // Removed or forgotten: this change comes back through _sync.
+      settings.musicTrack = MusicLibrary.builtIn.first.id;
+      return;
+    }
     final track = library.trackById(settings.musicTrack);
     final volume = settings.musicVolume;
     final loop = settings.musicMode == MusicMode.repeatOne;
@@ -205,7 +234,10 @@ class BackgroundMusic with WidgetsBindingObserver {
         _volume = volume;
         _loop = loop;
         _playing = true;
-        await engine.play(track.source, volume, loop: loop);
+        await engine
+            .play(track.source, volume, loop: loop)
+            .timeout(callTimeout);
+        _failedAfterTouch = 0;
         return;
       }
       if (_loop != loop) {
@@ -214,7 +246,7 @@ class BackgroundMusic with WidgetsBindingObserver {
       }
       if (!_playing) {
         _playing = true;
-        await engine.resume();
+        await engine.resume().timeout(callTimeout);
       }
       if (_volume != volume) {
         _volume = volume;
@@ -223,10 +255,12 @@ class BackgroundMusic with WidgetsBindingObserver {
     } catch (e) {
       _loaded = null;
       _playing = false;
-      if (needsTouchToPlay && !_touched) {
+      if (needsTouchToPlay &&
+          (!_touched || ++_failedAfterTouch < touchRetries)) {
         _waitingForTouch = true;
         return;
       }
+      _failedAfterTouch = 0;
       onError?.call(e);
       if (!track.builtIn) {
         // Falls back to a track that always works (and plays it).

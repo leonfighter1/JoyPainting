@@ -39,8 +39,24 @@
 36. In widget tests, `pump()` after `enterText` before tapping a button that the typing enables; the button turns on only in the next frame.
 37. `scrollUntilVisible` stops as soon as the item is built, which can be below the screen (in the cache area). Call `ensureVisible` after it before tapping.
 38. Don't infer what happened from a plugin's result without reading its code: `share_plus` on the web returns "unavailable" both after the share menu and after its download fallback.
+39. A feature must change what the user sees. After an action whose effect could be invisible (a bigger paper fitted into the same screen), show the result and say how to use it.
+40. In a browser, don't start audio before the user's first touch or click, and put a time limit on awaiting platform media calls: a refused start can stay pending forever. A touch counts when the finger lifts, a mouse click when pressed.
+41. In `flutter test` output, a failure's details are printed before that test's `[E]` line, not after it.
+42. `IndexedStack` keeps hidden children's tickers on; use `Visibility.of(context)` to know whether a page is showing.
 
 ## Log
+
+### 2026-10-25: v2.2 reports: "bigger paper not implemented", music broken with old settings
+- **Symptom:** the user saw no effect from 画纸大小; music misbehaved in a normal browser window but worked in incognito.
+- **Root cause:** the bigger sheet was scaled to fit the screen, so 4× looked like 1× with smaller drawings. With music saved as on, the web player started before any touch; the browser's audio-context start stayed pending, and `BackgroundMusic`'s queue awaited it forever. Incognito starts with music off, so it started from a tap.
+- **Fix:** zoom to real size after enlarging, plus a hint; the web player waits for the first touch, uses the finger-up event, and limits each call to 8 s; stale track ids fall back.
+- **Rule:** 39, 40.
+
+### 2026-10-25: v2.2 test snags
+- **Symptom:** shortcut tests seemed to fail on paste, and keys reached the canvas while My Paintings was showing.
+- **Root cause:** I read the failure printed before an `[E]` line as belonging to the test named after it (paste only had a pending autosave timer). `IndexedStack` uses `Visibility.maintain`, so `TickerMode` stays on for hidden tabs.
+- **Fix:** let the autosave timer run in those tests; check `Visibility.of(context)`.
+- **Rule:** 41, 42.
 
 ### 2026-10-25: v2.1 test snags
 - **Symptom:** the add-kid test never added the kid; the reset and play-order tests tapped off screen (y 1024); a "Welcome!" finder missed "Welcome! 🌸".

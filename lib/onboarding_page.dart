@@ -31,6 +31,20 @@ class OnboardingPage extends StatefulWidget {
 class _OnboardingPageState extends State<OnboardingPage> {
   late final _name = TextEditingController(text: widget.settings.kidName);
 
+  /// The suggested name last filled in: while the field still shows it,
+  /// picking another language swaps it for that language's suggestion.
+  String? _suggested;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final suggestion = S.of(context).defaultKidName;
+    if (_name.text.isEmpty || _name.text == _suggested) {
+      _name.text = suggestion;
+      _suggested = suggestion;
+    }
+  }
+
   static const _languageNames = {'en': 'English', 'zh': '简体中文'};
 
   @override

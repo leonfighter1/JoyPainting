@@ -9,6 +9,7 @@ import 'drawing/stroke.dart';
 import 'gallery/painting_archive.dart';
 import 'gallery/painting_file.dart';
 import 'gallery/painting_store.dart';
+import 'gallery/sample_painting.dart';
 import 'l10n.dart';
 import 'settings.dart';
 
@@ -88,6 +89,9 @@ class PaintingSession extends ChangeNotifier {
   /// v2.1, which have no names.
   Future<void> restoreLast() async {
     await store.nameUnnamed(_s.defaultPaintingName);
+    // Before the first-start setup the language isn't chosen yet; the home
+    // page adds it then.
+    if (settings.onboarded.value) await addSampleOnce();
     final lastId = settings.lastPaintingId;
     if (lastId != null) {
       try {
@@ -280,6 +284,57 @@ class PaintingSession extends ChangeNotifier {
       if (await _addCopy(doc) != null) added++;
     }
     return added;
+  }
+
+  /// Puts the sample painting into the current kid's My Paintings, the
+  /// first time only.
+  Future<void> addSampleOnce() async {
+    if (settings.sampleAdded) return;
+    // Marked first, so two calls at once can't add it twice.
+    settings.sampleAdded = true;
+    final now = DateTime.now();
+    final strokes = SamplePainting.strokes(_s);
+    await _addCopy(PaintingDoc(
+      meta: PaintingMeta(
+        id: '',
+        name: _s.samplePaintingName,
+        createdAt: now,
+        updatedAt: now,
+        width: SamplePainting.size.width,
+        height: SamplePainting.size.height,
+        strokeCount: strokes.length,
+      ),
+      strokes: strokes,
+      paper: SamplePainting.paper,
+    ));
+  }
+
+  /// Adds a copy of [paintingId] named [name], next to it in My Paintings
+  /// (the open one is saved first, so the copy has everything). Returns the
+  /// copy, or null if it couldn't be made.
+  Future<PaintingDoc?> duplicate(String paintingId, String name) async {
+    final PaintingDoc? doc;
+    if (paintingId == id) {
+      if (!await save()) return null;
+      doc = currentDoc();
+    } else {
+      doc = await store.load(paintingId);
+    }
+    if (doc == null) return null;
+    return _addCopy(PaintingDoc(
+      meta: PaintingMeta(
+        id: '',
+        name: name,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        width: doc.meta.width,
+        height: doc.meta.height,
+        strokeCount: doc.strokes.length,
+      ),
+      strokes: doc.strokes,
+      paper: doc.paper,
+      paperScale: doc.paperScale,
+    ));
   }
 
   /// Stores [incoming] as a new painting (fresh id, its own name or the

@@ -1,9 +1,11 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jingyao_paint/music/background_music.dart';
 import 'package:jingyao_paint/music/music_library.dart';
+import 'package:jingyao_paint/settings.dart';
 
 import 'test_helpers.dart';
 import 'widget_test.dart' show openSettings, pumpApp, tapMenu;
@@ -14,8 +16,13 @@ void main() {
   group('Music library', () {
     test('has the built-in tracks, and finds the first for unknown ids', () {
       final library = MusicLibrary(MemoryMusicFiles());
-      expect([for (final t in library.tracks) t.id],
-          ['builtin:sunny', 'builtin:twinkle']);
+      expect([for (final t in library.tracks) t.id], [
+        'builtin:sunny',
+        'builtin:twinkle',
+        'builtin:joy',
+        'builtin:tigers',
+        'builtin:clouds',
+      ]);
       expect(library.trackById('file:gone.mp3').id, 'builtin:sunny');
     });
 
@@ -60,13 +67,20 @@ void main() {
       );
       Object? reported;
       player.onError = (e) => reported = e;
+      // Switched on in an earlier visit: the page opens with music on.
+      app.settings.musicOn = true;
       player.start();
       addTearDown(player.dispose);
-      app.engine.failNext = true; // the browser refuses: no touch yet
-      app.settings.musicOn = true;
       await player.settled;
       expect(reported, isNull, reason: 'not an error, just too early');
-      expect(app.settings.musicTrack, 'builtin:sunny');
+      expect(app.engine.calls, isEmpty, reason: "doesn't even try yet");
+
+      // Some browsers still refuse on the first touch (a finger landing
+      // doesn't count, lifting it does): wait for the next one.
+      app.engine.failNext = true;
+      player.userTouched();
+      await player.settled;
+      expect(reported, isNull);
       expect(app.engine.calls, isEmpty);
 
       player.userTouched();
@@ -74,9 +88,68 @@ void main() {
       expect(app.engine.calls, ['play']);
     });
 
+    testWidgets('a start that never finishes does not block the music',
+        (tester) async {
+      final app = await createTestApp();
+      final player = BackgroundMusic(
+        settings: app.settings,
+        library: app.music,
+        engine: app.engine,
+        needsTouchToPlay: true,
+      );
+      app.settings.musicOn = true;
+      player.start();
+      addTearDown(player.dispose);
+      app.engine.hangNext = true;
+      player.userTouched();
+      await tester.pump(BackgroundMusic.callTimeout);
+      await player.settled;
+      expect(app.engine.calls, isEmpty);
+
+      player.userTouched();
+      await player.settled;
+      expect(app.engine.calls, ['play'], reason: 'the next touch starts it');
+    });
+
+    testWidgets('a saved track that is gone falls back to a bundled one',
+        (tester) async {
+      // An upload on the web lasts only until the page is reloaded, but the
+      // choice was saved.
+      final app = await createTestApp(prefs: {
+        'flutter.musicTrack': 'file:song from last time.mp3',
+        'flutter.musicMode': 'repeatOne',
+        'flutter.musicOn': true,
+      });
+      app.player.start();
+      addTearDown(app.player.dispose);
+      await app.player.settled;
+      expect(app.settings.musicTrack, 'builtin:sunny');
+      expect((app.engine.source! as AssetMusic).path, 'music/sunny_walk.wav');
+    });
+
+    testWidgets('shuffle is the default and starts on a random track',
+        (tester) async {
+      final app = await createTestApp();
+      expect(app.settings.musicMode, MusicMode.shuffle);
+      final player = BackgroundMusic(
+        settings: app.settings,
+        library: app.music,
+        engine: app.engine,
+        random: math.Random(1),
+      );
+      app.settings.musicOn = true;
+      player.start();
+      addTearDown(player.dispose);
+      await player.settled;
+      expect(app.engine.loop, isFalse, reason: 'moves on when a track ends');
+      expect(app.settings.musicTrack,
+          MusicLibrary.builtIn[math.Random(1).nextInt(5)].id);
+    });
+
     testWidgets('is quiet until switched on, then loops the chosen track',
         (tester) async {
       final app = await createTestApp();
+      app.settings.musicMode = MusicMode.repeatOne;
       app.player.start();
       addTearDown(app.player.dispose);
       await app.player.settled;
