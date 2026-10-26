@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../drawing/drawing_controller.dart';
+import '../gallery/painting_archive.dart';
+import '../gallery/painting_file.dart';
 import '../gallery/painting_store.dart';
 import '../l10n.dart';
 import '../theme/cute_theme.dart';
@@ -94,6 +96,45 @@ Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
   }
 }
 
+/// Exports paintings to keep or move to another device: one painting as
+/// its `.jypaint` file, several as one `.zip` of them. Import reads both.
+Future<void> exportPaintings(BuildContext context, List<PaintingDoc> docs) async {
+  if (docs.isEmpty) return;
+  final s = S.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final origin = shareOrigin(context);
+  try {
+    final file = docs.length == 1
+        ? ExportedFile(PaintingFile.encode(docs.single),
+            exportName(docs.single, ExportFormat.painting), PaintingFile.mimeType)
+        : ExportedFile(PaintingArchive.encode(docs),
+            s.archiveName(docs.length, DateTime.now()), PaintingArchive.mimeType);
+    await deliverExport(file, origin);
+    messenger.showSnackBar(
+        SnackBar(content: Text(s.exportedCount(docs.length))));
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(s.exportFailed(e))));
+  }
+}
+
+/// Hands an exported file over: the share sheet in the apps (save to
+/// Files, send to a chat…), a download in the browser. Replaced in tests.
+@visibleForTesting
+Future<void> Function(ExportedFile file, Rect? origin) deliverExport =
+    _deliver;
+
+Future<void> _deliver(ExportedFile file, Rect? origin) async {
+  if (kIsWeb) {
+    downloadInBrowser(file.bytes, file.name, file.mimeType);
+    return;
+  }
+  await SharePlus.instance.share(ShareParams(
+    files: [XFile.fromData(file.bytes, mimeType: file.mimeType, name: file.name)],
+    fileNameOverrides: [file.name],
+    sharePositionOrigin: origin,
+  ));
+}
+
 /// Where the share sheet points from: the area of the widget at [context],
 /// in screen coordinates. On iPad the sheet is a popover and needs one (it
 /// fails without); phones ignore it.
@@ -112,7 +153,7 @@ Future<void> printPainting(BuildContext context, PaintingDoc doc) async {
   try {
     final size = paintingSize(doc);
     final png = await DrawingController.renderPng(
-        doc.strokes, size, exportPixelRatio, paper: doc.paper);
+        doc.strokes, size, exportRatioFor(size), paper: doc.paper);
     await navigator.push(MaterialPageRoute<void>(
       fullscreenDialog: true,
       builder: (_) => PrintPreviewPage(

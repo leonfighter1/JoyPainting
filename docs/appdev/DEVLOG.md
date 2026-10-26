@@ -1,5 +1,14 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-25: v2.1.1 (import/export, bigger paper, pinned palette, moving the paper)
+- Asked, in steps: an obvious import button; export from My Paintings with checkmarks, multi-select and the filter, several as a zip and one as its own file; import reading both; the web loading text English until the language is set; a paper up to 4× bigger; a pinned palette, which on small screens became a slim strip; ✋ move-the-paper; dragging outside the paper moves it with one finger.
+- Clarified: "锁住调色板" means pinning it on screen (not a parental lock).
+- Done: see FEATURES v2.1.1. `archive` added for zips.
+- Found by tests: the wider undo bar (with ✋) overlapped the tools button on a 393px phone, so ✋ moved to the title bar; the title's pencil icon overflowed a 360px phone at 1.3× text, so it became part of the text; the strip's colors started off screen, so it got a second row.
+- Harness: PASS (analyze 0 issues, 227 tests, build web ok).
+- Emulator (2560×1600 tablet, x86_64 release APK 2.1.1): 导入/导出 buttons (then left-aligned with the year chips); checkmark selection of 2 paintings; export opened the share sheet with 快乐涂鸦_20261025_2幅.zip; ✋ in the title bar; pinning docked the palette on the right and the painting scaled to fit beside it; no app errors in logcat.
+- Not tested: browser downloads, Space-to-move on a real keyboard, the strip on a real phone, importing the exported zip on another device.
+
 ## 2026-10-25: v2.1.0 (JoyPainting, first-start setup, kids, painting names)
 - Asked: first-start language/theme (English default), email attachment from the web, default painting names with rename, kid's name in Settings and setup, device-specific texts, music play order, add/delete kids and reset behind a multiplication question; then rename the app JoyPainting / 快乐涂鸦 and a web address that ignores capitals.
 - Interpreted: kids each get their own paintings; the grown-up check guards add, delete and reset (not renaming); installs from before v2.1 see the setup once, keeping Chinese and 靖瑶; internal IDs keep "Jingyao" so updates install in place.

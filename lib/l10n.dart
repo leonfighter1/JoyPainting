@@ -223,6 +223,29 @@ class S {
       };
   String get importPainting => _t('导入画作文件', 'Import painting file');
   String get imported => _t('已导入画作，可以继续画啦', 'Painting imported. Keep drawing!');
+  // Import and export in My Paintings
+  String get importButton => _t('导入', 'Import');
+  String get exportButton => _t('导出', 'Export');
+  String get importHint => _t('可以选一幅画（.jypaint）或一个压缩包（.zip）',
+      'Choose one painting (.jypaint) or a zip with several');
+  String get exportPickHint =>
+      _t('点画作来选择，可以多选', 'Tap the paintings to export');
+  String paintingsSelected(int n) => _t('已选 $n 幅', '$n selected');
+  String get selectAll => _t('全选', 'Select all');
+  String get selectNone => _t('全不选', 'Select none');
+  String exportSelected(int n) => _t('导出 $n 幅', 'Export $n');
+  String exportedCount(int n) => _t('已导出 $n 幅画作',
+      n == 1 ? 'Exported 1 painting' : 'Exported $n paintings');
+  String importedMany(int n) => _t('已导入 $n 幅画作，在“我的画作”里',
+      n == 1 ? 'Imported 1 painting into My Paintings' : 'Imported $n paintings into My Paintings');
+  String exportFailed(Object e) => _t('导出失败：$e', 'Export failed: $e');
+
+  /// The name of a zip with several paintings.
+  String archiveName(int count, DateTime d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final date = '${d.year}${two(d.month)}${two(d.day)}';
+    return _t('快乐涂鸦_${date}_$count幅.zip', 'JoyPainting_${date}_$count paintings.zip');
+  }
   String get notAPainting =>
       _t('这个文件不是快乐涂鸦的画作', "This file isn't a JoyPainting painting");
   String sendFailed(Object e) => _t('发送失败：$e', 'Sending failed: $e');
@@ -311,19 +334,32 @@ class S {
   String get toolsTitle => _t('画笔与颜色', 'Brushes & colors');
   String get openTools => _t('打开画笔和颜色', 'Open brushes and colors');
   String get closeTools => _t('收起画笔和颜色', 'Close brushes and colors');
+  String get pinPalette => _t('固定在屏幕上，边画边选', 'Pin it here while drawing');
+  String get unpinPalette => _t('取消固定', 'Unpin');
+  String get moreTools => _t('更多：大小、形状、透明度', 'More: size, shapes, opacity');
 
   // Zoom
   String get zoomIn => _t('放大画布', 'Zoom in');
   String get zoomOut => _t('缩小画布', 'Zoom out');
   String get fitScreen => _t('适应屏幕', 'Fit to screen');
+  String get panCanvas => _t('拖动画板', 'Move the paper');
   String get pinchHint => _device.desktopOs
-      ? _t('双指捏合可以放大缩小画布，双指拖动可以移动画布；用鼠标时，滚动滚轮也能缩放',
-          'Pinch with two fingers to zoom, drag with two fingers to move; with a mouse, scroll the wheel to zoom')
-      : _t('双指捏合可以放大缩小画布，双指拖动可以移动画布',
-          'Pinch with two fingers to zoom, drag with two fingers to move');
+      ? _t('双指捏合可以放大缩小画布，双指拖动可以移动画布；用鼠标时，滚动滚轮缩放，按住空格键或点 ✋ 拖动画板',
+          'Pinch with two fingers to zoom, drag with two fingers to move; with a mouse, scroll the wheel to zoom, and hold Space or tap ✋ to move the paper')
+      : _t('双指捏合可以放大缩小画布，双指拖动可以移动画布；点 ✋ 后一根手指也能拖动画板',
+          'Pinch with two fingers to zoom, drag with two fingers to move; tap ✋ to move the paper with one finger');
   String percent(double v) => '${(v * 100).round()}%';
   String get mirror => _t('对称绘画', 'Mirror drawing');
   String get paperColor => _t('画纸颜色', 'Paper color');
+  String get paperSize => _t('画纸大小', 'Paper size');
+  String paperSizeName(double scale) => switch (scale) {
+        1 => _t('1倍 · 刚好一屏', '1× · one screen'),
+        4 => _t('4倍 · 宽和高都是 2 倍', '4× · twice as wide and tall'),
+        _ => _t('${scale.round()}倍', '${scale.round()}×'),
+      };
+  String get paperSizeHint => _t(
+      '画纸越大，能画的地方越多。整张纸会缩小放进屏幕，双指放大就能画细节。画好的部分不会被裁掉。',
+      'Bigger paper means more room to draw. The whole sheet shrinks to fit the screen; pinch to zoom in for details. Nothing drawn is ever cut off.');
   List<String> get paperNames => _zh
       ? const ['纯白', '奶油', '樱花', '天空', '薄荷', '薰衣草']
       : const ['White', 'Cream', 'Blossom', 'Sky', 'Mint', 'Lavender'];

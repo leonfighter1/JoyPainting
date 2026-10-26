@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -33,6 +34,15 @@ class ExportedFile {
 /// Pixels per canvas point in exported images: sharp enough to print.
 const exportPixelRatio = 2.0;
 
+/// Exported pictures are at most this many pixels on their longest side, so
+/// a big (4×) paper doesn't make a picture too large to save or send.
+const maxExportSide = 4096.0;
+
+/// [exportPixelRatio], lowered for big papers to stay within
+/// [maxExportSide].
+double exportRatioFor(Size size) => math.min(
+    exportPixelRatio, maxExportSide / math.max(1, math.max(size.width, size.height)));
+
 /// The painting's canvas size, with a sensible fallback for odd data.
 Size paintingSize(PaintingDoc doc) => doc.meta.width > 0 && doc.meta.height > 0
     ? Size(doc.meta.width, doc.meta.height)
@@ -42,8 +52,7 @@ Size paintingSize(PaintingDoc doc) => doc.meta.width > 0 && doc.meta.height > 0
 /// like `JoyPainting_20261024_1530.png` for a painting without a name.
 /// Characters that file systems refuse become `_`.
 String exportName(PaintingDoc doc, ExportFormat format) {
-  final name =
-      doc.meta.name.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '_').trim();
+  final name = PaintingFile.safeName(doc.meta.name, fallback: '');
   if (name.isNotEmpty) return '$name.${format.extension}';
   final d = doc.meta.updatedAt;
   String two(int n) => n.toString().padLeft(2, '0');
@@ -55,11 +64,11 @@ Future<ExportedFile> exportPainting(PaintingDoc doc, ExportFormat format) async 
   final size = paintingSize(doc);
   final Uint8List bytes = switch (format) {
     ExportFormat.png => await DrawingController.renderPng(
-        doc.strokes, size, exportPixelRatio, paper: doc.paper),
+        doc.strokes, size, exportRatioFor(size), paper: doc.paper),
     ExportFormat.jpg => await _jpg(doc, size),
     ExportFormat.pdf => await buildPdf(
         await DrawingController.renderPng(
-            doc.strokes, size, exportPixelRatio, paper: doc.paper),
+            doc.strokes, size, exportRatioFor(size), paper: doc.paper),
         size,
         PdfPageFormat.a4),
     ExportFormat.painting => PaintingFile.encode(doc),
@@ -69,7 +78,7 @@ Future<ExportedFile> exportPainting(PaintingDoc doc, ExportFormat format) async 
 
 Future<Uint8List> _jpg(PaintingDoc doc, Size size) async {
   final raw = await DrawingController.renderRgba(
-      doc.strokes, size, exportPixelRatio, paper: doc.paper);
+      doc.strokes, size, exportRatioFor(size), paper: doc.paper);
   // JPEG encoding is pure Dart and can take a moment on big paintings, so
   // do it off the UI thread where the platform allows.
   return compute(_encodeJpg, raw);

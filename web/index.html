@@ -47,10 +47,16 @@
     <div id="loading-text">JoyPainting · Loading…</div>
   </div>
   <script>
-    // Chinese browsers see the Chinese name, also on the home screen: Safari
-    // takes it from apple-mobile-web-app-title when "Add to Home Screen" is
-    // tapped. (The app itself follows its own language setting.)
-    if ((navigator.language || '').toLowerCase().indexOf('zh') === 0) {
+    // English until the app's language is set; after that, the loading
+    // screen, tab title and home-screen name (Safari reads
+    // apple-mobile-web-app-title at "Add to Home Screen") follow it. The app
+    // keeps the choice in localStorage as "flutter.language" (JSON).
+    var language = 'en';
+    try {
+      var saved = localStorage.getItem('flutter.language');
+      if (saved) language = JSON.parse(saved);
+    } catch (e) {}
+    if (language === 'zh') {
       document.documentElement.lang = 'zh-Hans';
       document.title = '快乐涂鸦';
       document.querySelector('meta[name="apple-mobile-web-app-title"]')

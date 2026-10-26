@@ -39,6 +39,51 @@ class _GalleryPageState extends State<GalleryPage> {
   /// null shows every year.
   int? _year;
 
+  /// Choosing paintings to export: tapping a card checks it.
+  bool _selecting = false;
+  final Set<String> _picked = {};
+
+  void _startSelecting([String? first]) => setState(() {
+    _selecting = true;
+    _picked.clear();
+    if (first != null) _picked.add(first);
+  });
+
+  void _stopSelecting() => setState(() {
+    _selecting = false;
+    _picked.clear();
+  });
+
+  void _toggle(String id) => setState(
+    () => _picked.contains(id) ? _picked.remove(id) : _picked.add(id),
+  );
+
+  /// All shown (the year filter applies), or none if they all are already.
+  void _toggleAll(List<PaintingMeta> shown) => setState(() {
+    final ids = {for (final p in shown) p.id};
+    if (_picked.containsAll(ids)) {
+      _picked.removeAll(ids);
+    } else {
+      _picked.addAll(ids);
+    }
+  });
+
+  /// Exports the checked paintings, in gallery order. The open one is taken
+  /// live from the canvas, so unsaved strokes are included.
+  Future<void> _exportPicked() async {
+    final docs = <PaintingDoc>[];
+    for (final meta in _paintings ?? const <PaintingMeta>[]) {
+      if (!_picked.contains(meta.id)) continue;
+      final doc = meta.id == widget.session.id
+          ? widget.session.currentDoc()
+          : await _store.load(meta.id);
+      if (doc != null) docs.add(doc);
+    }
+    if (!mounted) return;
+    await exportPaintings(context, docs);
+    if (mounted) _stopSelecting();
+  }
+
   PaintingStore get _store => widget.session.store;
 
   /// The store being listened to; it changes when another kid is chosen.
@@ -73,8 +118,11 @@ class _GalleryPageState extends State<GalleryPage> {
 
   Future<void> _rename(PaintingMeta meta) async {
     final s = S.of(context);
-    final name = await showNameDialog(context,
-        title: s.renameTitle, initial: meta.name);
+    final name = await showNameDialog(
+      context,
+      title: s.renameTitle,
+      initial: meta.name,
+    );
     if (name != null) await widget.session.rename(meta.id, name);
   }
 
@@ -87,6 +135,8 @@ class _GalleryPageState extends State<GalleryPage> {
       if (_year != null && !list.any((p) => p.createdAt.year == _year)) {
         _year = null;
       }
+      // Forget checks on paintings that are gone.
+      _picked.retainWhere((id) => list.any((p) => p.id == id));
     });
   }
 
@@ -113,11 +163,13 @@ class _GalleryPageState extends State<GalleryPage> {
         content: Text(s.deleteBody),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(s.cancel)),
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(s.cancel),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(s.delete),
           ),
@@ -129,8 +181,10 @@ class _GalleryPageState extends State<GalleryPage> {
 
   /// Sends or prints a saved painting. The open one is taken live from the
   /// canvas, so unsaved strokes are included.
-  Future<void> _withDoc(PaintingMeta meta,
-      Future<void> Function(BuildContext, PaintingDoc) action) async {
+  Future<void> _withDoc(
+    PaintingMeta meta,
+    Future<void> Function(BuildContext, PaintingDoc) action,
+  ) async {
     final doc = meta.id == widget.session.id
         ? widget.session.currentDoc()
         : await _store.load(meta.id);
@@ -152,97 +206,234 @@ class _GalleryPageState extends State<GalleryPage> {
     ];
 
     final cute = CuteTheme.of(context);
-    return Scaffold(
-      appBar: GradientAppBar(
-        title: AppLogoTitle(
-          text: all == null ? s.navGallery : '${s.navGallery} (${all.length})',
-        ),
-        actions: [
-          IconButton(
-            tooltip: s.importPainting,
-            icon: const Icon(Icons.file_open_rounded),
-            onPressed: () =>
-                pickAndImport(context, widget.session, widget.onOpened),
+    return PopScope(
+      // Back leaves choosing before it leaves the page.
+      canPop: !_selecting,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _stopSelecting();
+      },
+      child: Scaffold(
+        appBar: GradientAppBar(
+          title: AppLogoTitle(
+            text: all == null
+                ? s.navGallery
+                : '${s.navGallery} (${all.length})',
           ),
-          // Same unfolding menu as the canvas page.
-          IconButton(
-            tooltip: s.more,
-            icon: const Icon(Icons.more_vert_rounded),
-            onPressed: () => showDropMenu(context, [
-              DropMenuSection(items: [
-                DropMenuItem(
-                  icon: Icons.settings_rounded,
-                  label: s.navSettings,
-                  onSelected: widget.onOpenSettings,
+          actions: [
+            // Same unfolding menu as the canvas page.
+            IconButton(
+              tooltip: s.more,
+              icon: const Icon(Icons.more_vert_rounded),
+              onPressed: () => showDropMenu(context, [
+                DropMenuSection(
+                  items: [
+                    DropMenuItem(
+                      icon: Icons.settings_rounded,
+                      label: s.navSettings,
+                      onSelected: widget.onOpenSettings,
+                    ),
+                  ],
                 ),
               ]),
-            ]),
-          ),
-        ],
-      ),
-      // Colors come from the theme's contrast-checked secondary pair.
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _newPainting,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(s.newPainting),
-      ),
-      body: all == null
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                if (all.isNotEmpty)
-                  SizedBox(
-                    // Chips need 48px of height for an accessible tap area.
-                    height: 60,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      children: [
-                        _YearChip(
-                          label: '${s.allYears} (${all.length})',
-                          selected: _year == null,
-                          color: cute.spec.primary,
-                          onTap: () => setState(() => _year = null),
-                        ),
-                        for (final (i, y) in sortedYears.indexed)
-                          _YearChip(
-                            label: '${s.year(y)} (${years[y]})',
-                            selected: _year == y,
-                            color: cute.nav[i % cute.nav.length],
-                            onTap: () => setState(() => _year = y),
-                          ),
-                      ],
-                    ),
+            ),
+          ],
+        ),
+        // Colors come from the theme's contrast-checked secondary pair.
+        floatingActionButton: _selecting
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: _newPainting,
+                icon: const Icon(Icons.add_rounded),
+                label: Text(s.newPainting),
+              ),
+        body: all == null
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  _GalleryActions(
+                    selecting: _selecting,
+                    picked: _picked.length,
+                    allShownPicked:
+                        shown.isNotEmpty &&
+                        shown.every((p) => _picked.contains(p.id)),
+                    canExport: all.isNotEmpty,
+                    onImport: () =>
+                        pickAndImport(context, widget.session, widget.onOpened),
+                    onStartExport: () => _startSelecting(),
+                    onCancel: _stopSelecting,
+                    onToggleAll: () => _toggleAll(shown),
+                    onExport: _exportPicked,
                   ),
-                Expanded(
-                  child: shown.isEmpty
-                      ? _EmptyState(
-                          text: all.isEmpty ? s.emptyGallery : s.emptyYear)
-                      : GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
-                          gridDelegate:
-                              const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 240,
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 0.72,
-                          ),
-                          itemCount: shown.length,
-                          itemBuilder: (context, i) => _PaintingCard(
-                            meta: shown[i],
-                            store: _store,
-                            isCurrent: shown[i].id == widget.session.id,
-                            onOpen: () => _open(shown[i]),
-                            onDelete: () => _confirmDelete(shown[i]),
-                            onRename: () => _rename(shown[i]),
-                            onSend: () => _withDoc(shown[i], showSendSheet),
-                            onPrint: () => _withDoc(shown[i], printPainting),
-                          ),
+                  if (all.isNotEmpty)
+                    SizedBox(
+                      // Chips need 48px of height for an accessible tap area.
+                      height: 60,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
+                        children: [
+                          _YearChip(
+                            label: '${s.allYears} (${all.length})',
+                            selected: _year == null,
+                            color: cute.spec.primary,
+                            onTap: () => setState(() => _year = null),
+                          ),
+                          for (final (i, y) in sortedYears.indexed)
+                            _YearChip(
+                              label: '${s.year(y)} (${years[y]})',
+                              selected: _year == y,
+                              color: cute.nav[i % cute.nav.length],
+                              onTap: () => setState(() => _year = y),
+                            ),
+                        ],
+                      ),
+                    ),
+                  Expanded(
+                    child: shown.isEmpty
+                        ? _EmptyState(
+                            text: all.isEmpty ? s.emptyGallery : s.emptyYear,
+                          )
+                        : GridView.builder(
+                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
+                            gridDelegate:
+                                const SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 240,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: 0.72,
+                                ),
+                            itemCount: shown.length,
+                            itemBuilder: (context, i) => _PaintingCard(
+                              meta: shown[i],
+                              store: _store,
+                              isCurrent: shown[i].id == widget.session.id,
+                              onOpen: () => _open(shown[i]),
+                              onDelete: () => _confirmDelete(shown[i]),
+                              onRename: () => _rename(shown[i]),
+                              onSend: () => _withDoc(shown[i], showSendSheet),
+                              onPrint: () => _withDoc(shown[i], printPainting),
+                              selecting: _selecting,
+                              picked: _picked.contains(shown[i].id),
+                              onToggle: () => _toggle(shown[i].id),
+                              onLongPress: _selecting
+                                  ? null
+                                  : () => _startSelecting(shown[i].id),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// The row under the title: Import and Export, or while choosing what to
+/// export: cancel, how many are checked, select all and Export.
+class _GalleryActions extends StatelessWidget {
+  const _GalleryActions({
+    required this.selecting,
+    required this.picked,
+    required this.allShownPicked,
+    required this.canExport,
+    required this.onImport,
+    required this.onStartExport,
+    required this.onCancel,
+    required this.onToggleAll,
+    required this.onExport,
+  });
+
+  final bool selecting;
+  final int picked;
+  final bool allShownPicked;
+  final bool canExport;
+  final VoidCallback onImport;
+  final VoidCallback onStartExport;
+  final VoidCallback onCancel;
+  final VoidCallback onToggleAll;
+  final VoidCallback onExport;
+
+  static const importKey = Key('galleryImport');
+  static const exportKey = Key('galleryExport');
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final cute = CuteTheme.of(context);
+    if (!selecting) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        child: Align(
+          // In line with the year chips below.
+          alignment: AlignmentDirectional.centerStart,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              Tooltip(
+                message: s.importHint,
+                child: OutlinedButton.icon(
+                  key: importKey,
+                  icon: const Icon(Icons.file_open_rounded),
+                  label: Text(s.importButton),
+                  onPressed: onImport,
+                ),
+              ),
+              OutlinedButton.icon(
+                key: exportKey,
+                icon: const Icon(Icons.ios_share_rounded),
+                label: Text(s.exportButton),
+                onPressed: canExport ? onStartExport : null,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 12, 0),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: s.cancel,
+            icon: const Icon(Icons.close_rounded),
+            onPressed: onCancel,
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.paintingsSelected(picked),
+                  style: TextStyle(
+                    color: cute.ink,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  s.exportPickHint,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: cute.ink, fontSize: 12),
                 ),
               ],
             ),
+          ),
+          TextButton(
+            onPressed: onToggleAll,
+            child: Text(allShownPicked ? s.selectNone : s.selectAll),
+          ),
+          const SizedBox(width: 4),
+          FilledButton.icon(
+            icon: const Icon(Icons.ios_share_rounded),
+            label: Text(s.exportSelected(picked)),
+            onPressed: picked > 0 ? onExport : null,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -292,6 +483,10 @@ class _PaintingCard extends StatefulWidget {
     required this.onRename,
     required this.onSend,
     required this.onPrint,
+    required this.selecting,
+    required this.picked,
+    required this.onToggle,
+    required this.onLongPress,
   });
 
   final PaintingMeta meta;
@@ -302,6 +497,14 @@ class _PaintingCard extends StatefulWidget {
   final VoidCallback onRename;
   final VoidCallback onSend;
   final VoidCallback onPrint;
+
+  /// Choosing paintings to export: a tap checks or unchecks this one.
+  final bool selecting;
+  final bool picked;
+  final VoidCallback onToggle;
+
+  /// Starts choosing, with this painting checked.
+  final VoidCallback? onLongPress;
 
   @override
   State<_PaintingCard> createState() => _PaintingCardState();
@@ -333,8 +536,15 @@ class _PaintingCardState extends State<_PaintingCard> {
     final theme = Theme.of(context);
     final cute = CuteTheme.of(context);
     return Card(
+      shape: widget.picked
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(cute.radius),
+              side: BorderSide(color: theme.colorScheme.primary, width: 3),
+            )
+          : null,
       child: InkWell(
-        onTap: widget.onOpen,
+        onTap: widget.selecting ? widget.onToggle : widget.onOpen,
+        onLongPress: widget.onLongPress,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -347,8 +557,11 @@ class _PaintingCardState extends State<_PaintingCard> {
                     child: FutureBuilder(
                       future: _thumbnail,
                       builder: (context, snap) => snap.data == null
-                          ? Icon(Icons.image_outlined,
-                              size: 48, color: theme.colorScheme.outlineVariant)
+                          ? Icon(
+                              Icons.image_outlined,
+                              size: 48,
+                              color: theme.colorScheme.outlineVariant,
+                            )
                           : Image.memory(
                               snap.data!,
                               fit: BoxFit.contain,
@@ -358,6 +571,36 @@ class _PaintingCardState extends State<_PaintingCard> {
                             ),
                     ),
                   ),
+                  if (widget.selecting)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Semantics(
+                        checked: widget.picked,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: widget.picked
+                                ? theme.colorScheme.primary
+                                : Colors.white,
+                            border: Border.all(
+                              color: theme.colorScheme.primary,
+                              width: 2,
+                            ),
+                          ),
+                          child: widget.picked
+                              ? Icon(
+                                  Icons.check_rounded,
+                                  size: 20,
+                                  color: theme.colorScheme.onPrimary,
+                                )
+                              : null,
+                        ),
+                      ),
+                    ),
                   if (widget.isCurrent)
                     Positioned(
                       left: 8,
@@ -369,12 +612,17 @@ class _PaintingCardState extends State<_PaintingCard> {
                         ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          child: Text(s.editing,
-                              style: TextStyle(
-                                  color: cute.onHeader,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700)),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          child: Text(
+                            s.editing,
+                            style: TextStyle(
+                              color: cute.onHeader,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -391,8 +639,9 @@ class _PaintingCardState extends State<_PaintingCard> {
                       children: [
                         Text(
                           meta.name,
-                          style: theme.textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -405,48 +654,54 @@ class _PaintingCardState extends State<_PaintingCard> {
                       ],
                     ),
                   ),
-                  PopupMenuButton<VoidCallback>(
-                    onSelected: (action) => action(),
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: widget.onOpen,
-                        child: ListTile(
-                          leading: const Icon(Icons.brush_rounded),
-                          title: Text(s.continuePainting),
+                  if (widget.selecting)
+                    const SizedBox(width: 48, height: 48)
+                  else
+                    PopupMenuButton<VoidCallback>(
+                      onSelected: (action) => action(),
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: widget.onOpen,
+                          child: ListTile(
+                            leading: const Icon(Icons.brush_rounded),
+                            title: Text(s.continuePainting),
+                          ),
                         ),
-                      ),
-                      PopupMenuItem(
-                        value: widget.onRename,
-                        child: ListTile(
-                          leading: const Icon(
-                              Icons.drive_file_rename_outline_rounded),
-                          title: Text(s.rename),
+                        PopupMenuItem(
+                          value: widget.onRename,
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.drive_file_rename_outline_rounded,
+                            ),
+                            title: Text(s.rename),
+                          ),
                         ),
-                      ),
-                      PopupMenuItem(
-                        value: widget.onSend,
-                        child: ListTile(
-                          leading: const Icon(Icons.send_rounded),
-                          title: Text(s.send),
+                        PopupMenuItem(
+                          value: widget.onSend,
+                          child: ListTile(
+                            leading: const Icon(Icons.send_rounded),
+                            title: Text(s.send),
+                          ),
                         ),
-                      ),
-                      PopupMenuItem(
-                        value: widget.onPrint,
-                        child: ListTile(
-                          leading: const Icon(Icons.print_rounded),
-                          title: Text(s.print),
+                        PopupMenuItem(
+                          value: widget.onPrint,
+                          child: ListTile(
+                            leading: const Icon(Icons.print_rounded),
+                            title: Text(s.print),
+                          ),
                         ),
-                      ),
-                      PopupMenuItem(
-                        value: widget.onDelete,
-                        child: ListTile(
-                          leading: Icon(Icons.delete_outline_rounded,
-                              color: theme.colorScheme.error),
-                          title: Text(s.delete),
+                        PopupMenuItem(
+                          value: widget.onDelete,
+                          child: ListTile(
+                            leading: Icon(
+                              Icons.delete_outline_rounded,
+                              color: theme.colorScheme.error,
+                            ),
+                            title: Text(s.delete),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -476,8 +731,11 @@ class _EmptyState extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: cute.headerGradient,
             ),
-            child: Icon(Icons.palette_rounded,
-                size: 64, color: cute.spec.primary),
+            child: Icon(
+              Icons.palette_rounded,
+              size: 64,
+              color: cute.spec.primary,
+            ),
           ),
           const SizedBox(height: 16),
           Text(

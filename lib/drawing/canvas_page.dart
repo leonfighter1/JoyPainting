@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart'
     show PointerHoverEvent, PointerScrollEvent;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 
@@ -104,6 +105,8 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     _viewFor = widget.session.id;
     widget.session.addListener(_onSessionChanged);
     _settings.addListener(_onSettingsChanged);
+    panMode.addListener(_updatePanning);
+    HardwareKeyboard.instance.addHandler(_onKey);
     _drawing.addListener(_onDrawingChanged);
     selectionFrame.addListener(_scheduleBarAnchor);
     view.addListener(_scheduleBarAnchor);
@@ -122,6 +125,9 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   void dispose() {
     widget.session.removeListener(_onSessionChanged);
     _settings.removeListener(_onSettingsChanged);
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    panMode.dispose();
+    _panning.dispose();
     _drawing.removeListener(_onDrawingChanged);
     selected.dispose();
     selectionFrame.dispose();
@@ -147,17 +153,42 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
 
   void _onFrameDown(PointerDownEvent e) {
     _touches[e.pointer] = e.localPosition;
-    if (_touches.length == 2) _startPinch();
+    if (_touches.length == 2) {
+      _outsideDrag = null;
+      _startPinch();
+      return;
+    }
+    // The paper sees a touch first; one it didn't take landed outside the
+    // paper (zoomed out, moved, or a sheet of another shape). Dragging
+    // there moves the paper.
+    if (_touches.length == 1 && _activePointer != e.pointer && !_pinching) {
+      _outsideDrag = (
+        pointer: e.pointer,
+        start: e.position,
+        view: view.value.clone(),
+      );
+    }
   }
+
+  /// A drag that started outside the paper, moving it.
+  ({int pointer, Offset start, Matrix4 view})? _outsideDrag;
 
   void _onFrameMove(PointerMoveEvent e) {
     if (!_touches.containsKey(e.pointer)) return;
     _touches[e.pointer] = e.localPosition;
-    if (_pinchStart != null) _updatePinch();
+    if (_pinchStart != null) {
+      _updatePinch();
+      return;
+    }
+    if (_outsideDrag case final g? when g.pointer == e.pointer) {
+      final d = e.position - g.start;
+      view.value = Matrix4.translationValues(d.dx, d.dy, 0).multiplied(g.view);
+    }
   }
 
   void _onFrameUp(PointerEvent e) {
     _touches.remove(e.pointer);
+    if (_outsideDrag?.pointer == e.pointer) _outsideDrag = null;
     if (_touches.length < 2) _pinchStart = null;
     if (_touches.isEmpty) _pinching = false;
   }
@@ -245,12 +276,43 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     return PointVector(e.localPosition.dx, e.localPosition.dy, pressure);
   }
 
+  // --- Moving the paper (拖动画板) ----------------------------------------
+
+  /// The ✋ button: while on, one finger or the mouse moves the paper
+  /// instead of drawing (handy on big papers, and with a mouse, which
+  /// can't do a two-finger drag).
+  final panMode = ValueNotifier<bool>(false);
+
+  /// Whether a drag moves the paper now: the ✋ button, or the space bar
+  /// held down (as in drawing programs on computers).
+  final _panning = ValueNotifier<bool>(false);
+  bool _spaceHeld = false;
+  ({Offset start, Matrix4 view})? _panGesture;
+
+  void _updatePanning() => _panning.value = panMode.value || _spaceHeld;
+
+  bool _onKey(KeyEvent e) {
+    if (e.logicalKey != LogicalKeyboardKey.space) return false;
+    // Typing a space in a text field isn't a request to move the paper.
+    final typing = FocusManager.instance.primaryFocus?.context
+        ?.findAncestorWidgetOfExactType<EditableText>();
+    if (typing != null) return false;
+    _spaceHeld = e is! KeyUpEvent;
+    _updatePanning();
+    return false;
+  }
+
   void _onDown(PointerDownEvent e) {
     // Ignore extra fingers here: a second finger starts a pinch (handled by
     // the frame listener), and nothing draws until every finger lifts.
     if (_activePointer != null || _pinching) return;
     _activePointer = e.pointer;
     _lastPointer = e.localPosition;
+    if (_panning.value) {
+      // Screen positions: the paper moves under the finger.
+      _panGesture = (start: e.position, view: view.value.clone());
+      return;
+    }
     if (_settings.brush == BrushType.text) {
       _textGesture = (
         hit: _drawing.hitText(e.localPosition),
@@ -309,6 +371,11 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   void _onMove(PointerMoveEvent e) {
     if (e.pointer != _activePointer || _pinching) return;
     _lastPointer = e.localPosition;
+    if (_panGesture case final g?) {
+      final d = e.position - g.start;
+      view.value = Matrix4.translationValues(d.dx, d.dy, 0).multiplied(g.view);
+      return;
+    }
     if (_textGesture != null) {
       _dragText(e.localPosition);
       return;
@@ -330,6 +397,10 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     _activePointer = null;
     _longPress?.cancel();
     _eraserCursor.value = null;
+    if (_panGesture != null) {
+      _panGesture = null;
+      return;
+    }
     if (_textGesture case final g?) {
       _textGesture = null;
       // A tap (not a drag, not a cancelled touch) adds or edits text.
@@ -436,8 +507,12 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     final hit = _drawing.hitStroke(p);
     if (hit != null && !sel.contains(hit)) {
       _select([hit]);
-      _moveGesture =
-          _MoveGesture(_MoveMode.drag, [hit], p, selectionFrame.value!.box);
+      _moveGesture = _MoveGesture(
+        _MoveMode.drag,
+        [hit],
+        p,
+        selectionFrame.value!.box,
+      );
       return;
     }
     if (frame != null && (hit != null || frame.box.contains(p))) {
@@ -461,9 +536,9 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
         if (g.current == null && delta.distance < _dragSlop) return;
         _applyMove(g, [for (final s in g.originals) s.moved(delta)]);
       case _MoveMode.scale:
-        final k = ((p - center).distance /
-                math.max(1, (g.down - center).distance))
-            .clamp(minSelectionScale, maxSelectionScale);
+        final k =
+            ((p - center).distance / math.max(1, (g.down - center).distance))
+                .clamp(minSelectionScale, maxSelectionScale);
         _applyMove(g, null, StrokeTransform.around(center, scale: k));
       case _MoveMode.rotate:
         final angle = (p - center).direction - (g.down - center).direction;
@@ -513,8 +588,11 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     final sel = selected.value;
     final frame = selectionFrame.value;
     if (sel.isEmpty || frame == null) return;
-    final t =
-        StrokeTransform.around(frame.box.center, scale: scale, angle: angle);
+    final t = StrokeTransform.around(
+      frame.box.center,
+      scale: scale,
+      angle: angle,
+    );
     final next = [for (final s in sel) s.transformed(t)];
     _drawing.replaceAll(sel, next);
     _select(next);
@@ -606,7 +684,10 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   void _onDrawingChanged() {
     if (_moveGesture != null) return;
     final sel = selected.value;
-    final kept = [for (final s in sel) if (_drawing.strokes.contains(s)) s];
+    final kept = [
+      for (final s in sel)
+        if (_drawing.strokes.contains(s)) s,
+    ];
     if (kept.length != sel.length) _select(kept);
   }
 
@@ -767,6 +848,53 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     }
   }
 
+  /// 1 to 4 screens' worth of paper. Undoable, like paper color.
+  Future<void> _pickPaperSize() async {
+    final s = S.of(context);
+    final current = _drawing.paperScale;
+    final picked = await showDialog<double>(
+      context: context,
+      builder: (context) {
+        final primary = Theme.of(context).colorScheme.primary;
+        return SimpleDialog(
+          title: Text(s.paperSize),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(s.paperSizeHint),
+            ),
+            for (final scale in DrawingController.paperScales)
+              ListTile(
+                leading: SizedBox(
+                  width: 48,
+                  height: 40,
+                  child: Center(
+                    // The sheet drawn to scale (4× is twice as wide).
+                    child: Container(
+                      width: 22 * math.sqrt(scale),
+                      height: 18 * math.sqrt(scale),
+                      decoration: BoxDecoration(
+                        color: primary.withValues(alpha: 0.12),
+                        border: Border.all(color: primary, width: 1.5),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                ),
+                title: Text(s.paperSizeName(scale)),
+                selected: scale == current,
+                trailing: scale == current
+                    ? Icon(Icons.check_circle_rounded, color: primary)
+                    : null,
+                onTap: () => Navigator.pop(context, scale),
+              ),
+          ],
+        );
+      },
+    );
+    if (picked != null) _drawing.setPaperScale(picked);
+  }
+
   Future<void> _confirmClear() async {
     final s = S.of(context);
     final ok = await showDialog<bool>(
@@ -839,6 +967,12 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
             label: s.fitScreen,
             onSelected: resetView,
           ),
+          DropMenuItem(
+            icon: Icons.pan_tool_rounded,
+            label: s.panCanvas,
+            checked: panMode.value,
+            onSelected: () => panMode.value = !panMode.value,
+          ),
         ],
       ),
       DropMenuSection(
@@ -854,6 +988,11 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
             icon: Icons.wallpaper_rounded,
             label: s.paperColor,
             onSelected: _pickPaper,
+          ),
+          DropMenuItem(
+            icon: Icons.aspect_ratio_rounded,
+            label: s.paperSize,
+            onSelected: _pickPaperSize,
           ),
         ],
       ),
@@ -1016,6 +1155,23 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
               ],
             ),
           ),
+          // ✋ Move the paper: one tap away, and in the title bar it never
+          // crowds the corner controls on a narrow phone.
+          ValueListenableBuilder(
+            valueListenable: panMode,
+            builder: (context, on, _) => IconButton(
+              tooltip: s.panCanvas,
+              isSelected: on,
+              icon: const Icon(Icons.pan_tool_outlined),
+              selectedIcon: const Icon(Icons.pan_tool_rounded),
+              style: on
+                  ? IconButton.styleFrom(
+                      backgroundColor: cute.onHeader.withValues(alpha: 0.18),
+                    )
+                  : null,
+              onPressed: () => panMode.value = !on,
+            ),
+          ),
           IconButton(
             tooltip: s.more,
             icon: const Icon(Icons.more_vert_rounded),
@@ -1030,158 +1186,214 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
           if (!didPop) _closeTools();
         },
         child: LayoutBuilder(
-          builder: (context, box) {
-            final drawerWidth = math.min(drawerMaxWidth, box.maxWidth * 0.88);
-            final slide = CurvedAnimation(
-              parent: _tools,
-              curve: Curves.easeOutCubic,
-              reverseCurve: Curves.easeInCubic,
+          builder: (context, outer) {
+            // A pinned palette sits beside the paper instead of sliding over it.
+            final locked = _settings.paletteLocked;
+            // An upright phone has no room for the whole palette beside the
+            // paper: a one-row strip sits below it instead, and "More" still
+            // slides the full drawer in.
+            final strip = locked && outer.maxWidth < 600;
+            final stage = LayoutBuilder(
+              builder: (context, box) {
+                final drawerWidth = math.min(
+                  drawerMaxWidth,
+                  box.maxWidth * 0.88,
+                );
+                final slide = CurvedAnimation(
+                  parent: _tools,
+                  curve: Curves.easeOutCubic,
+                  reverseCurve: Curves.easeInCubic,
+                );
+                final area = box.biggest;
+                final margin = EdgeInsets.fromLTRB(
+                  16,
+                  14,
+                  16,
+                  16 + MediaQuery.paddingOf(context).bottom,
+                );
+                // The drawer opens from the side the tools button is on.
+                final fromLeft = _settings.toolsCorner.isLeft;
+                return Stack(
+                  key: _stackKey,
+                  children: [
+                    Positioned.fill(child: _buildPaper(s, cute)),
+                    // Centered at the top, clear of every corner.
+                    Positioned(
+                      top: 16,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: _ZoomChip(view: view, onReset: resetView),
+                      ),
+                    ),
+                    // What the move tool can do with the selection, right next to
+                    // it (and under the corner controls, which stay usable).
+                    if (_settings.brush == BrushType.move)
+                      Positioned.fill(
+                        child: ValueListenableBuilder(
+                          valueListenable: _barAnchor,
+                          builder: (context, anchor, bar) => anchor == null
+                              ? const SizedBox.shrink()
+                              : CustomSingleChildLayout(
+                                  delegate: _NextToSelection(anchor),
+                                  child: bar,
+                                ),
+                          child: _SelectionBar(
+                            selected: selected,
+                            hide: slide,
+                            actions: [
+                              (
+                                Icons.copy_rounded,
+                                s.duplicate,
+                                _duplicateSelection,
+                              ),
+                              (
+                                Icons.open_in_full_rounded,
+                                s.makeBigger,
+                                () => _transformSelection(scale: 1.25),
+                              ),
+                              (
+                                Icons.close_fullscreen_rounded,
+                                s.makeSmaller,
+                                () => _transformSelection(scale: 0.8),
+                              ),
+                              (
+                                Icons.rotate_left_rounded,
+                                s.turnLeft,
+                                () => _transformSelection(angle: -math.pi / 12),
+                              ),
+                              (
+                                Icons.rotate_right_rounded,
+                                s.turnRight,
+                                () => _transformSelection(angle: math.pi / 12),
+                              ),
+                              (
+                                Icons.palette_rounded,
+                                s.colorAndOpacity,
+                                _showSelectionStyle,
+                              ),
+                              (
+                                Icons.delete_outline_rounded,
+                                s.deleteSelection,
+                                _deleteSelection,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    // Undo/redo and the tools button can each be dragged to any
+                    // corner; they never share one.
+                    CornerFloat(
+                      key: undoFloatKey,
+                      corner: _settings.undoCorner,
+                      blocked: _settings.toolsCorner,
+                      area: area,
+                      margin: margin,
+                      onCornerChanged: (c) => _settings.undoCorner = c,
+                      child: _UndoRedoBar(drawing: _drawing, hide: slide),
+                    ),
+                    if (!locked)
+                      CornerFloat(
+                        key: toolsFloatKey,
+                        corner: _settings.toolsCorner,
+                        blocked: _settings.undoCorner,
+                        area: area,
+                        margin: margin,
+                        onCornerChanged: (c) => _settings.toolsCorner = c,
+                        child: _ToolsLauncher(
+                          key: toolsButtonKey,
+                          settings: _settings,
+                          fromLeft: fromLeft,
+                          // Fades and shrinks away as the drawer slides in.
+                          hide: slide,
+                          onTap: _openTools,
+                        ),
+                      ),
+                    if ((!locked || strip) && _toolsShown) ...[
+                      Positioned.fill(
+                        child: FadeTransition(
+                          opacity: slide,
+                          child: ModalBarrier(
+                            color: Colors.black.withValues(alpha: 0.22),
+                            dismissible: true,
+                            onDismiss: _closeTools,
+                            semanticsLabel: s.closeTools,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 0,
+                        bottom: 0,
+                        left: fromLeft ? 0 : null,
+                        right: fromLeft ? null : 0,
+                        width: drawerWidth,
+                        child: SlideTransition(
+                          position: Tween(
+                            begin: Offset(fromLeft ? -1 : 1, 0),
+                            end: Offset.zero,
+                          ).animate(slide),
+                          child: _ToolDrawer(
+                            settings: _settings,
+                            palette: _palette,
+                            fromLeft: fromLeft,
+                            locked: false,
+                            pinned: locked,
+                            onToggleLock: _togglePaletteLock,
+                            onClose: _closeTools,
+                            onMoreColors: _pickColor,
+                            // Dragging the header back toward its edge closes it.
+                            onDrag: (dx) => _tools.value -=
+                                (fromLeft ? -dx : dx) / drawerWidth,
+                            onDragEnd: (velocity) =>
+                                (fromLeft ? -velocity : velocity) > 300 ||
+                                    _tools.value < 0.6
+                                ? _closeTools()
+                                : _openTools(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             );
-            final area = box.biggest;
-            final margin = EdgeInsets.fromLTRB(
-              16,
-              14,
-              16,
-              16 + MediaQuery.paddingOf(context).bottom,
-            );
-            // The drawer opens from the side the tools button is on.
+            if (!locked) return stage;
             final fromLeft = _settings.toolsCorner.isLeft;
-            return Stack(
-              key: _stackKey,
-              children: [
-                Positioned.fill(child: _buildPaper(s, cute)),
-                // Centered at the top, clear of every corner.
-                Positioned(
-                  top: 16,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: _ZoomChip(view: view, onReset: resetView),
-                  ),
-                ),
-                // What the move tool can do with the selection, right next to
-                // it (and under the corner controls, which stay usable).
-                if (_settings.brush == BrushType.move)
-                  Positioned.fill(
-                    child: ValueListenableBuilder(
-                      valueListenable: _barAnchor,
-                      builder: (context, anchor, bar) => anchor == null
-                          ? const SizedBox.shrink()
-                          : CustomSingleChildLayout(
-                              delegate: _NextToSelection(anchor),
-                              child: bar,
-                            ),
-                      child: _SelectionBar(
-                        selected: selected,
-                        hide: slide,
-                        actions: [
-                          (
-                            Icons.copy_rounded,
-                            s.duplicate,
-                            _duplicateSelection,
-                          ),
-                          (
-                            Icons.open_in_full_rounded,
-                            s.makeBigger,
-                            () => _transformSelection(scale: 1.25),
-                          ),
-                          (
-                            Icons.close_fullscreen_rounded,
-                            s.makeSmaller,
-                            () => _transformSelection(scale: 0.8),
-                          ),
-                          (
-                            Icons.rotate_left_rounded,
-                            s.turnLeft,
-                            () => _transformSelection(angle: -math.pi / 12),
-                          ),
-                          (
-                            Icons.rotate_right_rounded,
-                            s.turnRight,
-                            () => _transformSelection(angle: math.pi / 12),
-                          ),
-                          (
-                            Icons.palette_rounded,
-                            s.colorAndOpacity,
-                            _showSelectionStyle,
-                          ),
-                          (
-                            Icons.delete_outline_rounded,
-                            s.deleteSelection,
-                            _deleteSelection,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                // Undo/redo and the tools button can each be dragged to any
-                // corner; they never share one.
-                CornerFloat(
-                  key: undoFloatKey,
-                  corner: _settings.undoCorner,
-                  blocked: _settings.toolsCorner,
-                  area: area,
-                  margin: margin,
-                  onCornerChanged: (c) => _settings.undoCorner = c,
-                  child: _UndoRedoBar(drawing: _drawing, hide: slide),
-                ),
-                CornerFloat(
-                  key: toolsFloatKey,
-                  corner: _settings.toolsCorner,
-                  blocked: _settings.undoCorner,
-                  area: area,
-                  margin: margin,
-                  onCornerChanged: (c) => _settings.toolsCorner = c,
-                  child: _ToolsLauncher(
-                    key: toolsButtonKey,
-                    settings: _settings,
-                    fromLeft: fromLeft,
-                    // Fades and shrinks away as the drawer slides in.
-                    hide: slide,
-                    onTap: _openTools,
-                  ),
-                ),
-                if (_toolsShown) ...[
-                  Positioned.fill(
-                    child: FadeTransition(
-                      opacity: slide,
-                      child: ModalBarrier(
-                        color: Colors.black.withValues(alpha: 0.22),
-                        dismissible: true,
-                        onDismiss: _closeTools,
-                        semanticsLabel: s.closeTools,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 0,
-                    bottom: 0,
-                    left: fromLeft ? 0 : null,
-                    right: fromLeft ? null : 0,
-                    width: drawerWidth,
-                    child: SlideTransition(
-                      position: Tween(
-                        begin: Offset(fromLeft ? -1 : 1, 0),
-                        end: Offset.zero,
-                      ).animate(slide),
-                      child: _ToolDrawer(
-                        settings: _settings,
-                        palette: _palette,
-                        fromLeft: fromLeft,
-                        onClose: _closeTools,
-                        onMoreColors: _pickColor,
-                        // Dragging the header back toward its edge closes it.
-                        onDrag: (dx) =>
-                            _tools.value -= (fromLeft ? -dx : dx) / drawerWidth,
-                        onDragEnd: (velocity) =>
-                            (fromLeft ? -velocity : velocity) > 300 ||
-                                _tools.value < 0.6
-                            ? _closeTools()
-                            : _openTools(),
-                      ),
-                    ),
-                  ),
+            final panel = _ToolDrawer(
+              key: dockedPaletteKey,
+              settings: _settings,
+              palette: _palette,
+              fromLeft: fromLeft,
+              locked: true,
+              pinned: true,
+              onToggleLock: _togglePaletteLock,
+              onClose: _togglePaletteLock,
+              onMoreColors: _pickColor,
+              onDrag: (_) {},
+              onDragEnd: (_) {},
+            );
+            // Beside the paper where there's room (tablets, phones turned
+            // sideways), below it on a phone held upright.
+            if (outer.maxWidth >= 600) {
+              final width = math.min(drawerMaxWidth, outer.maxWidth * 0.4);
+              return Row(
+                children: [
+                  if (fromLeft) SizedBox(width: width, child: panel),
+                  Expanded(child: stage),
+                  if (!fromLeft) SizedBox(width: width, child: panel),
                 ],
+              );
+            }
+            return Column(
+              children: [
+                Expanded(child: stage),
+                _PaletteStrip(
+                  key: dockedPaletteKey,
+                  settings: _settings,
+                  palette: _palette,
+                  onMore: _openTools,
+                  onUnpin: _togglePaletteLock,
+                ),
               ],
             );
           },
@@ -1190,6 +1402,14 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     );
   }
 
+  /// Pins the palette beside the paper, or lets it slide away again.
+  void _togglePaletteLock() {
+    _settings.paletteLocked = !_settings.paletteLocked;
+    // The docked panel replaces the sliding one, and the other way round.
+    _tools.value = 0;
+  }
+
+  static const dockedPaletteKey = Key('dockedPalette');
   static const drawerMaxWidth = 360.0;
 
   /// Finds the tools button and the drawer's scrolling list in tests.
@@ -1211,16 +1431,22 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
       child: ListenableBuilder(
-        // An opened painting brings its own content.
-        listenable: widget.session,
+        // An opened painting brings its own content and paper size.
+        listenable: Listenable.merge([
+          widget.session,
+          _drawing.paperScaleListenable,
+          _panning,
+        ]),
         builder: (context, _) => LayoutBuilder(
           builder: (context, constraints) {
             final room = constraints.biggest;
             _room = room;
             final drawn = _drawing.contentBounds;
+            // A bigger paper is more screens' worth of room, by area.
+            final grow = math.sqrt(_drawing.paperScale);
             final size = Size(
-              math.max(room.width, drawn.right),
-              math.max(room.height, drawn.bottom),
+              math.max(room.width * grow, drawn.right),
+              math.max(room.height * grow, drawn.bottom),
             );
             widget.session.canvasSize = size;
             return ClipRect(
@@ -1277,6 +1503,10 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                 child: Semantics(
                   label: s.canvasLabel,
                   child: MouseRegion(
+                    // A hand while dragging moves the paper.
+                    cursor: _panning.value
+                        ? SystemMouseCursors.grab
+                        : MouseCursor.defer,
                     onHover: _onHover,
                     onExit: (_) => _eraserCursor.value = null,
                     child: Listener(
@@ -1456,11 +1686,15 @@ class CanvasOverlayPainter extends CustomPainter {
     canvas.drawRRect(box, Paint()..color = accent.withValues(alpha: 0.06));
     for (final metric in (Path()..addRRect(box)).computeMetrics()) {
       for (var d = 0.0; d < metric.length; d += 12) {
-        canvas.drawPath(metric.extractPath(d, d + 7), dash..strokeWidth = 2 / scale);
+        canvas.drawPath(
+          metric.extractPath(d, d + 7),
+          dash..strokeWidth = 2 / scale,
+        );
       }
     }
     final r = f.box;
-    final knob = r.topCenter - const Offset(0, SelectionFrameHandles.rotateHandleGap);
+    final knob =
+        r.topCenter - const Offset(0, SelectionFrameHandles.rotateHandleGap);
     canvas.drawLine(r.topCenter, knob, dash..strokeWidth = 2 / scale);
     for (final c in [r.topLeft, r.topRight, r.bottomLeft]) {
       canvas
@@ -1718,15 +1952,27 @@ class _ToolDrawer extends StatelessWidget {
     required this.settings,
     required this.palette,
     required this.fromLeft,
+    required this.locked,
+    required this.pinned,
+    required this.onToggleLock,
     required this.onClose,
     required this.onMoreColors,
     required this.onDrag,
     required this.onDragEnd,
+    super.key,
   });
 
   final AppSettings settings;
   final List<Color> palette;
   final bool fromLeft;
+
+  /// Pinned beside the paper (no close button, no swipe to close).
+  final bool locked;
+
+  /// Whether the palette is pinned (the 📌 shows it), also when this is
+  /// the full drawer opened from the strip on a phone.
+  final bool pinned;
+  final VoidCallback onToggleLock;
   final VoidCallback onClose;
   final VoidCallback onMoreColors;
   final ValueChanged<double> onDrag;
@@ -1769,10 +2015,22 @@ class _ToolDrawer extends StatelessWidget {
                       ),
                     ),
                     IconButton(
-                      tooltip: s.closeTools,
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: onClose,
+                      tooltip: pinned ? s.unpinPalette : s.pinPalette,
+                      icon: Icon(
+                        pinned
+                            ? Icons.push_pin_rounded
+                            : Icons.push_pin_outlined,
+                      ),
+                      color: pinned ? cute.spec.primary : null,
+                      isSelected: pinned,
+                      onPressed: onToggleLock,
                     ),
+                    if (!locked)
+                      IconButton(
+                        tooltip: s.closeTools,
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: onClose,
+                      ),
                   ],
                 ),
               ),
@@ -2596,10 +2854,9 @@ class _NextToSelection extends SingleChildLayoutDelegate {
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
-      BoxConstraints.loose(Size(
-        math.max(0, constraints.maxWidth - 32),
-        constraints.maxHeight,
-      ));
+      BoxConstraints.loose(
+        Size(math.max(0, constraints.maxWidth - 32), constraints.maxHeight),
+      );
 
   @override
   Offset getPositionForChild(Size size, Size child) {
@@ -2622,4 +2879,176 @@ class _NextToSelection extends SingleChildLayoutDelegate {
 
   @override
   bool shouldRelayout(_NextToSelection old) => old.anchor != anchor;
+}
+
+/// The pinned palette on an upright phone: one row under the paper with
+/// every brush and the colors, scrolling sideways, so most of the screen
+/// stays paper. "More" slides in the full drawer (sizes, shapes, opacity).
+class _PaletteStrip extends StatelessWidget {
+  const _PaletteStrip({
+    super.key,
+    required this.settings,
+    required this.palette,
+    required this.onMore,
+    required this.onUnpin,
+  });
+
+  final AppSettings settings;
+  final List<Color> palette;
+  final VoidCallback onMore;
+  final VoidCallback onUnpin;
+
+  static const rowHeight = 52.0;
+  static const height = rowHeight * 2;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final cute = CuteTheme.of(context);
+    final brush = settings.brush;
+    final colors = [
+      for (final c in settings.customColors)
+        if (!palette.any((p) => p.toARGB32() == c.toARGB32())) c,
+      ...palette,
+    ];
+    return Material(
+      elevation: 12,
+      shadowColor: cute.spec.primary.withValues(alpha: 0.4),
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(cute.radius)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: height,
+          child: Row(
+            children: [
+              // Brushes above, colors below: both one tap away, each row
+              // scrolling sideways on its own.
+              Expanded(
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: rowHeight,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        children: [
+                          for (final b in BrushType.values)
+                            _MiniBrush(
+                              brush: b,
+                              label: s.brushName(b),
+                              selected: b == brush,
+                              onTap: () => settings.brush = b,
+                            ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: rowHeight,
+                      // Picking a color while erasing switches to the pen,
+                      // as in the drawer.
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        children: [
+                          for (final c in colors)
+                            _Swatch(
+                              color: c,
+                              label: s.colorLabel(c),
+                              selected: brush.usesColor &&
+                                  c.toARGB32() == settings.color.toARGB32(),
+                              onTap: () => settings.color = c,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    tooltip: s.moreTools,
+                    icon: const Icon(Icons.tune_rounded),
+                    color: cute.ink,
+                    onPressed: onMore,
+                  ),
+                  IconButton(
+                    tooltip: s.unpinPalette,
+                    icon: const Icon(Icons.push_pin_rounded),
+                    color: cute.spec.primary,
+                    onPressed: onUnpin,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A brush as a small round button for the strip (48×48 to tap).
+class _MiniBrush extends StatelessWidget {
+  const _MiniBrush({
+    required this.brush,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final BrushType brush;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cute = CuteTheme.of(context);
+    final accent = AppTheme.brushColor(brush);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: label,
+        child: InkResponse(
+          onTap: onTap,
+          radius: 24,
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Center(
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected
+                      ? accent
+                      : accent.withValues(alpha: AppTheme.brushTintAlpha),
+                  border: Border.all(
+                    color: selected
+                        ? Colors.white
+                        : accent.withValues(alpha: 0.25),
+                    width: selected ? 3 : 1.5,
+                  ),
+                ),
+                child: Icon(
+                  AppTheme.brushIcon(brush),
+                  size: 20,
+                  color: selected ? cute.onColor(accent) : accent,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

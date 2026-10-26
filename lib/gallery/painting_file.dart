@@ -14,6 +14,14 @@ abstract final class PaintingFile {
   static const version = 1;
   static const _format = 'jingyao-paint';
 
+  /// [name] as a file name: characters file systems refuse become `_`;
+  /// [fallback] when nothing is left.
+  static String safeName(String name, {required String fallback}) {
+    final clean =
+        name.replaceAll(RegExp(r'[\/:*?"<>|\x00-\x1F]'), '_').trim();
+    return clean.isEmpty ? fallback : clean;
+  }
+
   static Uint8List encode(PaintingDoc doc) => utf8.encode(jsonEncode({
         'format': _format,
         'version': version,

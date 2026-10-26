@@ -8,10 +8,12 @@ import 'stroke.dart';
 
 /// What the drawing looked like before an edit, for undo and redo.
 class _Snapshot {
-  _Snapshot(List<Stroke> strokes, this.paper) : strokes = List.of(strokes);
+  _Snapshot(List<Stroke> strokes, this.paper, this.paperScale)
+      : strokes = List.of(strokes);
 
   final List<Stroke> strokes;
   final Color paper;
+  final double paperScale;
 }
 
 /// Holds the strokes and paper color of the open painting, plus its
@@ -26,6 +28,13 @@ class DrawingController extends ChangeNotifier {
   final List<_Snapshot> _redo = [];
   Stroke? current;
   Color paper = Colors.white;
+
+  /// How much paper there is, as screens' worth by area: 1 fills the
+  /// screen, 4 is twice as wide and twice as tall. The whole sheet still
+  /// fits on screen (smaller); zoom in to draw details.
+  double get paperScale => paperScaleListenable.value;
+  final paperScaleListenable = ValueNotifier<double>(1);
+  static const paperScales = [1.0, 2.0, 3.0, 4.0];
 
   /// Older steps are forgotten past this many, to bound memory.
   static const maxUndo = 100;
@@ -163,13 +172,13 @@ class DrawingController extends ChangeNotifier {
 
   void undo() {
     if (!canUndo) return;
-    _redo.add(_Snapshot(strokes, paper));
+    _redo.add(_Snapshot(strokes, paper, paperScale));
     _restore(_undo.removeLast());
   }
 
   void redo() {
     if (!canRedo) return;
-    _undo.add(_Snapshot(strokes, paper));
+    _undo.add(_Snapshot(strokes, paper, paperScale));
     _restore(_redo.removeLast());
   }
 
@@ -182,6 +191,14 @@ class DrawingController extends ChangeNotifier {
     _changed();
   }
 
+  void setPaperScale(double scale) {
+    final clamped = scale.clamp(1.0, 4.0);
+    if (clamped == paperScale) return;
+    _record();
+    paperScaleListenable.value = clamped;
+    _changed();
+  }
+
   void setPaper(Color color) {
     if (color.toARGB32() == paper.toARGB32()) return;
     _record();
@@ -190,7 +207,8 @@ class DrawingController extends ChangeNotifier {
   }
 
   /// Replaces the drawing with [loaded] strokes and forgets undo history.
-  void load(List<Stroke> loaded, {Color paper = Colors.white}) {
+  void load(List<Stroke> loaded,
+      {Color paper = Colors.white, double paperScale = 1}) {
     strokes
       ..clear()
       ..addAll(loaded);
@@ -198,12 +216,13 @@ class DrawingController extends ChangeNotifier {
     _redo.clear();
     current = null;
     this.paper = paper;
+    paperScaleListenable.value = paperScale;
     revision++;
     notifyListeners();
   }
 
   void _record() {
-    _undo.add(_Snapshot(strokes, paper));
+    _undo.add(_Snapshot(strokes, paper, paperScale));
     if (_undo.length > maxUndo) _undo.removeAt(0);
     _redo.clear();
   }
@@ -213,6 +232,7 @@ class DrawingController extends ChangeNotifier {
       ..clear()
       ..addAll(s.strokes);
     paper = s.paper;
+    paperScaleListenable.value = s.paperScale;
     _changed();
   }
 

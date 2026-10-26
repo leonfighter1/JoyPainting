@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart';
 
 import 'drawing/drawing_controller.dart';
 import 'drawing/stroke.dart';
+import 'gallery/painting_archive.dart';
 import 'gallery/painting_file.dart';
 import 'gallery/painting_store.dart';
 import 'l10n.dart';
@@ -174,6 +175,7 @@ class PaintingSession extends ChangeNotifier {
     // Snapshot first: the user may keep drawing while this save runs.
     final strokes = List<Stroke>.of(drawing.strokes);
     final paper = drawing.paper;
+    final paperScale = drawing.paperScale;
     final size = canvasSize.isEmpty ? _boundsOf(strokes) : canvasSize;
     final paintingId = id;
     if (name.isEmpty) name = await _nextName();
@@ -193,6 +195,7 @@ class PaintingSession extends ChangeNotifier {
           ),
           strokes: strokes,
           paper: paper,
+          paperScale: paperScale,
         ),
         thumbnail,
       );
@@ -238,6 +241,7 @@ class PaintingSession extends ChangeNotifier {
       ),
       strokes: strokes,
       paper: drawing.paper,
+      paperScale: drawing.paperScale,
     );
   }
 
@@ -253,6 +257,34 @@ class PaintingSession extends ChangeNotifier {
       return false;
     }
     if (!await save()) return false;
+    final copy = await _addCopy(incoming);
+    if (copy == null) return false;
+    _show(copy);
+    return true;
+  }
+
+  /// Adds every painting in a `.zip` (see [PaintingArchive]) to My
+  /// Paintings, without opening any. Returns how many were added: 0 if
+  /// [bytes] isn't a zip or holds no paintings.
+  Future<int> importArchive(Uint8List bytes) async {
+    final List<PaintingDoc> incoming;
+    try {
+      incoming = PaintingArchive.decode(bytes);
+    } on FormatException catch (e) {
+      debugPrint('Import rejected: $e');
+      return 0;
+    }
+    if (incoming.isEmpty || !await save()) return 0;
+    var added = 0;
+    for (final doc in incoming) {
+      if (await _addCopy(doc) != null) added++;
+    }
+    return added;
+  }
+
+  /// Stores [incoming] as a new painting (fresh id, its own name or the
+  /// next free "My painting N"). Null if saving failed.
+  Future<PaintingDoc?> _addCopy(PaintingDoc incoming) async {
     final copy = PaintingDoc(
       meta: PaintingMeta(
         id: _newId(),
@@ -267,6 +299,7 @@ class PaintingSession extends ChangeNotifier {
       ),
       strokes: incoming.strokes,
       paper: incoming.paper,
+      paperScale: incoming.paperScale,
     );
     try {
       final size = Size(copy.meta.width, copy.meta.height);
@@ -275,12 +308,11 @@ class PaintingSession extends ChangeNotifier {
         await thumbnailer(copy.strokes,
             size.isEmpty ? _boundsOf(copy.strokes) : size, copy.paper),
       );
+      return copy;
     } catch (e) {
       onSaveError?.call(e);
-      return false;
+      return null;
     }
-    _show(copy);
-    return true;
   }
 
   /// Saves the current painting and opens [paintingId] from the store.
@@ -312,7 +344,8 @@ class PaintingSession extends ChangeNotifier {
 
   void _show(PaintingDoc doc) {
     _reset(doc.meta.id, doc.meta.createdAt, doc.strokes, doc.paper,
-        size: Size(doc.meta.width, doc.meta.height));
+        size: Size(doc.meta.width, doc.meta.height),
+        paperScale: doc.paperScale);
     name = doc.meta.name;
     _persisted = true;
     settings.lastPaintingId = id;
@@ -323,12 +356,12 @@ class PaintingSession extends ChangeNotifier {
   /// canvas has room for", as for a new painting.
   void _reset(
       String newId, DateTime created, List<Stroke> strokes, Color paper,
-      {Size size = Size.zero}) {
+      {Size size = Size.zero, double paperScale = 1}) {
     id = newId;
     name = '';
     createdAt = created;
     canvasSize = size.isEmpty ? Size.zero : size;
-    drawing.load(strokes, paper: paper);
+    drawing.load(strokes, paper: paper, paperScale: paperScale);
     _savedRevision = drawing.revision;
     // Loading notifies listeners, which schedules an autosave; nothing
     // changed yet, so drop it.

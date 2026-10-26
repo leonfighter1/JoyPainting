@@ -93,14 +93,15 @@ void main() {
       await tester.tap(find.byIcon(Icons.add_circle_outline_rounded));
       await tester.pumpAndSettle();
       expect(app.session.name, '我的画作 2');
-      expect(find.text('我的画作 2'), findsOneWidget, reason: 'in the title');
+      expect(find.textContaining('我的画作 2'), findsOneWidget,
+          reason: 'in the title');
 
       // Tapping the title renames the open painting.
-      await tester.tap(find.text('我的画作 2'));
+      await tester.tap(find.textContaining('我的画作 2'));
       await tester.pumpAndSettle();
       await enterName(tester, '大恐龙');
       expect(app.session.name, '大恐龙');
-      expect(find.text('大恐龙'), findsOneWidget);
+      expect(find.textContaining('大恐龙'), findsOneWidget);
       await drawStroke(tester);
       await tester.pump(const Duration(seconds: 1));
       final names = [for (final m in await app.store.list()) m.name];

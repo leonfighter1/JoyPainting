@@ -725,7 +725,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await openTab(tester, 1);
-    expect(find.byTooltip('导入画作文件'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, '导入'), findsOneWidget);
     await tester.tap(cardMenu());
     await tester.pumpAndSettle();
     expect(find.text('发送给别人'), findsOneWidget);

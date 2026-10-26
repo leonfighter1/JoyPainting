@@ -70,15 +70,21 @@ class PaintingDoc {
     required this.meta,
     required this.strokes,
     this.paper = const Color(0xFFFFFFFF),
+    this.paperScale = 1,
   });
 
   final PaintingMeta meta;
   final List<Stroke> strokes;
   final Color paper;
 
+  /// How many screens' worth of paper (1 to 4, by area): see
+  /// `DrawingController.paperScale`.
+  final double paperScale;
+
   Map<String, Object?> toJson() => {
         ...meta.toJson(),
         'paper': paper.toARGB32(),
+        if (paperScale != 1) 'paperScale': paperScale,
         'strokes': [for (final s in strokes) s.toJson()],
       };
 
@@ -91,6 +97,7 @@ class PaintingDoc {
     return PaintingDoc(
       meta: PaintingMeta.fromJson(json),
       paper: Color(json['paper'] as int? ?? 0xFFFFFFFF),
+      paperScale: (json['paperScale'] as num? ?? 1).toDouble().clamp(1, 4),
       strokes: [
         for (final s in json['strokes'] as List)
           Stroke.fromJson(s as Map<String, Object?>),
@@ -208,6 +215,7 @@ class PaintingStore extends ChangeNotifier {
       meta: doc.meta.copyWith(name: named.name),
       strokes: doc.strokes,
       paper: doc.paper,
+      paperScale: doc.paperScale,
     );
   }
 
@@ -244,6 +252,7 @@ class PaintingStore extends ChangeNotifier {
                 meta: doc.meta.copyWith(name: name),
                 strokes: doc.strokes,
                 paper: doc.paper,
+                paperScale: doc.paperScale,
               ).encode());
         }
         index[at] = index[at].copyWith(name: name);

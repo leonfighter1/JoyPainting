@@ -130,6 +130,7 @@ class AppSettings extends ChangeNotifier {
   static const _kOnboarded = 'onboarded';
   static const _kKids = 'kids';
   static const _kCurrentKid = 'currentKid';
+  static const _kPaletteLocked = 'paletteLocked';
   static String _kSize(BrushType b) => 'size.${b.name}';
   static String _kOpacity(BrushType b) => 'opacity.${b.name}';
 
@@ -360,6 +361,15 @@ class AppSettings extends ChangeNotifier {
   set stamp(StampShape value) {
     _stamp = value;
     _prefs.setString(_kStamp, value.name);
+    notifyListeners();
+  }
+
+  /// Whether the brushes-and-colors palette is pinned beside the paper
+  /// instead of sliding in when needed.
+  bool get paletteLocked => _prefs.getBool(_kPaletteLocked) ?? false;
+
+  set paletteLocked(bool value) {
+    _prefs.setBool(_kPaletteLocked, value);
     notifyListeners();
   }
 

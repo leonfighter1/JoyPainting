@@ -38,13 +38,14 @@ Future<WebSendResult> sendFromBrowser(
       // Refused (say, too long after the tap): fall back to email below.
     }
   }
-  _download(bytes, name, mimeType);
+  downloadInBrowser(bytes, name, mimeType);
   web.window.location.href = 'mailto:?subject=${Uri.encodeComponent(subject)}'
       '&body=${Uri.encodeComponent(body)}';
   return WebSendResult.downloadedForEmail;
 }
 
-void _download(Uint8List bytes, String name, String mimeType) {
+/// Saves [bytes] as the file [name] through the browser's downloads.
+void downloadInBrowser(Uint8List bytes, String name, String mimeType) {
   final url = web.URL.createObjectURL(
       web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: mimeType)));
   final anchor = web.document.createElement('a') as web.HTMLAnchorElement

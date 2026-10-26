@@ -4,7 +4,11 @@ import 'web_send_result.dart';
 
 export 'web_send_result.dart';
 
-/// Only the web uses this; apps share through the system share sheet.
+/// Only the web uses these; apps share through the system share sheet.
+void downloadInBrowser(Uint8List bytes, String name, String mimeType) =>
+    throw UnsupportedError('Only for the web');
+
+
 Future<WebSendResult> sendFromBrowser(Uint8List bytes,
         {required String name,
         required String mimeType,

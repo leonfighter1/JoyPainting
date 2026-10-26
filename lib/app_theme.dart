@@ -184,23 +184,25 @@ class AppLogoTitle extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(text, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            sub,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: DefaultTextStyle.of(context).style.copyWith(
-                                fontSize: 13, fontWeight: FontWeight.w600),
+                    // One text with the pencil inside, so on a narrow
+                    // phone it shortens with "…" instead of overflowing.
+                    Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: sub),
+                        if (onTap != null)
+                          const WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Padding(
+                              padding: EdgeInsets.only(left: 4),
+                              child: Icon(Icons.edit_rounded, size: 14),
+                            ),
                           ),
-                        ),
-                        if (onTap != null) ...[
-                          const SizedBox(width: 4),
-                          const Icon(Icons.edit_rounded, size: 14),
-                        ],
-                      ],
+                      ]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: DefaultTextStyle.of(context)
+                          .style
+                          .copyWith(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
