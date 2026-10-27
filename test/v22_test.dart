@@ -188,7 +188,10 @@ void main() {
 
   group('Sample painting', () {
     testWidgets('each kid gets it once, in their language', (tester) async {
-      final app = await createTestApp(prefs: {'flutter.sampleAdded': false});
+      final app = await createTestApp(prefs: {
+        'flutter.level': 'beginner',
+        'flutter.samplesAdded': <String>[],
+      });
       await app.session.restoreLast();
       var paintings = await app.store.list();
       expect([for (final m in paintings) m.name], ['快乐的一天']);
@@ -238,6 +241,8 @@ void main() {
 
       await tester.enterText(field, '小明');
       await tester.pump();
+      await tester.ensureVisible(find.text('English'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('English'));
       await tester.pumpAndSettle();
       expect(name(), '小明', reason: 'a typed name is kept');

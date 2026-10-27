@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'device.dart';
 import 'drawing/stroke.dart';
+import 'skill_level.dart';
 import 'settings.dart' show MusicMode;
 
 /// All user-facing text, in Simplified Chinese (default) and English.
@@ -50,6 +51,8 @@ class S {
   String get copyFailed => _t('没能复制，再试一次', "Couldn't copy it. Try again");
   String get samplePaintingName => _t('快乐的一天', 'A Happy Day');
   String get sampleGreeting => _t('你好呀！', 'Hello!');
+  String get sampleSunsetName => _t('海边的晚霞', 'Sunset by the Sea');
+  String get sampleLakeName => _t('湖畔晨光', 'Dawn on the Lake');
   String get renameTitle => _t('给画作起个名字', 'Name this painting');
   String get nameLabel => _t('名字', 'Name');
   String get save => _t('保存', 'Save');
@@ -161,6 +164,7 @@ class S {
         BrushType.marker => _t('马克笔', 'Marker'),
         BrushType.highlighter => _t('荧光笔', 'Highlighter'),
         BrushType.soft => _t('柔边笔', 'Soft brush'),
+        BrushType.smudge => _t('晕染笔', 'Blender'),
         BrushType.spray => _t('喷枪', 'Spray'),
         BrushType.rainbow => _t('彩虹笔', 'Rainbow'),
         BrushType.stamp => _t('印章', 'Stamps'),
@@ -192,6 +196,9 @@ class S {
   String get deleteSelection => _t('删除选中的', 'Delete selected');
   String get rainbowKeepsColors =>
       _t('彩虹笔画的线会保留彩虹色，只改透明度。', 'Rainbow strokes keep their colors; only their opacity changes.');
+  String get smudgeHint => _t('在画好的颜色上来回涂，颜色会晕开、柔和地混在一起。不透明度越高，混得越多。',
+      'Rub over colors already painted to soften and blend them together. '
+          'Higher opacity blends more.');
   String get eraserHint => _t('橡皮擦是圆头的，长按画布可以看到擦除范围。',
       'The eraser has a round tip. Long-press the paper to see its size.');
 
@@ -289,6 +296,14 @@ class S {
         StrokeBlend.screen => _t('提亮', 'Light'),
         StrokeBlend.overlay => _t('叠加', 'Overlay'),
         StrokeBlend.softLight => _t('柔光', 'Soft light'),
+      };
+  String get texture => _t('纹理', 'Texture');
+  String textureName(StrokeTexture t) => switch (t) {
+        StrokeTexture.none => _t('不用', 'None'),
+        StrokeTexture.canvas => _t('画布', 'Canvas'),
+        StrokeTexture.paper => _t('纸纹', 'Paper'),
+        StrokeTexture.charcoal => _t('炭笔', 'Charcoal'),
+        StrokeTexture.bristle => _t('笔刷痕', 'Bristles'),
       };
   String get eraserRange => _t('橡皮擦范围', 'Eraser area');
   String get opacity => _t('不透明度', 'Opacity');
@@ -437,9 +452,38 @@ class S {
   // Settings
   String get theme => _t('主题', 'Theme');
   String get font => _t('字体', 'Font');
+  String get textSize => _t('文字大小', 'Text size');
+  String get textSizeHint => _t('拖动滑块，或点两边的按钮，放大或缩小整个应用的文字。',
+      'Drag the slider, or tap the buttons beside it, to make all text in '
+          'the app bigger or smaller.');
+  String get textSmaller => _t('文字小一点', 'Smaller text');
+  String get textLarger => _t('文字大一点', 'Larger text');
   String get fontSample => _t('快乐涂鸦 Aa', 'JoyPainting Aa');
   String get licenses => _t('开源许可', 'Open-source licenses');
   String get language => _t('语言', 'Language');
+
+  // Skill levels
+  String get skillLevel => _t('功能等级', 'Drawing level');
+  String get skillLevelHint => _t(
+      '等级只决定画画时显示哪些工具，随时可以在设置里改，画好的画不受影响。',
+      'A level only decides which tools are shown while drawing. Change it '
+          'any time in Settings; your paintings stay the same.');
+  String levelName(SkillLevel l) => switch (l) {
+        SkillLevel.beginner => _t('初级', 'Beginner'),
+        SkillLevel.intermediate => _t('中级', 'Intermediate'),
+        SkillLevel.advanced => _t('高级', 'Advanced'),
+      };
+  String levelDescription(SkillLevel l) => switch (l) {
+        SkillLevel.beginner => _t('简单好用：常用的画笔、颜色、形状、印章和文字。',
+            'Simple: the everyday brushes, colors, shapes, stamps and text.'),
+        SkillLevel.intermediate => _t(
+            '再加上荧光笔、柔边笔、选择移动、不透明度、自由形状和渐变。',
+            'Adds the highlighter, soft brush, move tool, opacity, free '
+                'shapes and gradients.'),
+        SkillLevel.advanced => _t('全部功能：再加上晕染笔、光影和纹理，适合画写实的画。',
+            'Everything: adds the blender, light and shadow, and textures, '
+                'for realistic paintings.'),
+      };
   String get about => _t('关于', 'About');
   String get aboutBody => _device.isWeb
       ? _t(

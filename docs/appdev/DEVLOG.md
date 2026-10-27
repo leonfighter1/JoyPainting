@@ -1,5 +1,14 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-27: v4.0.0 (drawing levels, realistic painting tools, level samples, text size, menu button)
+- Asked, in steps: the 愚人 card still too cartoonish, wanted a mature, realistic style with more realistic painting tools, and the traveler holding only his luggage; then a simpler tools drawer with levels (beginner / intermediate / advanced) chosen on first start and in Settings; a clearer top-right menu icon; a text size slider for accessibility; tarot code kept off git in a local folder (and removed from main); a detailed README per release, also as a rule in the appdev skill; three sample paintings (one per level, the top one to the 愚人 standard, in the repo); then push as one big update.
+- Done: see FEATURES v4.0.0 and the README release notes. The 愚人 card was repainted (dawn backlight, fractal mountains with erosion streaks and snow, a grassy headland, a man of seven and a half heads with a leather bag, the dog; face cleaned up after feedback, stubble kept) and lives in `local_art/` with its tooling. The appdev skill now requires README release notes for every version.
+- Checked by rendering: the card and the three samples were rendered from their saved files and looked at (whole picture and crops: face, edges, sun area).
+- Mistakes: MISTAKES rules 48 to 55.
+- Harness: PASS (analyze 0 issues, 313 tests, build web ok).
+- Not tested: the blender's speed and textures on a real phone or iPad; the text size slider with a real screen reader; the sample paintings opening on a slow phone (the advanced one is 2.6 MB).
+- Next: feedback on the samples; tarot cards I to XXI locally.
+
 ## 2026-10-27: v3.0.0 (painted looks, resizable paper, download formats, tarot cards)
 - Asked, in steps: a beautiful tarot deck made with the app, one style with text, starting with 0 愚人; then, after seeing it, a semi-realistic look instead of cartoon, with the app gaining whatever that needs as real tools (chosen: semi-realistic painting, not photo-realistic; as brushes and options, not only display); then a paper resized by dragging (drawings keep their size, undoable), no zoom items in 视图, download as PNG/JPG/PDF, the tarot paper exactly the card; then version 3 and deploy.
 - Done: see FEATURES v3.0.0. The first card was cartoon-style (triangles placed by transforms); the semi-realistic one uses the new free shapes, gradients, blur and blend modes (488 strokes, 80 blurred, 84 blended). New paintings still fill the screen until a grip is dragged.

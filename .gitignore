@@ -49,3 +49,6 @@ app.*.map.json
 
 # Built APKs
 /dist/
+
+# Local art made with the app's own brushes (tarot cards...), kept off git
+/local_art/

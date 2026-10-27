@@ -48,8 +48,22 @@
 45. A gradient stroke's see-through-ness comes from its gradient's colors, never from its base `color`'s alpha.
 46. A `Semantics` with `onIncrease`/`onDecrease` and a `value` also needs `increasedValue` and `decreasedValue`, or Flutter asserts.
 47. Controls on the paper's edge keep their whole touch area inside the paper area and clear of the floating buttons (the phone tools button is wide). Test them with a real drag from their center, which goes through hit testing.
+48. Never feed a computed line number or variable into `sed` (or any scripted edit) without checking it isn't empty: an empty address runs the command on every line. Use the Edit tool for multi-line changes; if a file gets damaged, restore it from git and reapply your edits.
+49. A texture takes paint away from a stroke, so whatever is behind it shows through. For an object that must stay opaque, paint it solid and add the grain as a separate layer on top.
+50. Keep blending (the blender) inside a shape's edge (pull the outline in), or it mixes in the background and leaves a light halo around the shape.
+51. Atmosphere layers (haze, glow) must follow the shape they belong to, not its bounding box, or a straight band shows where the box ends.
+52. When ordering points around a center by angle, measure the angle from a reference direction, so the jump at ±180° never falls inside the run.
+53. In widget tests, don't wrap calls on objects made in the test's fake-time zone in `tester.runAsync`: their futures wait for fake time that never comes. Asset loading works without it.
+54. Test helpers that find widgets by Chinese labels fail in English tests; use the label for the test's language.
+55. Adding a section near the top of a lazy settings or setup page pushes lower items out of the built range: tests must scroll to them (rule 37), and a short page can simply be non-lazy.
 
 ## Log
+
+### 2026-10-27: v4 snags
+- **Symptom:** a scripted edit put `});` after every `);` in `app_theme.dart`; textured cloth, hair and the dog let the sky show through (they looked checkered or grey); light halos around blended shapes; a straight light band between two mountain ranges and a straight line inside a cloud in the lake painting; tests hung on sample paintings; an English test failed on a Chinese tooltip; settings and setup tests couldn't find lower items.
+- **Root cause:** the line-number variable was empty, so `sed` ran on every line; a texture is a mask, so on an opaque object it cuts holes; a blender area reaching the edge blurs in the background; haze was a rectangle, not the mountain's shape; rim points were sorted by raw angle, which jumps at ±180°; `tester.runAsync` awaited futures from the fake-time zone; the new level and text-size sections pushed items down a lazy list.
+- **Fix:** restored the file from git and redid the edits with exact replacements; solid fill plus a grain layer; blending inset from the edge; haze clipped to the ridge; angles measured from the sun's direction; plain awaits in those tests; scrolling (and a non-lazy setup page).
+- **Rule:** 48 to 55.
 
 ### 2026-10-27: v3 snags found by renders and tests
 - **Symptom:** rendering the semi-realistic tarot card crashed ("colors must have length 2 if colorStops is omitted"); then most of its light effects (sun glow, rays, haze, shadows) were invisible; the new paper grips couldn't be dragged in tests; turning on semantics asserted.

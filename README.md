@@ -3,21 +3,23 @@
 JoyPainting is a cute drawing app for Android and iOS phones and tablets, built with Flutter, with a web version too. All of them come from the same code in this repository.
 
 **Try it in a browser:** https://leonfighter1.github.io/JoyPainting/ (any capitals work, also `/joypainting`, and the old `/JingyaoPaint/` forwards) (on iPhone or iPad: open it in Safari, then Share → Add to Home Screen).
-The app starts in English and asks for a language, a theme and the little artist's name on first launch; Simplified Chinese and English can be switched any time in Settings. Until v2.1 the app was called JingyaoPaint (靖瑶的画板); the repository moved to https://github.com/leonfighter1/JoyPainting (the old JingyaoPaint repository and web address forward here).
+The app starts in English and asks for a language, a theme, a drawing level and the little artist's name on first launch; all can be changed any time in Settings. Until v2.1 the app was called JingyaoPaint (靖瑶的画板); the repository moved to https://github.com/leonfighter1/JoyPainting (the old JingyaoPaint repository and web address forward here).
 
 What it does:
 
+- **Drawing levels** (功能等级: 初级 / 中级 / 高级, Beginner / Intermediate / Advanced): the tools drawer shows only what the level includes, so beginners aren't swamped. Beginner: pen, pencil, marker, spray, rainbow, stamps, text, eraser, colors, shapes and size. Intermediate adds the highlighter, soft brush, move tool, opacity, free shapes and gradients. Advanced adds the blender, light & shadow and textures. Picked on first start, changed in Settings; paintings look the same at every level.
 - **Drawing**:
-  - 11 tools: pen, pencil, marker, highlighter, soft brush, spray, rainbow, stamps, text, move and a round eraser.
+  - 12 tools: pen, pencil, marker, highlighter, soft brush, blender, spray, rainbow, stamps, text, move and a round eraser.
   - Pressure-sensitive strokes, opacity, shapes with fill, mirror drawing and paper colors.
-  - Painted looks: the soft brush (blurred, see-through edges for shading and glows), free shapes (draw around an area and it's filled), gradients made from the chosen color (lit top, dark bottom, fade, glow, rounded) and light & shadow (shadow darkens what's underneath, light brightens it).
+  - Painted looks: the soft brush (blurred, see-through edges for shading and glows), free shapes (draw around an area and it's filled), gradients made from the chosen color (lit top, dark bottom, fade, glow, rounded) and light & shadow (shadow, light, overlay, soft light).
+  - Realistic painting: the **blender** (晕染笔) softens and mixes colors already painted, like a finger in wet paint; **textures** (纹理) lay any brush's paint with the grain of canvas, paper, charcoal or bristles.
 - **Editing what's drawn** (move tool):
   - Tap a stroke, or drag a box over empty paper to select several at once.
   - Drag to move, drag the corner knob to resize (same proportions), drag the top knob to turn.
   - A bar next to the selection copies, resizes, turns, recolors, changes opacity and deletes. Every change undoes in one step.
 - **Canvas**:
   - Pinch to zoom and pan; ✋ (or holding Space, or a drag outside the paper) moves the paper with one finger or the mouse.
-  - Drag the grips on the paper's right and bottom edges to make it wider or taller (or narrower and shorter). What's drawn keeps its size, and undo puts the paper back. ⋮ → 画纸恢复默认大小 makes it fill the screen again.
+  - Drag the grips on the paper's right and bottom edges to make it wider or taller (or narrower and shorter). What's drawn keeps its size, and undo puts the paper back. The ☰ menu → 画纸恢复默认大小 makes it fill the screen again.
   - Pin the palette beside the paper (a slim strip under it on an upright phone) to change brushes and colors while drawing.
   - Brushes and colors live in a drawer that opens from the "画笔 · 颜色" button.
   - That button and the undo bar can be dragged to any corner of the paper.
@@ -28,28 +30,29 @@ What it does:
   - Autosave, and a gallery (我的画作) with names, dates and a year filter.
   - Export: check paintings (the year filter helps) and export one as its `.jypaint` or several as one `.zip`. Import reads both.
   - Every painting gets a name ("My painting 1" / "我的画作 1"); rename or copy it from the title or its gallery card.
-  - A sample painting (快乐的一天 / A Happy Day) to start with, for each kid.
+  - A sample painting for each kid, matching their level: 快乐的一天 / A Happy Day (beginner: pens, shapes and stamps), 海边的晚霞 / Sunset by the Sea (intermediate: soft brush, gradients, free shapes) or 湖畔晨光 / Dawn on the Lake (advanced: a realistic painting with textures, the blender and light & shadow). Picking another level later brings that one too, once.
   - Download as PNG, JPG or PDF (in the apps, pictures go to the photo gallery and a PDF to the share menu).
   - Send as PNG, JPG, PDF or an editable `.jypaint` file, named after the painting. In a browser it goes to an email as an attachment.
   - Print from an in-app preview with a big close button (Android's own print screen has none).
   - Open `.jypaint` files received from other apps.
 - **Background music**:
-  - Plays while you draw and pauses in the background. On/off in the ⋮ menu; volume, track and play order (shuffle by default, in order, repeat one) in Settings.
+  - Plays while you draw and pauses in the background. On/off in the ☰ menu (top right); volume, track and play order (shuffle by default, in order, repeat one) in Settings.
   - Five calm built-in tracks (阳光散步, 小星星摇篮曲, 欢乐颂, 两只老虎, 云朵飘飘), or add your own (MP3, M4A/AAC, WAV, OGG/Opus, FLAC, MIDI…).
 - **Keyboard** (browser, computer, iPad keyboard): Ctrl/⌘+Z undo, Ctrl+Y redo, Ctrl+S save, Ctrl+P print, Ctrl+C/X/V/D copy, cut, paste and duplicate the selection, Ctrl+A select all, Delete, Ctrl +/−/0/1 zoom, Space to move the paper, P/E/T/V tools, [ ] size, Esc. Press ? for the list.
-- **Tarot cards**: `tool/tarot/` paints a tarot deck (so far 0 愚人 The Fool, semi-realistic) with the app's own strokes. `flutter test tool/tarot/make_tarot_test.dart` writes each card to `dist/tarot/` as an editable `.jypaint` (import it in My Paintings) and a 1400×2400 PNG; the paper is exactly the card.
 - **Look**:
   - 5 portable JSON themes checked against WCAG contrast.
-  - 4 bundled cute fonts.
+  - 4 bundled cute fonts, and a text size slider in Settings (文字大小, 80%–150%, with − and + buttons) that makes all text in the app bigger or smaller, on top of the system's own size.
+  - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **3.0.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **4.0.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **3.0.0** | 2026-10-27 | Painted looks (soft brush, gradients, light & shadow, free shapes, soft edges), a paper resized by dragging its edges (undoable, drawings keep their size), download as PNG, JPG or PDF, a simpler View menu (no zoom buttons), a faster canvas for big paintings, and the tarot card tool with 0 愚人 |
+| **4.0.0** | 2026-10-27 | Drawing levels (beginner, intermediate, advanced) chosen on first start, realistic painting tools (the blender, four textures, overlay and soft light), a sample painting for each level, a text size slider, a clearer ☰ menu button |
+| 3.0.0 | 2026-10-27 | Painted looks (soft brush, gradients, light & shadow, free shapes, soft edges), a paper resized by dragging its edges (undoable, drawings keep their size), download as PNG, JPG or PDF, a simpler View menu (no zoom buttons), and a faster canvas for big paintings |
 | 2.2.0 | 2026-10-25 | Keyboard shortcuts (Ctrl+Z, Ctrl+C/V, Delete, zoom, tool keys; ? lists them), a bigger paper shows at real size, music that copes with old settings and browsers, five calm built-in tracks with shuffle by default, the sample painting 快乐的一天, copying paintings, default kid name 靖瑶 / Athena |
 | 2.1.1 | 2026-10-25 | Import/export buttons, export several paintings as a zip, paper up to 4× the screen, pinned palette (slim strip on phones), ✋ move the paper, web loading text in English until the language is set |
 | 2.1.0 | 2026-10-25 | Renamed JoyPainting (快乐涂鸦). First-start setup (language, theme, name), several kids with their own paintings, painting names and renaming, music play order, email sending from the web, texts that fit each device, grown-up check for adding/deleting kids and resetting |
@@ -63,6 +66,123 @@ Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The vers
 | 1.0.0 | 2026-10-23 | Freehand drawing, undo/redo, colors, save to album |
 
 The full list of what each version added, with the code and tests behind it, is in [docs/appdev/FEATURES.md](docs/appdev/FEATURES.md).
+
+## Release notes
+
+What changed in each version, newest first, in the app's own words (Chinese UI names in brackets).
+
+### 4.0.0 (2026-10-27): drawing levels, realistic painting, samples for every level
+
+**New**
+- **Drawing levels (功能等级: 初级 / 中级 / 高级)**: the first-start page asks how much the drawing screen should show, and Settings → 功能等级 changes it any time. Beginner shows the everyday tools (pen, pencil, marker, spray, rainbow, stamps, text, eraser, colors, shapes, size). Intermediate adds the highlighter, soft brush, move tool, the opacity slider, free shapes and gradients. Advanced shows everything, including the new blender, light & shadow and textures. Options a level hides act as their plain defaults (full opacity, no gradient…) but are remembered, so they come back with a higher level. Paintings look the same at every level.
+- **Blender (晕染笔)**: rub over colors already painted and they soften and mix, like a finger or a dry brush in wet paint. Opacity sets how strongly it mixes; it works as a line, a shape or a free shape. It has no color of its own and is never selected by the move tool.
+- **Textures (纹理)**: any brush (and shapes and free shapes) can lay its paint with a grain: 画布 Canvas (woven), 纸纹 Paper (soft grain), 炭笔 Charcoal (rough and broken) or 笔刷痕 Bristles (streaks that follow the stroke, running dry at its end). What's underneath shows through the gaps, as with real paint. Saved in paintings and `.jypaint` files.
+- **More light & shadow**: 叠加 Overlay and 柔光 Soft light join 普通, 阴影 and 提亮.
+- **A sample painting for each level**: new kids find one in My Paintings that shows what their level can do: 快乐的一天 A Happy Day (beginner), 海边的晚霞 Sunset by the Sea (intermediate, painted only with intermediate tools) or 湖畔晨光 Dawn on the Lake (advanced, a realistic painting with every tool). Picking another level later brings that level's sample too, once. They are ordinary paintings: move, recolor, erase or keep painting on them.
+- **Text size (文字大小)**: a slider in Settings, with − and + buttons beside it, makes all text in the app 80% to 150% of its usual size, on top of the phone's own text size.
+- **A clearer menu button**: the three faint dots at the top right are now an outlined ☰ ▾ button, on the canvas and in My Paintings.
+
+**Changed**
+- The tools drawer is shorter for beginners. Existing users start at Beginner; pick Intermediate or Advanced in Settings → 功能等级 to see every tool again.
+- The first-start page has a fourth question (drawing level) and scrolls as one page.
+
+**Fixed**
+- On a small phone with large text, the page title no longer runs out of room: it drops the logo first.
+
+**Good to know**
+- The blender keeps the blurred picture under each of its strokes until what's under it changes, so a painting full of blending stays quick to redraw.
+- Paintings with textures or the blender open in older versions without them (the paint shows plain, blender strokes do nothing).
+- Not yet tried on real devices: the blender's speed on an older phone, and textures on iPad.
+
+### 3.0.0 (2026-10-27): painted looks, a resizable paper, download formats
+
+**New**
+- **Soft brush (柔边笔)**: a see-through line with blurred edges, for shading, glows and soft light; layers build up like paint.
+- **Free shapes (自由形状)**: in the shapes row; draw around an area and it is filled (solid or gradient). Tap anywhere inside to select it.
+- **Gradients (渐变)** made from the chosen color: 上亮 lit top, 下暗 dark bottom, 渐淡 fade, 光晕 glow, 立体 rounded. A gradient moves, turns and resizes with its stroke.
+- **Light & shadow (光影)**: 阴影 darkens what's underneath, 提亮 lightens it.
+- **Resizable paper**: drag the grips on the paper's right and bottom edges to make it wider, taller, narrower or shorter (100 to 8000 points). Drawings keep their size, one undo puts the paper back, and 画纸恢复默认大小 in the menu makes it fill the screen again. Screen readers move the grips in steps.
+- **Download image (下载图片)** asks PNG, JPG or PDF. In a browser it downloads; in the apps pictures go to the photo gallery and a PDF to the share menu.
+
+**Changed**
+- The View menu has no zoom in / zoom out / fit items; pinch, the mouse wheel, Ctrl +/−/0/1 and the "% · 适应屏幕" chip remain.
+- The old 画纸大小 1×–4× choice is replaced by the grips; paintings made with it keep their size.
+
+**Fixed**
+- Big paintings no longer repaint every finished stroke for each point of a new one, so drawing on them is smoother.
+- Three-color gradients, see-through gradients and the grips under the floating buttons (found while building it).
+
+### 2.2.0 (2026-10-25): keyboard shortcuts, real-size bigger paper, steadier music
+
+**New**
+- **Keyboard shortcuts**: Ctrl/⌘+Z undo, Ctrl+Y redo, Ctrl+S save, Ctrl+P print, Ctrl+C/X/V/D copy, cut, paste, duplicate, Ctrl+A select all, Delete, Ctrl +/−/0/1 zoom, Space to move the paper, H for ✋, P/E/T/V tools, [ ] size, Esc. Press ? for the list.
+- **Five calm built-in tracks** (阳光散步, 小星星摇篮曲, 欢乐颂, 两只老虎, 云朵飘飘), shuffled by default.
+- **Sample painting 快乐的一天 / A Happy Day** for each kid, once.
+- **Copy a painting (复制一份)** from its card's menu in My Paintings.
+- The first-start page suggests 靖瑶 in Chinese and Athena in English.
+
+**Fixed**
+- A bigger paper now shows at real size (before, 4× looked like 1×).
+- Music in browsers waits for the first touch and no longer hangs with old settings; a missing track falls back to a built-in one.
+- Web releases never run older cached code.
+
+### 2.1.1 (2026-10-25): import/export, bigger paper, pinned palette
+
+**New**
+- 导入 / 导出 buttons in My Paintings; export one painting as `.jypaint` or several as a `.zip`, chosen with checkmarks.
+- Paper size up to 4× the screen.
+- Pin the palette beside the paper (a two-row strip on an upright phone).
+- ✋ to move the paper with one finger or the mouse; Space does it on a computer.
+- The web loading screen speaks the app's language.
+
+### 2.1.0 (2026-10-25): JoyPainting, first-start setup, kids, painting names
+
+**New**
+- Renamed JoyPainting (快乐涂鸦).
+- First-start setup: language, theme and the little artist's name.
+- Several kids, each with their own paintings and board title; adding or deleting a kid and resetting the app ask a grown-up a multiplication first.
+- Every painting has a name; rename it from the title or its card.
+- Music play order (repeat one, in order, shuffle); sending by email from the web; texts that fit each device.
+
+### 2.0.0 (2026-10-25): edit what's drawn, background music, print preview
+
+**New**
+- Select several strokes with a box; copy, resize, turn, recolor and fade the selection, each in one undo step.
+- Looping background music, built-in or your own files, with volume.
+- An in-app print preview with a big close button.
+- The first iOS (iPhone and iPad) version, and the web version.
+
+### 1.6.0 (2026-10-25): corner controls, move tool, round eraser
+- The undo bar and the "画笔 · 颜色" button can be dragged to any corner of the paper.
+- The move tool (选择移动) picks up and moves any stroke.
+- The eraser is always round, and long-pressing shows its size.
+
+### 1.5.0 (2026-10-25): tablets, zoom, tools drawer
+- Tablet and landscape layouts with a side rail; the paper fits any screen.
+- Pinch to zoom and pan.
+- Brushes and colors moved into a drawer; save, new and clear moved to the top bar.
+- Smaller APKs, one per CPU type.
+
+### 1.4.0 (2026-10-24): send, print, text, undo for everything
+- Send as PNG, JPG, PDF or an editable `.jypaint`; open `.jypaint` files from other apps.
+- Print.
+- The text tool with bold, italic, underline, bubble, alignment, size, font and color.
+- Every edit can be undone (last 100 steps). Renamed JingyaoPaint.
+
+### 1.3.0 (2026-10-24): shapes, eraser circle, cute fonts
+- Shapes (line, arrow, rectangle, circle, triangle, star, heart), filled or not.
+- Long-press with the eraser to see its range.
+- Four cute fonts to pick in Settings.
+
+### 1.2.0 (2026-10-24): more brushes, opacity, mirror, themes
+- Spray, rainbow and stamp brushes; an opacity slider per brush; mirror drawing; six paper colors.
+- Five themes with contrast-checked text, screen-reader labels and large tap targets.
+
+### 1.1.0 (2026-10-24): gallery and languages
+- New name and icon, My Paintings with autosave, Chinese and English.
+
+### 1.0.0 (2026-10-23): first version
+- Freehand drawing with pressure, undo and redo, colors, and saving to the photo album.
 
 ## Prerequisites
 
@@ -179,6 +299,8 @@ What the tests cover:
 - **`test/v21_test.dart`**: first-start setup, painting names, kids and the grown-up check, reset, music play order, texts per device.
 - **`test/v211_test.dart`**: zip export/import, choosing paintings to export, paper size, the pinned palette and strip, moving the paper.
 - **`test/v22_test.dart`**: the bigger paper at real size, keyboard shortcuts, copying paintings, the sample painting, the default kid name.
+- **`test/v3_test.dart`**: the soft brush, gradients, light & shadow, free shapes, the paper grips, the menu's download formats, and accessibility of the new options in every theme.
+- **`test/v4_test.dart`**: textures (pixels, saving), the blender (mixing, opacity, following what's under it, while drawing), drawing levels (what each shows, hidden options, first start, Settings), the menu button, text size (buttons, slider, largest text on a small phone), the sample painting for each level, and accessibility in every theme.
 - **`test/web_store_test.dart`**: saving paintings in the browser (IndexedDB), moving old localStorage data over. Browser only: `flutter test --platform chrome test/web_store_test.dart` (the Web workflow runs it).
 - **`test/model_test.dart`**: the painting store, autosave and import.
 - **`test/export_test.dart`**: real PNG, JPEG and PDF output, and `.jypaint` round trips.
@@ -264,14 +386,16 @@ lib/
   music/               background music: track library, saved uploads, looping player
   share/               send, print preview, import, .jypaint format
   theme/               portable JSON themes, contrast math, fonts (see theme/README.md)
-  widgets/             drop-down menu, draggable corner controls
+  widgets/             drop-down menu and its button, draggable corner controls
   l10n.dart            all UI text, zh and en
-  settings.dart        remembered choices (brush, colors, corners, theme…)
-assets/                logo, theme JSON files, fonts and their OFL licenses, built-in music
+  settings.dart        remembered choices (brush, colors, corners, theme, level, text size…)
+  skill_level.dart     what each drawing level shows
+assets/                logo, theme JSON files, fonts and their OFL licenses, built-in music, the level sample paintings
 android/               Android host app (MainActivity handles "open with")
 ios/                   iOS host app (AppDelegate handles "Open in", Info.plist)
 .github/workflows/     ios.yml (iOS build on GitHub's Macs), web.yml (publishes the web version)
-tool/                  build_apk.ps1, watch_build.ps1, make_icons.ps1, make_music.dart, ios_sim_smoke.sh; tarot/ (the tarot cards)
+tool/                  build_apk.ps1, watch_build.ps1, make_icons.ps1, make_music.dart, ios_sim_smoke.sh; samples/ (makes the level sample paintings in assets/samples/)
+local_art/             not in git: pictures made locally with the app's brushes
 docs/appdev/           FEATURES.md, MISTAKES.md, DEVLOG.md
 test/                  see Tests above
 ```

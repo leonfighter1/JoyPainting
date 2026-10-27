@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jingyao_paint/widgets/menu_button.dart';
 import 'package:jingyao_paint/app_theme.dart' show kThemeIds;
 import 'package:jingyao_paint/drawing/canvas_page.dart';
 import 'package:jingyao_paint/drawing/drawing_controller.dart';
@@ -534,7 +535,7 @@ void main() {
     testWidgets('View has no zoom buttons (pinch, the wheel or Ctrl +/−)',
         (tester) async {
       await pumpApp(tester);
-      await tester.tap(find.byIcon(Icons.more_vert_rounded));
+      await tester.tap(find.byIcon(MenuButton.icon));
       await tester.pumpAndSettle();
       expect(find.text('拖动画板'), findsOneWidget);
       for (final gone in ['放大画布', '缩小画布', '适应屏幕', '画纸大小']) {

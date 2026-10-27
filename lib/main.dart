@@ -17,6 +17,7 @@ import 'onboarding_page.dart';
 import 'painting_session.dart';
 import 'settings.dart';
 import 'settings_page.dart';
+import 'skill_level.dart';
 import 'share/import_actions.dart';
 import 'share/incoming_files.dart';
 import 'theme/cute_theme.dart';
@@ -108,6 +109,7 @@ class PaintApp extends StatelessWidget {
         settings.locale,
         settings.themeId,
         settings.fontId,
+        settings.textScale,
         settings.onboarded,
       ]),
       builder: (context, _) => MaterialApp(
@@ -122,15 +124,25 @@ class PaintApp extends StatelessWidget {
         // Browsers only allow sound after a touch or click; the first one
         // starts music that was switched on. A mouse counts when its button
         // goes down, a finger or pen only when it lifts.
-        builder: (context, child) => Listener(
-          behavior: HitTestBehavior.translucent,
-          onPointerDown: (e) {
-            if (e.kind == PointerDeviceKind.mouse) player?.userTouched();
-          },
-          onPointerUp: (e) {
-            if (e.kind != PointerDeviceKind.mouse) player?.userTouched();
-          },
-          child: child,
+        // Text is scaled by the size picked in Settings, on top of the
+        // system's own text size.
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(
+                MediaQuery.textScalerOf(context).scale(16) /
+                    16 *
+                    settings.textScale.value),
+          ),
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (e) {
+              if (e.kind == PointerDeviceKind.mouse) player?.userTouched();
+            },
+            onPointerUp: (e) {
+              if (e.kind != PointerDeviceKind.mouse) player?.userTouched();
+            },
+            child: child,
+          ),
         ),
         // A new install (or a reset) starts with the setup page.
         home: settings.onboarded.value
@@ -182,9 +194,20 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     widget.player?.onError = _showMusicError;
     // Right after the first-start setup (other times it's already there).
     widget.session.addSampleOnce();
+    _level = widget.settings.level;
+    widget.settings.addListener(_onSettings);
     // After the first frame, so the snackbar and translations are ready.
     WidgetsBinding.instance.addPostFrameCallback(
         (_) => IncomingFiles.listen(_openIncoming));
+  }
+
+  late SkillLevel _level;
+
+  /// Picking another level brings that level's sample painting (once).
+  void _onSettings() {
+    if (widget.settings.level == _level) return;
+    _level = widget.settings.level;
+    widget.session.addSampleOnce();
   }
 
   /// A painting file opened from another app (Android "open with").
@@ -197,6 +220,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    widget.settings.removeListener(_onSettings);
     widget.session.onSaveError = null;
     widget.player?.onError = null;
     super.dispose();

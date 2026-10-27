@@ -1,0 +1,48 @@
+import 'drawing/stroke.dart';
+
+/// How many tools the drawing screen shows. Beginners see the simple ones,
+/// and each level adds more. Paintings look the same at every level: a
+/// level only hides tools, never what was drawn with them.
+enum SkillLevel {
+  /// The everyday brushes, colors, shapes, stamps and text.
+  beginner,
+
+  /// Adds the highlighter, soft brush and move tool, opacity, free shapes
+  /// and gradients.
+  intermediate,
+
+  /// Everything: adds the blender, light and shadow, and textures, for
+  /// realistic paintings.
+  advanced;
+
+  static SkillLevel fromName(String? name) =>
+      values.firstWhere((l) => l.name == name, orElse: () => beginner);
+
+  bool get _intermediate => index >= intermediate.index;
+
+  /// Whether [b] is shown in the tools drawer and toolbar.
+  bool allows(BrushType b) => switch (b) {
+        BrushType.pen ||
+        BrushType.pencil ||
+        BrushType.marker ||
+        BrushType.spray ||
+        BrushType.rainbow ||
+        BrushType.stamp ||
+        BrushType.text ||
+        BrushType.eraser =>
+          true,
+        BrushType.highlighter || BrushType.soft || BrushType.move =>
+          _intermediate,
+        BrushType.smudge => this == advanced,
+      };
+
+  /// The brushes and tools shown, in toolbar order.
+  List<BrushType> get brushes =>
+      [for (final b in BrushType.values) if (allows(b)) b];
+
+  bool get opacity => _intermediate;
+  bool get freeShape => _intermediate;
+  bool get gradients => _intermediate;
+  bool get lightAndShadow => this == advanced;
+  bool get textures => this == advanced;
+}

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jingyao_paint/drawing/drawing_controller.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/settings.dart';
+import 'package:jingyao_paint/skill_level.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -56,7 +57,9 @@ Stroke line(BrushType brush,
 void main() {
   group('New brushes', () {
     // The text tool never makes freehand strokes; see the Text group.
-    for (final brush in BrushType.values.where((b) => b != BrushType.text && b != BrushType.move)) {
+    // The blender only mixes paint that is already there; see v4_test.
+    for (final brush in BrushType.values.where((b) =>
+        b != BrushType.text && b != BrushType.move && b != BrushType.smudge)) {
       test('${brush.name} draws without errors and leaves ink', () async {
         final strokes = [
           if (brush == BrushType.eraser) line(BrushType.marker),
@@ -153,7 +156,7 @@ void main() {
 
     test('every shape draws its outline with every brush', () async {
       for (final kind in ShapeKind.values) {
-        for (final brush in BrushType.values.where((b) => b != BrushType.eraser && b != BrushType.move)) {
+        for (final brush in BrushType.values.where((b) => !b.isEffect && b != BrushType.move)) {
           final px = await render([shape(kind, brush: brush)]);
           final anyInk = [
             for (var x = 10; x < 95; x += 2)
@@ -467,6 +470,7 @@ void main() {
     test('opacity, stamp, mirror, paper and theme are remembered', () async {
       SharedPreferences.setMockInitialValues({});
       (await AppSettings.load())
+        ..level = SkillLevel.advanced
         ..brush = BrushType.spray
         ..opacity = 0.3
         ..stamp = StampShape.flower

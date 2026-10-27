@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 
+import 'paint_strokes.dart';
 import 'stroke.dart';
 
 /// What the drawing looked like before an edit, for undo and redo.
@@ -161,8 +162,8 @@ class DrawingController extends ChangeNotifier {
   /// The topmost stroke of any kind under [point], if any.
   Stroke? hitStroke(Offset point) {
     for (final s in strokes.reversed) {
-      // Eraser strokes are invisible, so they can't be picked up.
-      if (s.brush != BrushType.eraser && s.hits(point)) return s;
+      // Eraser and blender strokes have no paint of their own to pick up.
+      if (!s.brush.isEffect && s.hits(point)) return s;
     }
     return null;
   }
@@ -171,7 +172,7 @@ class DrawingController extends ChangeNotifier {
   /// order.
   List<Stroke> strokesIn(Rect box) => [
         for (final s in strokes)
-          if (s.brush != BrushType.eraser && s.touches(box)) s,
+          if (!s.brush.isEffect && s.touches(box)) s,
       ];
 
   /// The topmost text item under [point], if any.
@@ -263,12 +264,20 @@ class DrawingController extends ChangeNotifier {
 
   /// Paints the finished strokes, and the eraser while it's being used
   /// (it cuts into them).
-  void paintFinished(Canvas canvas, Size size) =>
-      _paint(canvas, size, [...strokes, if (_erasing) ?current]);
+  void paintFinished(Canvas canvas, Size size) => paintStrokes(
+      canvas, size, [...strokes, if (_erasing) ?current],
+      paper: paper);
 
-  /// Paints the stroke being drawn, unless it's the eraser.
-  void paintCurrent(Canvas canvas) {
-    if (!_erasing) current?.paint(canvas);
+  /// Paints the stroke being drawn, unless it's the eraser. A blender
+  /// stroke shows the finished drawing under it, blurred.
+  void paintCurrent(Canvas canvas, Size size) {
+    final c = current;
+    if (c == null || _erasing) return;
+    if (c.brush == BrushType.smudge) {
+      paintSmudgeOver(canvas, size, strokes, c, paper: paper);
+    } else {
+      c.paint(canvas);
+    }
   }
 
   @override
@@ -276,16 +285,6 @@ class DrawingController extends ChangeNotifier {
     finishedRevision.dispose();
     paperSizeListenable.dispose();
     super.dispose();
-  }
-
-  static void _paint(Canvas canvas, Size size, List<Stroke> strokes) {
-    // Strokes go on their own layer so the eraser only removes ink, not the
-    // paper underneath.
-    canvas.saveLayer(Offset.zero & size, Paint());
-    for (final stroke in strokes) {
-      stroke.paint(canvas);
-    }
-    canvas.restore();
   }
 
   /// Renders the drawing on its paper as PNG bytes.
@@ -297,7 +296,7 @@ class DrawingController extends ChangeNotifier {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..scale(pixelRatio);
     canvas.drawRect(Offset.zero & size, Paint()..color = paper);
-    _paint(canvas, size, strokes);
+    paintStrokes(canvas, size, strokes, paper: paper);
     return recorder.endRecording().toImage(
         (size.width * pixelRatio).round().clamp(1, 1 << 14),
         (size.height * pixelRatio).round().clamp(1, 1 << 14));

@@ -8,13 +8,14 @@ import 'family.dart';
 import 'l10n.dart';
 import 'music/music_library.dart';
 import 'settings.dart';
+import 'skill_level.dart';
 import 'theme/cute_font.dart';
 import 'theme/cute_theme.dart';
 import 'theme/theme_spec.dart';
 import 'widgets/name_dialog.dart';
 import 'widgets/parent_gate.dart';
 
-const appVersion = '3.0.0';
+const appVersion = '4.0.0';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -117,6 +118,9 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          _SectionTitle(icon: Icons.format_size_rounded, text: s.textSize),
+          TextSizeCard(settings: settings),
+          const SizedBox(height: 24),
           _SectionTitle(icon: Icons.face_rounded, text: s.kids),
           _KidsSettings(settings: settings, family: family),
           const SizedBox(height: 24),
@@ -136,6 +140,13 @@ class SettingsPage extends StatelessWidget {
                   ),
               ],
             ),
+          ),
+          const SizedBox(height: 24),
+          _SectionTitle(icon: Icons.tune_rounded, text: s.skillLevel),
+          SkillLevelCard(settings: settings),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+            child: Text(s.skillLevelHint, style: TextStyle(color: cute.ink)),
           ),
           const SizedBox(height: 24),
           _SectionTitle(icon: Icons.music_note_rounded, text: s.backgroundMusic),
@@ -343,6 +354,129 @@ class _FontCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A slider for the size of all text in the app, with smaller and larger
+/// buttons beside it for those who find a slider hard to drag.
+class TextSizeCard extends StatelessWidget {
+  const TextSizeCard({super.key, required this.settings});
+
+  final AppSettings settings;
+
+  /// Finds the slider in tests.
+  static const sliderKey = Key('textSizeSlider');
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final cute = CuteTheme.of(context);
+    return ValueListenableBuilder(
+      valueListenable: settings.textScale,
+      builder: (context, scale, _) {
+        // In tenths, so the buttons step exactly like the slider.
+        final tenths = (scale * 10).round();
+        void step(int by) => settings.textSize = (tenths + by) / 10;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: s.textSmaller,
+                      icon: const Icon(Icons.text_decrease_rounded),
+                      color: cute.spec.primary,
+                      onPressed: scale > AppSettings.minTextScale + 0.01
+                          ? () => step(-1)
+                          : null,
+                    ),
+                    Expanded(
+                      child: Slider(
+                        key: sliderKey,
+                        min: AppSettings.minTextScale,
+                        max: AppSettings.maxTextScale,
+                        divisions: 7,
+                        value: scale,
+                        label: s.percent(scale),
+                        semanticFormatterCallback: (v) =>
+                            '${s.textSize} ${s.percent(v)}',
+                        onChanged: (v) => settings.textSize = v,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: s.textLarger,
+                      icon: const Icon(Icons.text_increase_rounded),
+                      color: cute.spec.primary,
+                      onPressed: scale < AppSettings.maxTextScale - 0.01
+                          ? () => step(1)
+                          : null,
+                    ),
+                  ],
+                ),
+                Text(
+                  s.percent(scale),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: cute.ink, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(s.textSizeHint, style: TextStyle(color: cute.ink)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The three drawing levels to pick from, each with what it shows. Used
+/// in Settings and on the first-start page.
+class SkillLevelCard extends StatelessWidget {
+  const SkillLevelCard({super.key, required this.settings});
+
+  final AppSettings settings;
+
+  static Key tileKey(SkillLevel level) => Key('level-${level.name}');
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final cute = CuteTheme.of(context);
+    return ListenableBuilder(
+      listenable: settings,
+      builder: (context, _) => Card(
+        child: Column(
+          children: [
+            for (final level in SkillLevel.values)
+              ListTile(
+                key: tileKey(level),
+                leading: Icon(
+                  switch (level) {
+                    SkillLevel.beginner => Icons.looks_one_rounded,
+                    SkillLevel.intermediate => Icons.looks_two_rounded,
+                    SkillLevel.advanced => Icons.looks_3_rounded,
+                  },
+                  color: cute.spec.primary,
+                ),
+                title: Text(s.levelName(level)),
+                subtitle: Text(s.levelDescription(level)),
+                trailing: level == settings.level
+                    ? Icon(Icons.check_circle_rounded,
+                        color: cute.spec.primary)
+                    : null,
+                selected: level == settings.level,
+                onTap: () => settings.level = level,
+              ),
+          ],
         ),
       ),
     );

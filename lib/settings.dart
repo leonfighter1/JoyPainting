@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'drawing/stroke.dart';
+import 'skill_level.dart';
 import 'widgets/corner_float.dart';
 
 /// One child using the app. Each kid has their own paintings.
@@ -56,6 +57,9 @@ class AppSettings extends ChangeNotifier {
         onboarded = ValueNotifier(_prefs.getBool(_kOnboarded) ?? false),
         themeId = ValueNotifier(_prefs.getString(_kTheme) ?? defaultThemeId),
         fontId = ValueNotifier(_prefs.getString(_kFont) ?? defaultFontId),
+        textScale = ValueNotifier((_prefs.getDouble(_kTextScale) ?? 1)
+            .clamp(minTextScale, maxTextScale)
+            .toDouble()),
         _shape = ShapeKind.fromName(_prefs.getString(_kShape)),
         _undoCorner = Corner.fromName(
             _prefs.getString(_kUndoCorner), Corner.topRight),
@@ -65,6 +69,8 @@ class AppSettings extends ChangeNotifier {
         _freeShape = _prefs.getBool(_kFreeShape) ?? false,
         _gradient = GradientStyle.fromName(_prefs.getString(_kGradient)),
         _blend = StrokeBlend.fromName(_prefs.getString(_kBlend)),
+        _texture = StrokeTexture.fromName(_prefs.getString(_kTexture)),
+        _level = SkillLevel.fromName(_prefs.getString(_kLevel)),
         _brush = BrushType.fromName(_prefs.getString(_kBrush)),
         _color = Color(_prefs.getInt(_kColor) ?? Colors.black.toARGB32()),
         _stamp = StampShape.fromName(_prefs.getString(_kStamp)),
@@ -115,11 +121,14 @@ class AppSettings extends ChangeNotifier {
   static const _kLanguage = 'language';
   static const _kTheme = 'theme';
   static const _kFont = 'font';
+  static const _kTextScale = 'textScale';
   static const _kShape = 'shape';
   static const _kFill = 'fill';
   static const _kFreeShape = 'freeShape';
   static const _kGradient = 'gradient';
   static const _kBlend = 'blend';
+  static const _kTexture = 'texture';
+  static const _kLevel = 'level';
   static const _kTextStyle = 'textStyle';
   static const _kUndoCorner = 'undoCorner';
   static const _kToolsCorner = 'toolsCorner';
@@ -148,6 +157,12 @@ class AppSettings extends ChangeNotifier {
   final ValueNotifier<Locale> locale;
   final ValueNotifier<String> themeId;
   final ValueNotifier<String> fontId;
+
+  /// How much bigger (or smaller) than usual all text in the app is, on
+  /// top of the system's own text size.
+  final ValueNotifier<double> textScale;
+  static const minTextScale = 0.8;
+  static const maxTextScale = 1.5;
 
   /// Whether the first-start setup (language, theme, name) is done.
   final ValueNotifier<bool> onboarded;
@@ -217,6 +232,8 @@ class AppSettings extends ChangeNotifier {
     _freeShape = false;
     _gradient = GradientStyle.none;
     _blend = StrokeBlend.normal;
+    _texture = StrokeTexture.none;
+    _level = SkillLevel.beginner;
     _undoCorner = Corner.topRight;
     _toolsCorner = Corner.bottomRight;
     _brush = BrushType.pen;
@@ -234,6 +251,7 @@ class AppSettings extends ChangeNotifier {
     locale.value = const Locale('en');
     themeId.value = defaultThemeId;
     fontId.value = defaultFontId;
+    textScale.value = 1;
     onboarded.value = false;
     notifyListeners();
   }
@@ -243,6 +261,8 @@ class AppSettings extends ChangeNotifier {
   bool _freeShape;
   GradientStyle _gradient;
   StrokeBlend _blend;
+  StrokeTexture _texture;
+  SkillLevel _level;
   Corner _undoCorner;
   Corner _toolsCorner;
 
@@ -279,14 +299,21 @@ class AppSettings extends ChangeNotifier {
 
   /// Whether drawing makes free shapes: the area a line goes around is
   /// filled (see [Stroke.fill]). [shape] is null meanwhile.
-  bool get freeShape => _freeShape;
+  bool get freeShape => _level.freeShape && _freeShape;
 
   /// The gradient new lines and shapes get from the chosen color.
-  GradientStyle get gradient => _gradient;
+  GradientStyle get gradient =>
+      _level.gradients ? _gradient : GradientStyle.none;
 
   /// How new strokes mix with what's under them.
-  StrokeBlend get blend => _blend;
-  BrushType get brush => _brush;
+  StrokeBlend get blend => _level.lightAndShadow ? _blend : StrokeBlend.normal;
+
+  /// The grain new strokes are painted with.
+  StrokeTexture get texture =>
+      _level.textures ? _texture : StrokeTexture.none;
+
+  /// The brush in use; one the [level] hides counts as the pen.
+  BrushType get brush => _level.allows(_brush) ? _brush : BrushType.pen;
   Color get color => _color;
   StampShape get stamp => _stamp;
   bool get mirror => _mirror;
@@ -296,11 +323,11 @@ class AppSettings extends ChangeNotifier {
   List<Color> get customColors => List.unmodifiable(_customColors);
 
   /// Each brush remembers its own size and opacity.
-  double get size => sizeFor(_brush);
+  double get size => sizeFor(brush);
   double sizeFor(BrushType b) =>
       _prefs.getDouble(_kSize(b)) ??
       switch (b) { BrushType.pencil => 6, BrushType.text => 16, _ => 10 };
-  double get opacity => opacityFor(_brush);
+  double get opacity => _level.opacity ? opacityFor(brush) : 1;
   double opacityFor(BrushType b) => _prefs.getDouble(_kOpacity(b)) ?? 1;
 
   /// The painting the current kid last had open.
@@ -341,6 +368,12 @@ class AppSettings extends ChangeNotifier {
     fontId.value = id;
   }
 
+  set textSize(double value) {
+    final v = value.clamp(minTextScale, maxTextScale).toDouble();
+    _prefs.setDouble(_kTextScale, v);
+    textScale.value = v;
+  }
+
   set shape(ShapeKind? value) {
     _shape = value;
     _freeShape = false;
@@ -378,6 +411,22 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+  set texture(StrokeTexture value) {
+    _texture = value;
+    _prefs.setString(_kTexture, value.name);
+    notifyListeners();
+  }
+
+  /// Which tools the drawing screen shows. Options a level hides read as
+  /// their plain defaults (no gradient, full opacity, ...) but are kept, so
+  /// they come back with a higher level.
+  SkillLevel get level => _level;
+  set level(SkillLevel value) {
+    _level = value;
+    _prefs.setString(_kLevel, value.name);
+    notifyListeners();
+  }
+
   set brush(BrushType value) {
     _brush = value;
     _prefs.setString(_kBrush, value.name);
@@ -393,12 +442,12 @@ class AppSettings extends ChangeNotifier {
   }
 
   set size(double value) {
-    _prefs.setDouble(_kSize(_brush), value);
+    _prefs.setDouble(_kSize(brush), value);
     notifyListeners();
   }
 
   set opacity(double value) {
-    _prefs.setDouble(_kOpacity(_brush), value.clamp(minOpacity, 1));
+    _prefs.setDouble(_kOpacity(brush), value.clamp(minOpacity, 1));
     notifyListeners();
   }
 
@@ -470,15 +519,25 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Whether the current kid has been given the sample painting (once:
-  /// deleting it doesn't bring it back).
-  bool get sampleAdded => _prefs.getBool(_sampleKey) ?? false;
+  /// Whether the current kid has been given the sample painting for
+  /// [level] (once each: deleting it doesn't bring it back). Before v4
+  /// there was one sample, the beginner's.
+  bool sampleAddedFor(SkillLevel level) => _samplesAdded.contains(level.name);
 
-  set sampleAdded(bool value) => _prefs.setBool(_sampleKey, value);
+  void markSampleAdded(SkillLevel level) => _prefs.setStringList(
+      _samplesKey, {..._samplesAdded, level.name}.toList());
+
+  List<String> get _samplesAdded =>
+      _prefs.getStringList(_samplesKey) ??
+      [if (_prefs.getBool(_sampleKey) ?? false) SkillLevel.beginner.name];
 
   String get _sampleKey => _currentKidId == Kid.firstId
       ? 'sampleAdded'
       : 'sampleAdded.$_currentKidId';
+
+  String get _samplesKey => _currentKidId == Kid.firstId
+      ? 'samplesAdded'
+      : 'samplesAdded.$_currentKidId';
 
   set lastPaintingId(String? id) {
     if (id == null) {
@@ -505,6 +564,7 @@ class AppSettings extends ChangeNotifier {
     onboarded.dispose();
     themeId.dispose();
     fontId.dispose();
+    textScale.dispose();
     super.dispose();
   }
 }

@@ -8,6 +8,7 @@ import '../painting_session.dart';
 import '../share/import_actions.dart';
 import '../share/share_actions.dart';
 import '../widgets/drop_menu.dart';
+import '../widgets/menu_button.dart';
 import '../widgets/name_dialog.dart';
 import '../theme/cute_theme.dart';
 import 'painting_store.dart';
@@ -231,9 +232,8 @@ class _GalleryPageState extends State<GalleryPage> {
           ),
           actions: [
             // Same unfolding menu as the canvas page.
-            IconButton(
+            MenuButton(
               tooltip: s.more,
-              icon: const Icon(Icons.more_vert_rounded),
               onPressed: () => showDropMenu(context, [
                 DropMenuSection(
                   items: [

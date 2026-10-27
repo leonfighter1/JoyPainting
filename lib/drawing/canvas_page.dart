@@ -19,6 +19,7 @@ import '../share/share_actions.dart';
 import '../theme/cute_theme.dart';
 import '../widgets/corner_float.dart';
 import '../widgets/drop_menu.dart';
+import '../widgets/menu_button.dart';
 import '../widgets/name_dialog.dart';
 import 'drawing_controller.dart';
 import 'stroke.dart';
@@ -592,6 +593,8 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
         : null;
     final blur = brush.blur * _settings.size * brush.sizeFactor;
     final blend = brush.usesColor ? _settings.blend : StrokeBlend.normal;
+    final texture =
+        brush.usesTexture ? _settings.texture : StrokeTexture.none;
     if (shape != null) {
       _drawing.begin(
         Stroke.shape(
@@ -608,6 +611,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
           gradient: gradient,
           blur: blur,
           blend: blend,
+          texture: texture,
         ),
       );
     } else {
@@ -623,6 +627,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
           gradient: gradient,
           blur: blur,
           blend: blend,
+          texture: texture,
           usesRealPressure: e.kind == ui.PointerDeviceKind.stylus,
         ),
         _toPoint(e),
@@ -907,13 +912,13 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     _select(copies);
   }
 
-  /// Everything on the paper, with the move tool (eraser strokes are
-  /// invisible, so they're never selected).
+  /// Everything on the paper, with the move tool (eraser and blender
+  /// strokes have no paint of their own, so they're never selected).
   void _selectAll() {
     _settings.brush = BrushType.move;
     _select([
       for (final s in _drawing.strokes)
-        if (s.brush != BrushType.eraser) s,
+        if (!s.brush.isEffect) s,
     ]);
   }
 
@@ -976,9 +981,9 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     if (brush != BrushType.move) {
       if (selected.value.isNotEmpty) _select(const []);
     } else if (_syncedBrush != BrushType.move) {
-      // Eraser strokes are invisible, so they're never selected.
+      // Eraser and blender strokes are never selected.
       final last = _drawing.strokes.reversed
-          .where((s) => s.brush != BrushType.eraser)
+          .where((s) => !s.brush.isEffect)
           .firstOrNull;
       _select([?last]);
     }
@@ -1408,11 +1413,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
               onPressed: () => panMode.value = !on,
             ),
           ),
-          IconButton(
-            tooltip: s.more,
-            icon: const Icon(Icons.more_vert_rounded),
-            onPressed: _openMenu,
-          ),
+          MenuButton(tooltip: s.more, onPressed: _openMenu),
         ],
       ),
       // While the tools drawer is open, Back closes it instead of leaving.
@@ -1889,7 +1890,8 @@ class _CurrentStrokePainter extends CustomPainter {
   final DrawingController controller;
 
   @override
-  void paint(Canvas canvas, Size size) => controller.paintCurrent(canvas);
+  void paint(Canvas canvas, Size size) =>
+      controller.paintCurrent(canvas, size);
 
   @override
   bool shouldRepaint(_CurrentStrokePainter oldDelegate) =>
@@ -2507,7 +2509,7 @@ class _ToolPanel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
       children: [
         wrap([
-          for (final b in BrushType.values)
+          for (final b in settings.level.brushes)
             _BrushTile(
               brush: b,
               label: s.brushName(b),
@@ -2534,6 +2536,7 @@ class _ToolPanel extends StatelessWidget {
               BrushType.text => s.textHint,
               BrushType.move => s.moveHint,
               BrushType.eraser => s.eraserHint,
+              BrushType.smudge => s.smudgeHint,
               _ => null,
             }
             case final hint?)
@@ -2562,12 +2565,13 @@ class _ToolPanel extends StatelessWidget {
               selected: settings.shape == null && !settings.freeShape,
               onTap: () => settings.shape = null,
             ),
-            _ToolChip(
-              icon: Icons.format_shapes_rounded,
-              label: s.freeShape,
-              selected: settings.freeShape,
-              onTap: () => settings.freeShape = true,
-            ),
+            if (settings.level.freeShape)
+              _ToolChip(
+                icon: Icons.format_shapes_rounded,
+                label: s.freeShape,
+                selected: settings.freeShape,
+                onTap: () => settings.freeShape = true,
+              ),
             for (final shape in ShapeKind.values)
               _ToolChip(
                 icon: AppTheme.shapeIcon(shape),
@@ -2614,7 +2618,9 @@ class _ToolPanel extends StatelessWidget {
               ),
           ]),
         ],
-        if (brush.usesColor && brush.kind == BrushKind.outline) ...[
+        if (settings.level.gradients &&
+            brush.usesColor &&
+            brush.kind == BrushKind.outline) ...[
           heading(s.gradient),
           wrap([
             for (final g in GradientStyle.values)
@@ -2626,7 +2632,7 @@ class _ToolPanel extends StatelessWidget {
               ),
           ]),
         ],
-        if (brush.usesColor) ...[
+        if (settings.level.lightAndShadow && brush.usesColor) ...[
           heading(s.lightAndShadow),
           wrap([
             for (final b in AppTheme.blends)
@@ -2635,6 +2641,18 @@ class _ToolPanel extends StatelessWidget {
                 label: s.blendName(b),
                 selected: settings.blend == b,
                 onTap: () => settings.blend = b,
+              ),
+          ]),
+        ],
+        if (settings.level.textures && brush.usesTexture) ...[
+          heading(s.texture),
+          wrap([
+            for (final t in StrokeTexture.values)
+              _ToolChip(
+                icon: AppTheme.textureIcon(t),
+                label: s.textureName(t),
+                selected: settings.texture == t,
+                onTap: () => settings.texture = t,
               ),
           ]),
         ],
@@ -2665,29 +2683,30 @@ class _ToolPanel extends StatelessWidget {
               _SizePreview(settings: settings),
             ],
           ),
-          Row(
-            children: [
-              _SliderLabel(
-                icon: Icons.opacity_rounded,
-                tooltip: s.opacity,
-                color: accent,
-              ),
-              Expanded(
-                child: Slider(
-                  min: AppSettings.minOpacity,
-                  max: 1,
-                  divisions: 19,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  value: settings.opacity,
-                  label: s.percent(settings.opacity),
-                  semanticFormatterCallback: (v) =>
-                      '${s.opacity} ${s.percent(v)}',
-                  activeColor: accent,
-                  onChanged: (v) => settings.opacity = v,
+          if (settings.level.opacity)
+            Row(
+              children: [
+                _SliderLabel(
+                  icon: Icons.opacity_rounded,
+                  tooltip: s.opacity,
+                  color: accent,
                 ),
-              ),
-            ],
-          ),
+                Expanded(
+                  child: Slider(
+                    min: AppSettings.minOpacity,
+                    max: 1,
+                    divisions: 19,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    value: settings.opacity,
+                    label: s.percent(settings.opacity),
+                    semanticFormatterCallback: (v) =>
+                        '${s.opacity} ${s.percent(v)}',
+                    activeColor: accent,
+                    onChanged: (v) => settings.opacity = v,
+                  ),
+                ),
+              ],
+            ),
         ],
         const Divider(height: 28),
         Row(
@@ -3038,6 +3057,7 @@ class _SizePreview extends StatelessWidget {
     final Color fill = switch (brush) {
       BrushType.eraser => Colors.white,
       BrushType.rainbow => Colors.white,
+      BrushType.smudge => Colors.grey,
       _ => settings.color,
     };
     final alpha = settings.opacity * brush.opacity;
@@ -3417,7 +3437,7 @@ class _PaletteStrip extends StatelessWidget {
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         children: [
-                          for (final b in BrushType.values)
+                          for (final b in settings.level.brushes)
                             _MiniBrush(
                               brush: b,
                               label: s.brushName(b),

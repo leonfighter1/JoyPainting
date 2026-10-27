@@ -2,6 +2,7 @@ import 'dart:ui' show SemanticsAction;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jingyao_paint/widgets/menu_button.dart';
 import 'package:jingyao_paint/app_theme.dart';
 import 'package:jingyao_paint/drawing/canvas_page.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
@@ -68,7 +69,7 @@ Future<void> tapMenu(WidgetTester tester, String label) =>
 /// Opens the ⋮ menu and taps [item]. The menu unfolds downward and
 /// scrolls on short screens, so the item is scrolled into view first.
 Future<void> _tapMenuItem(WidgetTester tester, Finder item) async {
-  await tester.tap(find.byIcon(Icons.more_vert_rounded));
+  await tester.tap(find.byIcon(MenuButton.icon));
   await tester.pumpAndSettle();
   await tester.ensureVisible(item);
   await tester.pumpAndSettle();
@@ -725,7 +726,7 @@ void main() {
     final app = await createTestApp();
     await app.store.save(sampleDoc('p', DateTime(2026, 2, 2)), tinyPng);
     await pumpApp(tester, app: app);
-    await tester.tap(find.byIcon(Icons.more_vert_rounded));
+    await tester.tap(find.byIcon(MenuButton.icon));
     await tester.pumpAndSettle();
     expect(find.text('打印'), findsOneWidget);
     await tester.tapAt(const Offset(10, 400));
@@ -756,7 +757,7 @@ void main() {
       for (final t in ['保存画作', '清空画布']) {
         expect(button(tester, t).onPressed, isNull, reason: t);
       }
-      await tester.tap(find.byIcon(Icons.more_vert_rounded));
+      await tester.tap(find.byIcon(MenuButton.icon));
       await tester.pumpAndSettle();
       final delete = find.widgetWithText(ListTile, '删除这幅画');
       await tester.ensureVisible(delete);
@@ -773,7 +774,7 @@ void main() {
 
     testWidgets('the ⋮ menu unfolds from the top, in groups', (tester) async {
       await pumpApp(tester);
-      await tester.tap(find.byIcon(Icons.more_vert_rounded));
+      await tester.tap(find.byIcon(MenuButton.icon));
       await tester.pump(); // first frame of the animation
       await tester.pump(const Duration(milliseconds: 100));
       final menu = find.ancestor(
@@ -857,7 +858,7 @@ void main() {
     testWidgets('settings is also in the gallery ⋮ menu', (tester) async {
       await pumpApp(tester);
       await openTab(tester, 1);
-      await tester.tap(find.byIcon(Icons.more_vert_rounded));
+      await tester.tap(find.byIcon(MenuButton.icon));
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
     });
@@ -962,6 +963,11 @@ void main() {
     final app = await pumpApp(tester);
 
     await openSettings(tester);
+    // Below the font and text size.
+    await tester.scrollUntilVisible(find.text('English'), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.text('English'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
     expect(find.text('Settings'), findsOneWidget,

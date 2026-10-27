@@ -2,197 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
-import 'package:jingyao_paint/gallery/painting_store.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
-
-/// A tarot card made of the app's own strokes (shapes, free shapes,
-/// brushes, gradients, soft edges, light and shadow, text), so it opens,
-/// moves, recolors and erases like anything drawn by hand.
-///
-/// Every card shares one frame (see [TarotFrame]); a card only brings its
-/// number, names, keywords and the scene inside the arched window.
-class TarotCard {
-  const TarotCard({
-    required this.number,
-    required this.numeral,
-    required this.zh,
-    required this.en,
-    required this.keywords,
-    required this.scene,
-  });
-
-  final int number;
-
-  /// What the medallion shows: '0', 'I', 'II', ...
-  final String numeral;
-  final String zh;
-  final String en;
-  final List<String> keywords;
-
-  /// Paints the picture. It may spill past the window; the frame covers it.
-  final void Function(Artist a) scene;
-
-  static const size = Size(700, 1200);
-  static const paper = Color(0xFFFFFFFF);
-
-  /// "00 愚人 The Fool": sorts in deck order.
-  String get fileName => '${number.toString().padLeft(2, '0')} $zh $en';
-
-  List<Stroke> strokes() {
-    final a = Artist();
-    scene(a);
-    TarotFrame.draw(a, this);
-    return a.strokes;
-  }
-
-  PaintingDoc doc(DateTime now) {
-    final all = strokes();
-    return PaintingDoc(
-      meta: PaintingMeta(
-        id: 'tarot-$number',
-        name: '塔罗 $numeral · $zh $en',
-        createdAt: now,
-        updatedAt: now,
-        width: size.width,
-        height: size.height,
-        strokeCount: all.length,
-      ),
-      strokes: all,
-      paper: paper,
-      // The paper is exactly the card: no margin around it, in the app or
-      // in pictures made from it.
-      paperSize: size,
-    );
-  }
-}
-
-/// The deck's shared look: a night-blue card, a gold arched window for the
-/// picture, the number on a medallion at the top and the names below.
-abstract final class TarotFrame {
-  static const navy = Color(0xFF1E2546);
-  static const gold = Color(0xFFE4BC62);
-  static const goldDeep = Color(0xFFB58A35);
-  static const goldPale = Color(0xFFF7E3A8);
-  static const cream = Color(0xFFFFF6E3);
-
-  /// Polished gold: pale where the light catches it, deeper at the ends.
-  static Fill goldAcross(double x0, double x1) => Fill.linear(
-        Offset(x0, 0),
-        Offset(x1, 0),
-        const [goldDeep, goldPale, gold, goldPale, goldDeep],
-      );
-
-  /// The picture window: straight sides and bottom, a half-circle on top.
-  static const window = Rect.fromLTRB(48, 130, 652, 930);
-  static const archCenter = Offset(350, 432);
-  static const archRadius = 302.0;
-
-  static const titleFont = 'ZCOOLQingKeHuangYou';
-  static const textFont = 'ZCOOLKuaiLe';
-
-  static void draw(Artist a, TarotCard card) {
-    final w = window;
-    // Navy mats around the window hide whatever the scene spilled; the top
-    // one is cut along the arch.
-    a.rect(const Rect.fromLTRB(0, 930, 700, 1200), navy);
-    a.rect(const Rect.fromLTRB(0, 430, 48, 1200), navy);
-    a.rect(const Rect.fromLTRB(652, 430, 700, 1200), navy);
-    a.area([
-      const Offset(0, 0), const Offset(700, 0), const Offset(700, 436),
-      Offset(w.right, 436),
-      ...a.arc(archCenter, archRadius, 0, 180, steps: 120),
-      Offset(w.left, 436), const Offset(0, 436),
-    ], const Fill(navy), spacing: 2);
-
-    // A soft glow behind the names.
-    a.glow(const Offset(350, 1040), 250, gold.withValues(alpha: 0.12),
-        squash: 0.44);
-
-    // Borders.
-    a.box(const Rect.fromLTRB(16, 16, 684, 1184), gold, width: 3);
-    a.box(const Rect.fromLTRB(26, 26, 674, 1174), goldDeep, width: 1.2);
-    a.box(const Rect.fromLTRB(40, 122, 660, 938), goldDeep, width: 1.5);
-    for (final c in const [
-      Offset(26, 26), Offset(674, 26), Offset(26, 1174), Offset(674, 1174), //
-    ]) {
-      a.diamond(c, 9, gold);
-    }
-
-    // The window's gold frame.
-    final frame = goldAcross(w.left, w.right);
-    a.line([w.bottomLeft, Offset(w.left, archCenter.dy)], gold, width: 6,
-        fill: frame);
-    a.line([w.bottomRight, Offset(w.right, archCenter.dy)], gold, width: 6,
-        fill: frame);
-    a.line([w.bottomLeft, w.bottomRight], gold, width: 6, fill: frame);
-    a.line(a.arc(archCenter, archRadius, 0, 180, steps: 120), gold,
-        width: 6, fill: frame);
-    a.line(a.arc(archCenter, archRadius - 9, 0, 180, steps: 120), goldPale,
-        width: 1.2, opacity: 0.6);
-
-    // Moon and star in the top corners, with a few small stars.
-    a.oval(const Offset(100, 182), 26, 26, Fill.radial(
-        const Offset(92, 174), 34, const [goldPale, gold, goldDeep]));
-    a.oval(const Offset(111, 174), 22, 22, const Fill(navy));
-    a.oval(const Offset(600, 182), 30, 30, Fill.radial(const Offset(600, 182),
-        30, [goldPale.withValues(alpha: 0.35), goldPale.withValues(alpha: 0)]));
-    a.star(const Offset(600, 182), 24, gold);
-    for (final (p, r) in const [
-      (Offset(150, 152), 7.0), (Offset(72, 262), 6.0), (Offset(160, 222), 4.0),
-      (Offset(550, 152), 7.0), (Offset(628, 262), 6.0), (Offset(540, 222), 4.0),
-    ]) {
-      a.star(p, r, goldPale);
-    }
-
-    // Medallion with the number, sitting on top of the arch.
-    for (final (x0, x1) in const [(110.0, 296.0), (404.0, 590.0)]) {
-      a.line([Offset(x0, 76), Offset(x1, 76)], gold, width: 1.5,
-          fill: goldAcross(x0, x1));
-    }
-    a.diamond(const Offset(104, 76), 6, gold);
-    a.diamond(const Offset(596, 76), 6, gold);
-    a.oval(const Offset(350, 82), 47, 47, Fill.linear(const Offset(310, 40),
-        const Offset(390, 124), const [goldPale, gold, goldDeep]));
-    a.oval(const Offset(350, 82), 43, 43, Fill.radial(const Offset(340, 70),
-        50, const [Color(0xFF34407A), navy]));
-    a.ring(const Offset(350, 82), 37, goldDeep, width: 1);
-    a.text(card.numeral, const Offset(350, 48), gold,
-        size: 50, font: titleFont);
-
-    // Names and keywords.
-    a.text(card.zh, const Offset(350, 952), gold, size: 64, font: titleFont);
-    a.text(card.en.toUpperCase().split('').join(' '), const Offset(350, 1036),
-        goldPale, size: 24, font: titleFont);
-    a.line([const Offset(190, 1090), const Offset(320, 1090)], gold,
-        width: 1.5, fill: goldAcross(190, 320));
-    a.line([const Offset(380, 1090), const Offset(510, 1090)], gold,
-        width: 1.5, fill: goldAcross(380, 510));
-    a.diamond(const Offset(184, 1090), 5, gold);
-    a.diamond(const Offset(516, 1090), 5, gold);
-    a.star(const Offset(350, 1090), 13, gold);
-    _keywords(a, card.keywords, top: 1110);
-  }
-
-  /// The keywords in a centered row with small gold diamonds between them
-  /// (the fonts' middle dots look like stray ticks).
-  static void _keywords(Artist a, List<String> words, {required double top}) {
-    const size = 26.0, gap = 40.0;
-    final widths = [
-      for (final w in words) Artist.textWidth(w, size: size, font: textFont),
-    ];
-    final total =
-        widths.fold(0.0, (sum, w) => sum + w) + gap * (words.length - 1);
-    var x = 350 - total / 2;
-    for (final (i, word) in words.indexed) {
-      if (i > 0) {
-        a.diamond(Offset(x - gap / 2, top + size * 0.66), 5, gold);
-      }
-      a.text(word, Offset(x + widths[i] / 2, top), cream,
-          size: size, font: textFont);
-      x += widths[i] + gap;
-    }
-  }
-}
 
 /// What an area or line is painted with: one color, or a gradient placed
 /// on the paper. It's turned into the stroke's own [StrokeGradient], which
@@ -264,6 +74,7 @@ class Artist {
     StrokeTransform? transform,
     double blur = 0,
     StrokeBlend blend = StrokeBlend.normal,
+    StrokeTexture texture = StrokeTexture.none,
     double opacity = 1,
   }) =>
       strokes.add(Stroke.shape(
@@ -283,6 +94,7 @@ class Artist {
         gradient: fill.gradientIn(box),
         blur: blur,
         blend: blend,
+        texture: texture,
         isComplete: true,
       ));
 
@@ -302,11 +114,16 @@ class Artist {
     double angle = 0,
     double blur = 0,
     StrokeBlend blend = StrokeBlend.normal,
+    StrokeTexture texture = StrokeTexture.none,
     double opacity = 1,
   }) =>
       _shape(ShapeKind.ellipse,
           Rect.fromCenter(center: c, width: rx * 2, height: ry * 2), fill,
-          angle: angle, blur: blur, blend: blend, opacity: opacity);
+          angle: angle,
+          blur: blur,
+          blend: blend,
+          opacity: opacity,
+          texture: texture);
 
   /// A soft light (or shade): [color] in the middle, fading out all
   /// around. [squash] flattens it and [angle] turns it, so the fade still
@@ -344,6 +161,7 @@ class Artist {
     Fill fill, {
     double blur = 0,
     StrokeBlend blend = StrokeBlend.normal,
+    StrokeTexture texture = StrokeTexture.none,
     double opacity = 1,
     double spacing = 3,
   }) {
@@ -356,9 +174,10 @@ class Artist {
       usesRealPressure: false,
       seed: _seed++,
       fill: true,
-      gradient: fill.gradientIn(_boxOf(pts)),
+      gradient: fill.gradientIn(boxOf(pts)),
       blur: blur,
       blend: blend,
+      texture: texture,
       isComplete: true,
       points: [for (final p in pts) PointVector(p.dx, p.dy, 0.5)],
     ));
@@ -370,10 +189,11 @@ class Artist {
     Fill fill, {
     double blur = 0,
     StrokeBlend blend = StrokeBlend.normal,
+    StrokeTexture texture = StrokeTexture.none,
     double opacity = 1,
   }) =>
       area(spline(corners, closed: true), fill,
-          blur: blur, blend: blend, opacity: opacity);
+          blur: blur, blend: blend, opacity: opacity, texture: texture);
 
   /// A freehand stroke through [corners], with a point every few pixels as
   /// a hand would make. [taper] thins both ends, like a brush lifting off.
@@ -385,6 +205,7 @@ class Artist {
     double opacity = 1,
     double blur = 0,
     StrokeBlend blend = StrokeBlend.normal,
+    StrokeTexture texture = StrokeTexture.none,
     bool taper = false,
     Fill? fill,
   }) {
@@ -399,9 +220,10 @@ class Artist {
       opacity: opacity,
       usesRealPressure: taper,
       seed: _seed++,
-      gradient: fill?.gradientIn(_boxOf(pts)),
+      gradient: fill?.gradientIn(boxOf(pts)),
       blur: blur,
       blend: blend,
+      texture: texture,
       isComplete: true,
       points: [
         for (final (i, p) in pts.indexed)
@@ -418,6 +240,7 @@ class Artist {
           double opacity = 1,
           double blur = 0,
           StrokeBlend blend = StrokeBlend.normal,
+          StrokeTexture texture = StrokeTexture.none,
           bool taper = false,
           Fill? fill}) =>
       line(spline(corners), color,
@@ -426,8 +249,48 @@ class Artist {
           opacity: opacity,
           blur: blur,
           blend: blend,
+          texture: texture,
           taper: taper,
           fill: fill);
+
+  /// The blender along a smooth curve through [corners]: softens and mixes
+  /// what's painted under a band [width] wide, as much as [strength].
+  void smudge(List<Offset> corners,
+      {double width = 20, double strength = 0.8}) {
+    final pts = densify(spline(corners), 3);
+    strokes.add(Stroke(
+      brush: BrushType.smudge,
+      color: const Color(0xFF000000),
+      size: width / BrushType.smudge.sizeFactor,
+      opacity: strength,
+      usesRealPressure: true,
+      seed: _seed++,
+      blur: width * 0.2,
+      isComplete: true,
+      points: [for (final p in pts) PointVector(p.dx, p.dy, 0.5)],
+    ));
+  }
+
+  /// The blender over the whole area [outline] goes around: colors spread
+  /// about [radius] pixels, softer toward the edge.
+  void smudgeArea(List<Offset> outline,
+      {double radius = 4, double strength = 1}) {
+    final pts = densify([...outline, outline.first], 3);
+    // The blender's reach is 0.3 of its width (see Stroke.smudgeRadius).
+    final width = radius / 0.3;
+    strokes.add(Stroke(
+      brush: BrushType.smudge,
+      color: const Color(0xFF000000),
+      size: width / BrushType.smudge.sizeFactor,
+      opacity: strength,
+      usesRealPressure: false,
+      seed: _seed++,
+      fill: true,
+      blur: radius,
+      isComplete: true,
+      points: [for (final p in pts) PointVector(p.dx, p.dy, 0.5)],
+    ));
+  }
 
   void stamp(StampShape kind, Offset at, Color color, {double width = 24}) =>
       strokes.add(Stroke(
@@ -556,7 +419,7 @@ class Artist {
     return out;
   }
 
-  static Rect _boxOf(List<Offset> pts) {
+  static Rect boxOf(List<Offset> pts) {
     var r = Rect.fromPoints(pts.first, pts.first);
     for (final p in pts) {
       r = r.expandToInclude(Rect.fromPoints(p, p));

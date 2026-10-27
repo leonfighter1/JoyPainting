@@ -6,10 +6,10 @@ import 'package:flutter/painting.dart';
 
 import 'drawing/drawing_controller.dart';
 import 'drawing/stroke.dart';
+import 'gallery/level_samples.dart';
 import 'gallery/painting_archive.dart';
 import 'gallery/painting_file.dart';
 import 'gallery/painting_store.dart';
-import 'gallery/sample_painting.dart';
 import 'l10n.dart';
 import 'settings.dart';
 
@@ -288,27 +288,19 @@ class PaintingSession extends ChangeNotifier {
     return added;
   }
 
-  /// Puts the sample painting into the current kid's My Paintings, the
-  /// first time only.
+  /// Puts the sample painting for the drawing level into the current kid's
+  /// My Paintings, the first time only (see [LevelSamples]). A kid who
+  /// moves up a level gets that level's sample too.
   Future<void> addSampleOnce() async {
-    if (settings.sampleAdded) return;
+    final level = settings.level;
+    if (settings.sampleAddedFor(level)) return;
     // Marked first, so two calls at once can't add it twice.
-    settings.sampleAdded = true;
-    final now = DateTime.now();
-    final strokes = SamplePainting.strokes(_s);
-    await _addCopy(PaintingDoc(
-      meta: PaintingMeta(
-        id: '',
-        name: _s.samplePaintingName,
-        createdAt: now,
-        updatedAt: now,
-        width: SamplePainting.size.width,
-        height: SamplePainting.size.height,
-        strokeCount: strokes.length,
-      ),
-      strokes: strokes,
-      paper: SamplePainting.paper,
-    ));
+    settings.markSampleAdded(level);
+    try {
+      await _addCopy(await LevelSamples.load(level, _s));
+    } catch (e) {
+      debugPrint('Sample painting not added: $e');
+    }
   }
 
   /// Adds a copy of [paintingId] named [name], next to it in My Paintings

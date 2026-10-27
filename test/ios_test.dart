@@ -35,6 +35,9 @@ void main() {
       expect(find.text('画笔与颜色'), findsOneWidget);
       await closeTools(tester);
       await openSettings(tester);
+      // Further down, below the drawing level.
+      await tester.scrollUntilVisible(find.text('背景音乐'), 200,
+          scrollable: find.byType(Scrollable).first);
       expect(find.text('背景音乐'), findsOneWidget);
       await leaveSettings(tester);
       expect(find.byType(CanvasPage), findsOneWidget);

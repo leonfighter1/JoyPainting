@@ -6,6 +6,10 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 
+import 'stroke_texture.dart';
+
+export 'stroke_texture.dart';
+
 /// How a brush turns pointer points into paint.
 enum BrushKind {
   /// A smooth filled outline (perfect_freehand).
@@ -34,6 +38,11 @@ enum BrushType {
   /// A see-through line with blurred edges, for shading, glows and soft
   /// light: layers of it build up like paint.
   soft(BrushKind.outline, thinning: 0.2, smoothing: 0.6, streamline: 0.5, sizeFactor: 2, opacity: 0.6, blur: 0.35),
+
+  /// A blender: paints nothing itself, but softens and mixes the colors
+  /// already on the paper under it, like a finger or a dry brush smudging
+  /// wet paint. See [Stroke.paintSmudge].
+  smudge(BrushKind.outline, thinning: 0.2, smoothing: 0.6, streamline: 0.5, sizeFactor: 2.5, blur: 0.2),
   spray(BrushKind.spray, sizeFactor: 2.5),
   rainbow(BrushKind.rainbow, sizeFactor: 1),
   stamp(BrushKind.stamp, sizeFactor: 2.2),
@@ -76,11 +85,20 @@ enum BrushType {
   final double blur;
 
   /// Brushes that ignore the chosen color.
-  bool get usesColor => this != eraser && this != rainbow && this != move;
+  bool get usesColor =>
+      this != eraser && this != rainbow && this != move && this != smudge;
 
   /// Tools that can draw shapes. The eraser is always a round tip; text and
   /// move don't draw at all.
   bool get usesShapes => this != eraser && this != text && this != move;
+
+  /// Brushes whose paint can have a [StrokeTexture]. The eraser and the
+  /// blender paint nothing of their own.
+  bool get usesTexture => usesShapes && this != smudge;
+
+  /// Tools whose strokes paint nothing of their own (they remove or mix
+  /// what's there), so they can't be picked up or selected.
+  bool get isEffect => this == eraser || this == smudge;
 
   static BrushType fromName(String? name) =>
       values.firstWhere((b) => b.name == name, orElse: () => pen);
@@ -535,6 +553,7 @@ class Stroke {
     this.gradient,
     this.blur = 0,
     this.blend = StrokeBlend.normal,
+    this.texture = StrokeTexture.none,
     List<PointVector>? points,
     this.isComplete = false,
   })  : seed = seed ?? math.Random().nextInt(1 << 30),
@@ -643,6 +662,7 @@ class Stroke {
         gradient: gradient,
         blur: blur,
         blend: blend,
+        texture: texture,
         isComplete: true,
       );
     }
@@ -660,6 +680,7 @@ class Stroke {
       gradient: gradient,
       blur: blur,
       blend: blend,
+      texture: texture,
       isComplete: true,
       points: [
         for (final p in points)
@@ -745,6 +766,7 @@ class Stroke {
     StrokeGradient? gradient,
     double blur = 0,
     StrokeBlend blend = StrokeBlend.normal,
+    StrokeTexture texture = StrokeTexture.none,
     bool isComplete = false,
   }) =>
       Stroke(
@@ -762,6 +784,7 @@ class Stroke {
         gradient: gradient,
         blur: blur,
         blend: blend,
+        texture: texture,
         isComplete: isComplete,
       )..setShapeEnds(from, to);
 
@@ -809,6 +832,10 @@ class Stroke {
 
   /// How the stroke mixes with the strokes under it.
   final StrokeBlend blend;
+
+  /// The grain its paint is laid with. Text, the eraser and the blender
+  /// ignore it.
+  final StrokeTexture texture;
   TextPainter? _textPainter;
   Offset? _from;
   Offset? _to;
@@ -921,15 +948,157 @@ class Stroke {
   }
 
   void _paintOnce(Canvas canvas) {
-    // A blend mode mixes the whole stroke with what's under it at once, so
-    // the stroke is drawn on its own layer first.
+    // The blender needs what's under it; see [paintSmudge].
+    if (brush == BrushType.smudge) return;
+    // A blend mode mixes the whole stroke with what's under it at once,
+    // and a texture takes paint away from the whole stroke, so the stroke
+    // is drawn on its own layer first.
     final blended = blend != StrokeBlend.normal && brush != BrushType.eraser;
-    if (blended) {
+    final textured =
+        texture != StrokeTexture.none && brush.usesTexture && text == null;
+    if (blended || textured) {
       canvas.saveLayer(text != null ? textBounds.inflate(2) : _bounds,
           Paint()..blendMode = blend.mode);
     }
     _paintContent(canvas);
-    if (blended) canvas.restore();
+    if (textured) _paintTexture(canvas);
+    if (blended || textured) canvas.restore();
+  }
+
+  /// Masks the stroke just painted with its texture. Bristles follow a
+  /// line along its length; areas get the grain along their longest side.
+  void _paintTexture(Canvas canvas) {
+    if (texture == StrokeTexture.bristle && !fill && points.length > 1) {
+      _paintBristles(canvas);
+    } else {
+      texture.mask(canvas, _bounds, angle: _mainAngle);
+    }
+  }
+
+  /// The direction the points mostly run in (radians).
+  double get _mainAngle {
+    if (points.length < 2) return 0;
+    var mx = 0.0, my = 0.0;
+    for (final p in points) {
+      mx += p.x;
+      my += p.y;
+    }
+    mx /= points.length;
+    my /= points.length;
+    var xx = 0.0, yy = 0.0, xy = 0.0;
+    for (final p in points) {
+      final dx = p.x - mx, dy = p.y - my;
+      xx += dx * dx;
+      yy += dy * dy;
+      xy += dx * dy;
+    }
+    return 0.5 * math.atan2(2 * xy, xx - yy);
+  }
+
+  /// Keeps the paint only where the hairs of a bristle brush drag it along
+  /// the line: streaks of different strength, some running dry early.
+  void _paintBristles(Canvas canvas) {
+    final pts = [for (final p in points) p as Offset];
+    Offset normalAt(int i) {
+      final d = pts[math.min(pts.length - 1, i + 1)] - pts[math.max(0, i - 1)];
+      return d.distance == 0
+          ? const Offset(0, 1)
+          : Offset(-d.dy, d.dx) / d.distance;
+    }
+
+    final normals = [for (var i = 0; i < pts.length; i++) normalAt(i)];
+    final rnd = math.Random(seed);
+    final hairs = (width / 1.5).clamp(5, 48).round();
+    canvas.saveLayer(_bounds, Paint()..blendMode = BlendMode.dstIn);
+    for (var h = 0; h < hairs; h++) {
+      final across = ((h + 0.5) / hairs - 0.5) * width * 1.05 +
+          (rnd.nextDouble() - 0.5) * width / hairs;
+      final strength = 0.4 + 0.6 * rnd.nextDouble();
+      final start = (rnd.nextDouble() * 0.1 * pts.length).floor();
+      final end = pts.length - (rnd.nextDouble() * 0.3 * pts.length).floor();
+      final hairWidth = width / hairs * (1.6 + rnd.nextDouble());
+      if (end - start < 2) continue;
+      // Each hair runs dry toward its end: the last third fades out.
+      final paint = Paint()
+        ..isAntiAlias = true
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = hairWidth
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      final dry = start + ((end - start) * 0.67).round();
+      for (final (from, to, fade) in [
+        (start, dry, 1.0),
+        (dry - 1, dry + (end - dry) ~/ 2, 0.6),
+        (dry + (end - dry) ~/ 2 - 1, end, 0.3),
+      ]) {
+        if (to - from < 2) continue;
+        final hair = Path();
+        for (var i = from; i < to; i++) {
+          final p = pts[i] + normals[i] * across;
+          i == from ? hair.moveTo(p.dx, p.dy) : hair.lineTo(p.dx, p.dy);
+        }
+        canvas.drawPath(
+            hair, paint..color = Color.fromRGBO(255, 255, 255, strength * fade));
+      }
+    }
+    canvas.restore();
+  }
+
+  /// How far the blender spreads colors (a blur radius in pixels).
+  double get smudgeRadius => math.max(1, width * 0.3);
+
+  /// Paints a blender stroke: [under], what's painted beneath it already
+  /// blurred and covering [region] of the paper, shows through the
+  /// stroke's shape, as strongly as its opacity.
+  void paintSmudge(Canvas canvas, ui.Image under, Rect region) {
+    final area = bounds.intersect(region);
+    if (area.isEmpty) return;
+    canvas
+      ..saveLayer(area, Paint())
+      ..drawImageRect(
+        under,
+        Rect.fromLTWH(0, 0, under.width.toDouble(), under.height.toDouble()),
+        region,
+        Paint()..filterQuality = FilterQuality.medium,
+      )
+      // The stroke's shape (and its mirror image) together, as a mask.
+      ..saveLayer(area, Paint()..blendMode = BlendMode.dstIn);
+    if (transform case final t?) {
+      canvas
+        ..save()
+        ..transform(t.matrix4);
+    }
+    _paintSmudgeMask(canvas);
+    if (mirrorX case final m?) {
+      canvas
+        ..save()
+        ..translate(2 * m, 0)
+        ..scale(-1, 1);
+      _paintSmudgeMask(canvas);
+      canvas.restore();
+    }
+    if (transform != null) canvas.restore();
+    canvas
+      ..restore()
+      ..restore();
+  }
+
+  void _paintSmudgeMask(Canvas canvas) {
+    final paint = Paint()
+      ..isAntiAlias = true
+      ..color = Color.fromRGBO(0, 0, 0, (opacity * brush.opacity).clamp(0, 1));
+    if (blur > 0) paint.maskFilter = MaskFilter.blur(BlurStyle.normal, blur);
+    if (shape != null && !fill) {
+      canvas.drawPath(
+          _shapePath,
+          paint
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = width
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round);
+    } else {
+      canvas.drawPath(fill ? _fillArea : path, paint);
+    }
   }
 
   void _paintContent(Canvas canvas) {
@@ -1285,6 +1454,7 @@ class Stroke {
         if (gradient != null) 'gradient': gradient!.toJson(),
         if (blur > 0) 'blur': _round(blur, 10),
         if (blend != StrokeBlend.normal) 'blend': blend.name,
+        if (texture != StrokeTexture.none) 'texture': texture.name,
         if (text != null) 'text': text!.toJson(),
         // Shapes are stored by their two corners and rebuilt on load.
         if (shape != null) ...{
@@ -1312,6 +1482,8 @@ class Stroke {
     final gradient = StrokeGradient.fromJson(json['gradient']);
     final blur = (json['blur'] as num? ?? 0).toDouble();
     final blend = StrokeBlend.fromName(json['blend'] as String?);
+    // Nor textures before v3.1.
+    final texture = StrokeTexture.fromName(json['texture'] as String?);
     if (json['text'] case final Map<String, Object?> text) {
       final p = (json['points'] as List).cast<num>();
       return Stroke.text(
@@ -1345,6 +1517,7 @@ class Stroke {
         gradient: gradient,
         blur: blur,
         blend: blend,
+        texture: texture,
         isComplete: true,
       );
     }
@@ -1364,6 +1537,7 @@ class Stroke {
       gradient: gradient,
       blur: blur,
       blend: blend,
+      texture: texture,
       isComplete: true,
       points: [
         for (var i = 0; i + 2 < flat.length; i += 3)

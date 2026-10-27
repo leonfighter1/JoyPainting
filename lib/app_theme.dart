@@ -48,6 +48,7 @@ abstract final class AppTheme {
         BrushType.marker => const Color(0xFFC2185B),
         BrushType.highlighter => const Color(0xFF8A6D00),
         BrushType.soft => const Color(0xFF2E7D32),
+        BrushType.smudge => const Color(0xFF5D6B2F),
         BrushType.spray => const Color(0xFF1C7A96),
         BrushType.rainbow => const Color(0xFFA63A9E),
         BrushType.stamp => const Color(0xFFD1376F),
@@ -62,6 +63,7 @@ abstract final class AppTheme {
         BrushType.marker => Icons.brush_rounded,
         BrushType.highlighter => Icons.border_color_rounded,
         BrushType.soft => Icons.water_drop_rounded,
+        BrushType.smudge => Icons.blur_circular_rounded,
         BrushType.spray => Icons.blur_on_rounded,
         BrushType.rainbow => Icons.looks_rounded,
         BrushType.stamp => Icons.favorite_rounded,
@@ -90,12 +92,13 @@ abstract final class AppTheme {
         GradientStyle.rounded => Icons.circle_rounded,
       };
 
-  /// The blend modes offered in the tools drawer; the others are for
-  /// paintings made outside it.
+  /// The blend modes offered in the tools drawer, in order.
   static const blends = [
     StrokeBlend.normal,
     StrokeBlend.multiply,
     StrokeBlend.screen,
+    StrokeBlend.overlay,
+    StrokeBlend.softLight,
   ];
 
   static IconData blendIcon(StrokeBlend b) => switch (b) {
@@ -104,6 +107,14 @@ abstract final class AppTheme {
         StrokeBlend.screen => Icons.light_mode_rounded,
         StrokeBlend.overlay => Icons.layers_rounded,
         StrokeBlend.softLight => Icons.tonality_rounded,
+      };
+
+  static IconData textureIcon(StrokeTexture t) => switch (t) {
+        StrokeTexture.none => Icons.square_rounded,
+        StrokeTexture.canvas => Icons.grid_on_rounded,
+        StrokeTexture.paper => Icons.description_rounded,
+        StrokeTexture.charcoal => Icons.grain_rounded,
+        StrokeTexture.bristle => Icons.texture_rounded,
       };
 
   static IconData stampIcon(StampShape s) => switch (s) {
@@ -194,15 +205,21 @@ class AppLogoTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final emoji = CuteTheme.of(context).spec.emoji;
     final sub = subtitle;
-    final title = Row(
+    // On a narrow bar with big text, the words matter more than the logo
+    // and the emoji.
+    final title = LayoutBuilder(builder: (context, box) {
+    final roomy = box.maxWidth >= 120;
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.asset('assets/icon/logo.png',
-              width: 32, height: 32, excludeFromSemantics: true),
-        ),
-        const SizedBox(width: 10),
+        if (roomy) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.asset('assets/icon/logo.png',
+                width: 32, height: 32, excludeFromSemantics: true),
+          ),
+          const SizedBox(width: 10),
+        ],
         Flexible(
           child: sub == null
               ? Text(text, overflow: TextOverflow.ellipsis)
@@ -234,12 +251,13 @@ class AppLogoTitle extends StatelessWidget {
                   ],
                 ),
         ),
-        if (emoji.isNotEmpty) ...[
+        if (roomy && emoji.isNotEmpty) ...[
           const SizedBox(width: 6),
           ExcludeSemantics(child: Text(emoji)),
         ],
       ],
     );
+    });
     if (onTap == null) return title;
     return Semantics(
       button: true,
