@@ -8,12 +8,12 @@ import 'stroke.dart';
 
 /// What the drawing looked like before an edit, for undo and redo.
 class _Snapshot {
-  _Snapshot(List<Stroke> strokes, this.paper, this.paperScale)
+  _Snapshot(List<Stroke> strokes, this.paper, this.paperSize)
       : strokes = List.of(strokes);
 
   final List<Stroke> strokes;
   final Color paper;
-  final double paperScale;
+  final Size? paperSize;
 }
 
 /// Holds the strokes and paper color of the open painting, plus its
@@ -29,15 +29,24 @@ class DrawingController extends ChangeNotifier {
   Stroke? current;
   Color paper = Colors.white;
 
-  /// How much paper there is, as screens' worth by area: 1 fills the
-  /// screen, 4 is twice as wide and twice as tall. The whole sheet still
-  /// fits on screen (smaller); zoom in to draw details.
-  double get paperScale => paperScaleListenable.value;
-  final paperScaleListenable = ValueNotifier<double>(1);
-  static const paperScales = [1.0, 2.0, 3.0, 4.0];
+  /// The paper's own size, or null for paper that fills the screen (and
+  /// grows to fit what's drawn), as new paintings have. Strokes never
+  /// change with it: a smaller paper only hides what's past its edges.
+  Size? get paperSize => paperSizeListenable.value;
+  final paperSizeListenable = ValueNotifier<Size?>(null);
+  static const minPaperSide = 100.0;
+  static const maxPaperSide = 8000.0;
 
   /// Older steps are forgotten past this many, to bound memory.
   static const maxUndo = 100;
+
+  /// Bumped when what's finished (strokes, paper) changes, and on every
+  /// move of the eraser, which cuts into it; not while another stroke is
+  /// being drawn. The finished drawing has its own layer, so a big painting
+  /// isn't painted again for every point of a new stroke.
+  final finishedRevision = ValueNotifier<int>(0);
+
+  bool get _erasing => current?.brush == BrushType.eraser;
 
   /// Bumped whenever the finished drawing changes, so listeners can tell an
   /// edit worth saving apart from a repaint of the stroke being drawn.
@@ -57,12 +66,14 @@ class DrawingController extends ChangeNotifier {
   void begin(Stroke stroke, [PointVector? point]) {
     current = stroke;
     if (point != null) stroke.points.add(point);
+    if (_erasing) finishedRevision.value++;
     notifyListeners();
   }
 
   void extend(PointVector point) {
     if (current == null) return;
     current!.points.add(point);
+    if (_erasing) finishedRevision.value++;
     notifyListeners();
   }
 
@@ -70,6 +81,7 @@ class DrawingController extends ChangeNotifier {
   /// second finger turns the touch into a pinch.
   void cancel() {
     if (current == null) return;
+    if (_erasing) finishedRevision.value++;
     current = null;
     notifyListeners();
   }
@@ -172,13 +184,13 @@ class DrawingController extends ChangeNotifier {
 
   void undo() {
     if (!canUndo) return;
-    _redo.add(_Snapshot(strokes, paper, paperScale));
+    _redo.add(_Snapshot(strokes, paper, paperSize));
     _restore(_undo.removeLast());
   }
 
   void redo() {
     if (!canRedo) return;
-    _undo.add(_Snapshot(strokes, paper, paperScale));
+    _undo.add(_Snapshot(strokes, paper, paperSize));
     _restore(_redo.removeLast());
   }
 
@@ -191,11 +203,17 @@ class DrawingController extends ChangeNotifier {
     _changed();
   }
 
-  void setPaperScale(double scale) {
-    final clamped = scale.clamp(1.0, 4.0);
-    if (clamped == paperScale) return;
-    _record();
-    paperScaleListenable.value = clamped;
+  /// Changes the paper's size (null: back to filling the screen), in
+  /// whole pixels within [minPaperSide] and [maxPaperSide]. Can be undone;
+  /// pass `recordUndo: false` for the later steps of one drag, so the
+  /// whole drag undoes in one step.
+  void setPaperSize(Size? size, {bool recordUndo = true}) {
+    double side(double v) =>
+        v.clamp(minPaperSide, maxPaperSide).roundToDouble();
+    final next = size == null ? null : Size(side(size.width), side(size.height));
+    if (next == paperSize) return;
+    if (recordUndo) _record();
+    paperSizeListenable.value = next;
     _changed();
   }
 
@@ -208,7 +226,7 @@ class DrawingController extends ChangeNotifier {
 
   /// Replaces the drawing with [loaded] strokes and forgets undo history.
   void load(List<Stroke> loaded,
-      {Color paper = Colors.white, double paperScale = 1}) {
+      {Color paper = Colors.white, Size? paperSize}) {
     strokes
       ..clear()
       ..addAll(loaded);
@@ -216,13 +234,14 @@ class DrawingController extends ChangeNotifier {
     _redo.clear();
     current = null;
     this.paper = paper;
-    paperScaleListenable.value = paperScale;
+    paperSizeListenable.value = paperSize;
     revision++;
+    finishedRevision.value++;
     notifyListeners();
   }
 
   void _record() {
-    _undo.add(_Snapshot(strokes, paper, paperScale));
+    _undo.add(_Snapshot(strokes, paper, paperSize));
     if (_undo.length > maxUndo) _undo.removeAt(0);
     _redo.clear();
   }
@@ -232,17 +251,32 @@ class DrawingController extends ChangeNotifier {
       ..clear()
       ..addAll(s.strokes);
     paper = s.paper;
-    paperScaleListenable.value = s.paperScale;
+    paperSizeListenable.value = s.paperSize;
     _changed();
   }
 
   void _changed() {
     revision++;
+    finishedRevision.value++;
     notifyListeners();
   }
 
-  void paintStrokes(Canvas canvas, Size size) =>
-      _paint(canvas, size, [...strokes, ?current]);
+  /// Paints the finished strokes, and the eraser while it's being used
+  /// (it cuts into them).
+  void paintFinished(Canvas canvas, Size size) =>
+      _paint(canvas, size, [...strokes, if (_erasing) ?current]);
+
+  /// Paints the stroke being drawn, unless it's the eraser.
+  void paintCurrent(Canvas canvas) {
+    if (!_erasing) current?.paint(canvas);
+  }
+
+  @override
+  void dispose() {
+    finishedRevision.dispose();
+    paperSizeListenable.dispose();
+    super.dispose();
+  }
 
   static void _paint(Canvas canvas, Size size, List<Stroke> strokes) {
     // Strokes go on their own layer so the eraser only removes ink, not the

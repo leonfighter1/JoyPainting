@@ -47,6 +47,7 @@ abstract final class AppTheme {
         BrushType.pencil => const Color(0xFFB5521A),
         BrushType.marker => const Color(0xFFC2185B),
         BrushType.highlighter => const Color(0xFF8A6D00),
+        BrushType.soft => const Color(0xFF2E7D32),
         BrushType.spray => const Color(0xFF1C7A96),
         BrushType.rainbow => const Color(0xFFA63A9E),
         BrushType.stamp => const Color(0xFFD1376F),
@@ -60,6 +61,7 @@ abstract final class AppTheme {
         BrushType.pencil => Icons.edit_rounded,
         BrushType.marker => Icons.brush_rounded,
         BrushType.highlighter => Icons.border_color_rounded,
+        BrushType.soft => Icons.water_drop_rounded,
         BrushType.spray => Icons.blur_on_rounded,
         BrushType.rainbow => Icons.looks_rounded,
         BrushType.stamp => Icons.favorite_rounded,
@@ -77,6 +79,31 @@ abstract final class AppTheme {
         ShapeKind.triangle => Icons.change_history_rounded,
         ShapeKind.star => Icons.star_border_rounded,
         ShapeKind.heart => Icons.favorite_border_rounded,
+      };
+
+  static IconData gradientIcon(GradientStyle g) => switch (g) {
+        GradientStyle.none => Icons.square_rounded,
+        GradientStyle.lighter => Icons.wb_sunny_rounded,
+        GradientStyle.darker => Icons.nights_stay_rounded,
+        GradientStyle.fade => Icons.gradient_rounded,
+        GradientStyle.glow => Icons.flare_rounded,
+        GradientStyle.rounded => Icons.circle_rounded,
+      };
+
+  /// The blend modes offered in the tools drawer; the others are for
+  /// paintings made outside it.
+  static const blends = [
+    StrokeBlend.normal,
+    StrokeBlend.multiply,
+    StrokeBlend.screen,
+  ];
+
+  static IconData blendIcon(StrokeBlend b) => switch (b) {
+        StrokeBlend.normal => Icons.brush_rounded,
+        StrokeBlend.multiply => Icons.contrast_rounded,
+        StrokeBlend.screen => Icons.light_mode_rounded,
+        StrokeBlend.overlay => Icons.layers_rounded,
+        StrokeBlend.softLight => Icons.tonality_rounded,
       };
 
   static IconData stampIcon(StampShape s) => switch (s) {

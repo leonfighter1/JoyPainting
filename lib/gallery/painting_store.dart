@@ -70,21 +70,21 @@ class PaintingDoc {
     required this.meta,
     required this.strokes,
     this.paper = const Color(0xFFFFFFFF),
-    this.paperScale = 1,
+    this.paperSize,
   });
 
   final PaintingMeta meta;
   final List<Stroke> strokes;
   final Color paper;
 
-  /// How many screens' worth of paper (1 to 4, by area): see
-  /// `DrawingController.paperScale`.
-  final double paperScale;
+  /// The paper's own size, or null for paper that fills the screen: see
+  /// `DrawingController.paperSize`.
+  final Size? paperSize;
 
   Map<String, Object?> toJson() => {
         ...meta.toJson(),
         'paper': paper.toARGB32(),
-        if (paperScale != 1) 'paperScale': paperScale,
+        if (paperSize case final s?) 'paperSize': [s.width, s.height],
         'strokes': [for (final s in strokes) s.toJson()],
       };
 
@@ -97,12 +97,25 @@ class PaintingDoc {
     return PaintingDoc(
       meta: PaintingMeta.fromJson(json),
       paper: Color(json['paper'] as int? ?? 0xFFFFFFFF),
-      paperScale: (json['paperScale'] as num? ?? 1).toDouble().clamp(1, 4),
+      paperSize: _paperSizeOf(json),
       strokes: [
         for (final s in json['strokes'] as List)
           Stroke.fromJson(s as Map<String, Object?>),
       ],
     );
+  }
+
+  /// Saved since v3. A bigger paper from v2.1 to v2.2 (2 to 4 screens'
+  /// worth) keeps the size it was saved at; a 1× paper fills the screen.
+  static Size? _paperSizeOf(Map<String, Object?> json) {
+    if (json['paperSize'] case [final num w, final num h] when w > 0 && h > 0) {
+      return Size(w.toDouble(), h.toDouble());
+    }
+    final w = json['width'] as num? ?? 0, h = json['height'] as num? ?? 0;
+    if ((json['paperScale'] as num? ?? 1) > 1 && w > 0 && h > 0) {
+      return Size(w.toDouble(), h.toDouble());
+    }
+    return null;
   }
 }
 
@@ -215,7 +228,7 @@ class PaintingStore extends ChangeNotifier {
       meta: doc.meta.copyWith(name: named.name),
       strokes: doc.strokes,
       paper: doc.paper,
-      paperScale: doc.paperScale,
+      paperSize: doc.paperSize,
     );
   }
 
@@ -252,7 +265,7 @@ class PaintingStore extends ChangeNotifier {
                 meta: doc.meta.copyWith(name: name),
                 strokes: doc.strokes,
                 paper: doc.paper,
-                paperScale: doc.paperScale,
+                paperSize: doc.paperSize,
               ).encode());
         }
         index[at] = index[at].copyWith(name: name);

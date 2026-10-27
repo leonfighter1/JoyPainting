@@ -47,7 +47,8 @@ enum MusicMode {
 }
 
 /// User choices that survive app restarts: language, theme, brush, colors,
-/// sizes, opacity, stamp shape, mirror mode, paper, music and the kids.
+/// sizes, opacity, stamp shape, shapes and their look (fill, free shapes,
+/// gradient, blend), mirror mode, paper, music and the kids.
 class AppSettings extends ChangeNotifier {
   AppSettings(this._prefs)
       : locale = ValueNotifier(
@@ -61,6 +62,9 @@ class AppSettings extends ChangeNotifier {
         _toolsCorner = Corner.fromName(
             _prefs.getString(_kToolsCorner), Corner.bottomRight),
         _fill = _prefs.getBool(_kFill) ?? false,
+        _freeShape = _prefs.getBool(_kFreeShape) ?? false,
+        _gradient = GradientStyle.fromName(_prefs.getString(_kGradient)),
+        _blend = StrokeBlend.fromName(_prefs.getString(_kBlend)),
         _brush = BrushType.fromName(_prefs.getString(_kBrush)),
         _color = Color(_prefs.getInt(_kColor) ?? Colors.black.toARGB32()),
         _stamp = StampShape.fromName(_prefs.getString(_kStamp)),
@@ -113,6 +117,9 @@ class AppSettings extends ChangeNotifier {
   static const _kFont = 'font';
   static const _kShape = 'shape';
   static const _kFill = 'fill';
+  static const _kFreeShape = 'freeShape';
+  static const _kGradient = 'gradient';
+  static const _kBlend = 'blend';
   static const _kTextStyle = 'textStyle';
   static const _kUndoCorner = 'undoCorner';
   static const _kToolsCorner = 'toolsCorner';
@@ -207,6 +214,9 @@ class AppSettings extends ChangeNotifier {
     await _prefs.clear();
     _shape = null;
     _fill = false;
+    _freeShape = false;
+    _gradient = GradientStyle.none;
+    _blend = StrokeBlend.normal;
     _undoCorner = Corner.topRight;
     _toolsCorner = Corner.bottomRight;
     _brush = BrushType.pen;
@@ -230,6 +240,9 @@ class AppSettings extends ChangeNotifier {
 
   ShapeKind? _shape;
   bool _fill;
+  bool _freeShape;
+  GradientStyle _gradient;
+  StrokeBlend _blend;
   Corner _undoCorner;
   Corner _toolsCorner;
 
@@ -263,6 +276,16 @@ class AppSettings extends ChangeNotifier {
 
   /// Whether closed shapes are drawn filled.
   bool get fill => _fill;
+
+  /// Whether drawing makes free shapes: the area a line goes around is
+  /// filled (see [Stroke.fill]). [shape] is null meanwhile.
+  bool get freeShape => _freeShape;
+
+  /// The gradient new lines and shapes get from the chosen color.
+  GradientStyle get gradient => _gradient;
+
+  /// How new strokes mix with what's under them.
+  StrokeBlend get blend => _blend;
   BrushType get brush => _brush;
   Color get color => _color;
   StampShape get stamp => _stamp;
@@ -320,6 +343,8 @@ class AppSettings extends ChangeNotifier {
 
   set shape(ShapeKind? value) {
     _shape = value;
+    _freeShape = false;
+    _prefs.setBool(_kFreeShape, false);
     if (value == null) {
       _prefs.remove(_kShape);
     } else {
@@ -331,6 +356,25 @@ class AppSettings extends ChangeNotifier {
   set fill(bool value) {
     _fill = value;
     _prefs.setBool(_kFill, value);
+    notifyListeners();
+  }
+
+  set freeShape(bool value) {
+    if (value) shape = null;
+    _freeShape = value;
+    _prefs.setBool(_kFreeShape, value);
+    notifyListeners();
+  }
+
+  set gradient(GradientStyle value) {
+    _gradient = value;
+    _prefs.setString(_kGradient, value.name);
+    notifyListeners();
+  }
+
+  set blend(StrokeBlend value) {
+    _blend = value;
+    _prefs.setString(_kBlend, value.name);
     notifyListeners();
   }
 

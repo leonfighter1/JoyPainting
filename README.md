@@ -8,15 +8,16 @@ The app starts in English and asks for a language, a theme and the little artist
 What it does:
 
 - **Drawing**:
-  - 10 tools: pen, pencil, marker, highlighter, spray, rainbow, stamps, text, move and a round eraser.
+  - 11 tools: pen, pencil, marker, highlighter, soft brush, spray, rainbow, stamps, text, move and a round eraser.
   - Pressure-sensitive strokes, opacity, shapes with fill, mirror drawing and paper colors.
+  - Painted looks: the soft brush (blurred, see-through edges for shading and glows), free shapes (draw around an area and it's filled), gradients made from the chosen color (lit top, dark bottom, fade, glow, rounded) and light & shadow (shadow darkens what's underneath, light brightens it).
 - **Editing what's drawn** (move tool):
   - Tap a stroke, or drag a box over empty paper to select several at once.
   - Drag to move, drag the corner knob to resize (same proportions), drag the top knob to turn.
   - A bar next to the selection copies, resizes, turns, recolors, changes opacity and deletes. Every change undoes in one step.
 - **Canvas**:
   - Pinch to zoom and pan; ✋ (or holding Space, or a drag outside the paper) moves the paper with one finger or the mouse.
-  - Paper size from 1× to 4× the screen.
+  - Drag the grips on the paper's right and bottom edges to make it wider or taller (or narrower and shorter). What's drawn keeps its size, and undo puts the paper back. ⋮ → 画纸恢复默认大小 makes it fill the screen again.
   - Pin the palette beside the paper (a slim strip under it on an upright phone) to change brushes and colors while drawing.
   - Brushes and colors live in a drawer that opens from the "画笔 · 颜色" button.
   - That button and the undo bar can be dragged to any corner of the paper.
@@ -28,6 +29,7 @@ What it does:
   - Export: check paintings (the year filter helps) and export one as its `.jypaint` or several as one `.zip`. Import reads both.
   - Every painting gets a name ("My painting 1" / "我的画作 1"); rename or copy it from the title or its gallery card.
   - A sample painting (快乐的一天 / A Happy Day) to start with, for each kid.
+  - Download as PNG, JPG or PDF (in the apps, pictures go to the photo gallery and a PDF to the share menu).
   - Send as PNG, JPG, PDF or an editable `.jypaint` file, named after the painting. In a browser it goes to an email as an attachment.
   - Print from an in-app preview with a big close button (Android's own print screen has none).
   - Open `.jypaint` files received from other apps.
@@ -35,18 +37,20 @@ What it does:
   - Plays while you draw and pauses in the background. On/off in the ⋮ menu; volume, track and play order (shuffle by default, in order, repeat one) in Settings.
   - Five calm built-in tracks (阳光散步, 小星星摇篮曲, 欢乐颂, 两只老虎, 云朵飘飘), or add your own (MP3, M4A/AAC, WAV, OGG/Opus, FLAC, MIDI…).
 - **Keyboard** (browser, computer, iPad keyboard): Ctrl/⌘+Z undo, Ctrl+Y redo, Ctrl+S save, Ctrl+P print, Ctrl+C/X/V/D copy, cut, paste and duplicate the selection, Ctrl+A select all, Delete, Ctrl +/−/0/1 zoom, Space to move the paper, P/E/T/V tools, [ ] size, Esc. Press ? for the list.
+- **Tarot cards**: `tool/tarot/` paints a tarot deck (so far 0 愚人 The Fool, semi-realistic) with the app's own strokes. `flutter test tool/tarot/make_tarot_test.dart` writes each card to `dist/tarot/` as an editable `.jypaint` (import it in My Paintings) and a 1400×2400 PNG; the paper is exactly the card.
 - **Look**:
   - 5 portable JSON themes checked against WCAG contrast.
   - 4 bundled cute fonts.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **2.2.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **3.0.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **2.2.0** | 2026-10-25 | Keyboard shortcuts (Ctrl+Z, Ctrl+C/V, Delete, zoom, tool keys; ? lists them), a bigger paper shows at real size, music that copes with old settings and browsers, five calm built-in tracks with shuffle by default, the sample painting 快乐的一天, copying paintings, default kid name 靖瑶 / Athena |
+| **3.0.0** | 2026-10-27 | Painted looks (soft brush, gradients, light & shadow, free shapes, soft edges), a paper resized by dragging its edges (undoable, drawings keep their size), download as PNG, JPG or PDF, a simpler View menu (no zoom buttons), a faster canvas for big paintings, and the tarot card tool with 0 愚人 |
+| 2.2.0 | 2026-10-25 | Keyboard shortcuts (Ctrl+Z, Ctrl+C/V, Delete, zoom, tool keys; ? lists them), a bigger paper shows at real size, music that copes with old settings and browsers, five calm built-in tracks with shuffle by default, the sample painting 快乐的一天, copying paintings, default kid name 靖瑶 / Athena |
 | 2.1.1 | 2026-10-25 | Import/export buttons, export several paintings as a zip, paper up to 4× the screen, pinned palette (slim strip on phones), ✋ move the paper, web loading text in English until the language is set |
 | 2.1.0 | 2026-10-25 | Renamed JoyPainting (快乐涂鸦). First-start setup (language, theme, name), several kids with their own paintings, painting names and renaming, music play order, email sending from the web, texts that fit each device, grown-up check for adding/deleting kids and resetting |
 | 2.0.0 | 2026-10-25 | First iOS (iPhone and iPad) version. Box-select several strokes; copy, resize, turn, recolor and fade the selection; looping background music (built-in or your own, with volume); print preview with an easy way out |
@@ -220,7 +224,7 @@ Published to GitHub Pages by `.github/workflows/web.yml` on every push to `main`
 
 - **iPhone/iPad**: open the link in Safari, tap Share → **Add to Home Screen**. It then opens full screen from its own icon, with no signing and no expiry.
 - **Paintings** are saved in the browser (IndexedDB, hundreds of MB) on that device only. Deleting Safari's website data deletes them. Send a painting as a `.jypaint` file to keep a copy.
-- **Differences from the apps**: "Save to album" downloads the picture; background music starts at the first tap (browsers block sound before that), and added music lasts until the page reloads.
+- **Differences from the apps**: 下载图片 downloads the PNG, JPG or PDF; background music starts at the first tap (browsers block sound before that), and added music lasts until the page reloads.
 - The rendering engine is served from the site itself, not Google's CDN.
 - **One-time setup** (already needed once per repository): Settings → Pages → Build and deployment → Source: **GitHub Actions**.
 - **Any capitals**: GitHub Pages matches paths letter for letter, so the account's root site, https://github.com/leonfighter1/leonfighter1.github.io, catches every other spelling in its `404.html` and forwards `/joypainting` or `/jingyaopaint` (any capitals) here; its front page opens the app too.
@@ -267,7 +271,7 @@ assets/                logo, theme JSON files, fonts and their OFL licenses, bui
 android/               Android host app (MainActivity handles "open with")
 ios/                   iOS host app (AppDelegate handles "Open in", Info.plist)
 .github/workflows/     ios.yml (iOS build on GitHub's Macs), web.yml (publishes the web version)
-tool/                  build_apk.ps1, watch_build.ps1, make_icons.ps1, make_music.dart, ios_sim_smoke.sh
+tool/                  build_apk.ps1, watch_build.ps1, make_icons.ps1, make_music.dart, ios_sim_smoke.sh; tarot/ (the tarot cards)
 docs/appdev/           FEATURES.md, MISTAKES.md, DEVLOG.md
 test/                  see Tests above
 ```

@@ -179,8 +179,9 @@ class PaintingSession extends ChangeNotifier {
     // Snapshot first: the user may keep drawing while this save runs.
     final strokes = List<Stroke>.of(drawing.strokes);
     final paper = drawing.paper;
-    final paperScale = drawing.paperScale;
-    final size = canvasSize.isEmpty ? _boundsOf(strokes) : canvasSize;
+    final paperSize = drawing.paperSize;
+    final size = paperSize ??
+        (canvasSize.isEmpty ? _boundsOf(strokes) : canvasSize);
     final paintingId = id;
     if (name.isEmpty) name = await _nextName();
     final paintingName = name;
@@ -199,7 +200,7 @@ class PaintingSession extends ChangeNotifier {
           ),
           strokes: strokes,
           paper: paper,
-          paperScale: paperScale,
+          paperSize: paperSize,
         ),
         thumbnail,
       );
@@ -232,7 +233,8 @@ class PaintingSession extends ChangeNotifier {
   /// The open painting as a document, for sending or printing.
   PaintingDoc currentDoc() {
     final strokes = List<Stroke>.of(drawing.strokes);
-    final size = canvasSize.isEmpty ? _boundsOf(strokes) : canvasSize;
+    final size = drawing.paperSize ??
+        (canvasSize.isEmpty ? _boundsOf(strokes) : canvasSize);
     return PaintingDoc(
       meta: PaintingMeta(
         id: id,
@@ -245,7 +247,7 @@ class PaintingSession extends ChangeNotifier {
       ),
       strokes: strokes,
       paper: drawing.paper,
-      paperScale: drawing.paperScale,
+      paperSize: drawing.paperSize,
     );
   }
 
@@ -333,7 +335,7 @@ class PaintingSession extends ChangeNotifier {
       ),
       strokes: doc.strokes,
       paper: doc.paper,
-      paperScale: doc.paperScale,
+      paperSize: doc.paperSize,
     ));
   }
 
@@ -354,7 +356,7 @@ class PaintingSession extends ChangeNotifier {
       ),
       strokes: incoming.strokes,
       paper: incoming.paper,
-      paperScale: incoming.paperScale,
+      paperSize: incoming.paperSize,
     );
     try {
       final size = Size(copy.meta.width, copy.meta.height);
@@ -399,8 +401,8 @@ class PaintingSession extends ChangeNotifier {
 
   void _show(PaintingDoc doc) {
     _reset(doc.meta.id, doc.meta.createdAt, doc.strokes, doc.paper,
-        size: Size(doc.meta.width, doc.meta.height),
-        paperScale: doc.paperScale);
+        size: doc.paperSize ?? Size(doc.meta.width, doc.meta.height),
+        paperSize: doc.paperSize);
     name = doc.meta.name;
     _persisted = true;
     settings.lastPaintingId = id;
@@ -411,12 +413,12 @@ class PaintingSession extends ChangeNotifier {
   /// canvas has room for", as for a new painting.
   void _reset(
       String newId, DateTime created, List<Stroke> strokes, Color paper,
-      {Size size = Size.zero, double paperScale = 1}) {
+      {Size size = Size.zero, Size? paperSize}) {
     id = newId;
     name = '';
     createdAt = created;
     canvasSize = size.isEmpty ? Size.zero : size;
-    drawing.load(strokes, paper: paper, paperScale: paperScale);
+    drawing.load(strokes, paper: paper, paperSize: paperSize);
     _savedRevision = drawing.revision;
     // Loading notifies listeners, which schedules an autosave; nothing
     // changed yet, so drop it.

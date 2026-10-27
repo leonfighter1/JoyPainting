@@ -43,8 +43,25 @@
 40. In a browser, don't start audio before the user's first touch or click, and put a time limit on awaiting platform media calls: a refused start can stay pending forever. A touch counts when the finger lifts, a mouse click when pressed.
 41. In `flutter test` output, a failure's details are printed before that test's `[E]` line, not after it.
 42. `IndexedStack` keeps hidden children's tickers on; use `Visibility.of(context)` to know whether a page is showing.
+43. Don't cover a curved edge with one very wide freehand stroke: perfect_freehand keeps outline points only about size × smoothing apart, so the edge turns into chords. Use several thin strokes or filled shapes, and check the edge in a zoomed crop.
+44. Give dart:ui gradients stops whenever there are more than two colors; build even stops when a file or caller gives none.
+45. A gradient stroke's see-through-ness comes from its gradient's colors, never from its base `color`'s alpha.
+46. A `Semantics` with `onIncrease`/`onDecrease` and a `value` also needs `increasedValue` and `decreasedValue`, or Flutter asserts.
+47. Controls on the paper's edge keep their whole touch area inside the paper area and clear of the floating buttons (the phone tools button is wide). Test them with a real drag from their center, which goes through hit testing.
 
 ## Log
+
+### 2026-10-27: v3 snags found by renders and tests
+- **Symptom:** rendering the semi-realistic tarot card crashed ("colors must have length 2 if colorStops is omitted"); then most of its light effects (sun glow, rays, haze, shadows) were invisible; the new paper grips couldn't be dragged in tests; turning on semantics asserted.
+- **Root cause:** dart:ui needs stops for three or more colors; a gradient stroke took its overall alpha from its base color, which for a fade was the transparent end; half of each grip lay outside the paper area when the paper filled it, and the bottom grip sat under the wide 画笔 · 颜色 button; the grips' semantics had a value but no next/previous value.
+- **Fix:** even stops by default; alpha from the gradient; grips kept inside and a quarter along the bottom edge, away from the floating buttons; increased/decreased values.
+- **Rule:** 44 to 47.
+
+### 2026-10-27: tarot frame showed sky past the arch
+- **Symptom:** a zoomed crop of the 愚人 card showed blue sky between the gold arch and the navy frame near the top.
+- **Root cause:** the navy cover over the arch's corners was one 136px-wide marker stroke; perfect_freehand drops outline points closer than about size × smoothing (~68px), so its inner edge was a few straight chords.
+- **Fix:** six 30px rings at first; since v3 one filled free shape cut exactly along the arch.
+- **Rule:** 43.
 
 ### 2026-10-25: v2.2 reports: "bigger paper not implemented", music broken with old settings
 - **Symptom:** the user saw no effect from 画纸大小; music misbehaved in a normal browser window but worked in incognito.

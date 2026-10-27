@@ -6,6 +6,7 @@ import '../drawing/drawing_controller.dart';
 import '../gallery/painting_archive.dart';
 import '../gallery/painting_file.dart';
 import '../gallery/painting_store.dart';
+import '../image_saver.dart';
 import '../l10n.dart';
 import '../theme/cute_theme.dart';
 import 'painting_export.dart';
@@ -19,14 +20,16 @@ IconData _formatIcon(ExportFormat f) => switch (f) {
       ExportFormat.painting => Icons.brush_rounded,
     };
 
-/// Asks which format to send [doc] in, then opens the system share sheet,
-/// where the user picks who or which app to send it to. In a browser it
-/// goes to an email as an attachment (see [sendFromBrowser]).
-Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
+/// A sheet listing [formats] under [title] (and [hint]); the one tapped,
+/// or null if the sheet was closed.
+Future<ExportFormat?> pickExportFormat(
+  BuildContext context, {
+  required String title,
+  String? hint,
+  List<ExportFormat> formats = ExportFormat.values,
+}) {
   final s = S.of(context);
-  final messenger = ScaffoldMessenger.of(context);
-  final origin = shareOrigin(context);
-  final format = await showModalBottomSheet<ExportFormat>(
+  return showModalBottomSheet<ExportFormat>(
     context: context,
     showDragHandle: true,
     builder: (context) {
@@ -38,18 +41,18 @@ Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text(s.sendAs,
+              child: Text(title,
                   style: Theme.of(context)
                       .textTheme
                       .titleMedium
                       ?.copyWith(fontWeight: FontWeight.w800)),
             ),
-            if (kIsWeb)
+            if (hint != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                child: Text(s.sendHintWeb),
+                child: Text(hint),
               ),
-            for (final f in ExportFormat.values)
+            for (final f in formats)
               ListTile(
                 leading: CircleAvatar(
                   backgroundColor: cute.spec.secondary,
@@ -65,6 +68,51 @@ Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
         ),
       );
     },
+  );
+}
+
+/// Downloads [doc] as a PNG, JPG or PDF, as the user picks: a download in
+/// the browser; in the apps, pictures go to the photo gallery and a PDF to
+/// the share sheet (Save to Files…).
+Future<void> downloadPainting(BuildContext context, PaintingDoc doc) async {
+  final s = S.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final origin = shareOrigin(context);
+  final format = await pickExportFormat(
+    context,
+    title: s.downloadAs,
+    hint: kIsWeb ? null : s.downloadHintApps,
+    formats: const [ExportFormat.png, ExportFormat.jpg, ExportFormat.pdf],
+  );
+  if (format == null) return;
+  try {
+    final file = await exportPainting(doc, format);
+    if (kIsWeb) {
+      downloadInBrowser(file.bytes, file.name, file.mimeType);
+      messenger.showSnackBar(SnackBar(content: Text(s.downloaded(file.name))));
+    } else if (format == ExportFormat.pdf) {
+      await deliverExport(file, origin);
+    } else {
+      await saveImage(file.bytes,
+          file.name.substring(0, file.name.length - format.extension.length - 1));
+      messenger.showSnackBar(SnackBar(content: Text(s.savedToGallery)));
+    }
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(s.saveFailed(e))));
+  }
+}
+
+/// Asks which format to send [doc] in, then opens the system share sheet,
+/// where the user picks who or which app to send it to. In a browser it
+/// goes to an email as an attachment (see [sendFromBrowser]).
+Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
+  final s = S.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final origin = shareOrigin(context);
+  final format = await pickExportFormat(
+    context,
+    title: s.sendAs,
+    hint: kIsWeb ? s.sendHintWeb : null,
   );
   if (format == null) return;
   try {

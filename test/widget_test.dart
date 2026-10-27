@@ -121,6 +121,13 @@ Future<void> closeTools(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Zooms the paper view by [factor] around its middle, as Ctrl + and Ctrl −
+/// do (the ⋮ menu has no zoom since v3).
+Future<void> zoomBy(WidgetTester tester, double factor) async {
+  tester.state<CanvasPageState>(find.byType(CanvasPage)).zoomCenter(factor);
+  await tester.pumpAndSettle();
+}
+
 /// The current zoom level of the paper view.
 double zoomOf(WidgetTester tester) => CanvasPageState.zoomLevel(
     tester.widget<Transform>(find.byKey(CanvasPageState.zoomKey)).transform);
@@ -138,7 +145,7 @@ void main() {
     expect(find.text('画笔 · 颜色'), findsOneWidget, reason: 'tools button');
 
     await openTools(tester);
-    for (final name in ['钢笔', '铅笔', '马克笔', '荧光笔', '喷枪', '彩虹笔', '印章', '文字', '橡皮擦']) {
+    for (final name in ['钢笔', '铅笔', '马克笔', '荧光笔', '柔边笔', '喷枪', '彩虹笔', '印章', '文字', '橡皮擦']) {
       expect(find.text(name), findsOneWidget, reason: name);
     }
   });
@@ -401,7 +408,7 @@ void main() {
 
     testWidgets('fit to screen animates back to 100%', (tester) async {
       await pumpApp(tester);
-      await tapMenu(tester, '放大画布');
+      await zoomBy(tester, 1.25);
       expect(zoomOf(tester), closeTo(1.25, 0.001));
       await tester.tap(find.text('125% · 适应屏幕'));
       await tester.pump(); // the animation starts on the next frame
@@ -417,11 +424,11 @@ void main() {
     testWidgets('zoom stays between 50% and 800%', (tester) async {
       await pumpApp(tester);
       for (var i = 0; i < 20; i++) {
-        await tapMenu(tester, '放大画布');
+        await zoomBy(tester, 1.25);
       }
       expect(zoomOf(tester), closeTo(CanvasPageState.maxZoom, 0.001));
       for (var i = 0; i < 30; i++) {
-        await tapMenu(tester, '缩小画布');
+        await zoomBy(tester, 0.8);
       }
       expect(zoomOf(tester), closeTo(CanvasPageState.minZoom, 0.001));
     });
@@ -430,8 +437,8 @@ void main() {
       final app = await pumpApp(tester);
       final paper = find.byKey(CanvasPageState.paperKey);
       final before = tester.getTopLeft(paper);
-      await tapMenu(tester, '放大画布');
-      await tapMenu(tester, '放大画布'); // 156%
+      await zoomBy(tester, 1.25);
+      await zoomBy(tester, 1.25); // 156%
 
       // Where does paper point (150, 300) appear on screen now?
       const target = Offset(150, 300);
@@ -450,7 +457,7 @@ void main() {
       final app = await createTestApp();
       await app.store.save(sampleDoc('p', DateTime(2026, 1, 1)), tinyPng);
       await pumpApp(tester, app: app);
-      await tapMenu(tester, '放大画布');
+      await zoomBy(tester, 1.25);
       await app.session.open('p');
       await tester.pumpAndSettle();
       expect(zoomOf(tester), closeTo(1, 0.001));

@@ -43,10 +43,13 @@ const maxExportSide = 4096.0;
 double exportRatioFor(Size size) => math.min(
     exportPixelRatio, maxExportSide / math.max(1, math.max(size.width, size.height)));
 
-/// The painting's canvas size, with a sensible fallback for odd data.
-Size paintingSize(PaintingDoc doc) => doc.meta.width > 0 && doc.meta.height > 0
-    ? Size(doc.meta.width, doc.meta.height)
-    : const Size(800, 1000);
+/// The painting's paper size (its own, or the screen it was saved on),
+/// with a sensible fallback for odd data.
+Size paintingSize(PaintingDoc doc) =>
+    doc.paperSize ??
+    (doc.meta.width > 0 && doc.meta.height > 0
+        ? Size(doc.meta.width, doc.meta.height)
+        : const Size(800, 1000));
 
 /// The painting's name as the file name (`My painting 1.png`), or one
 /// like `JoyPainting_20261024_1530.png` for a painting without a name.

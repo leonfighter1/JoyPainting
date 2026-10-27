@@ -11,7 +11,7 @@ import 'package:jingyao_paint/settings.dart';
 
 import 'test_helpers.dart';
 import 'widget_test.dart'
-    show drawStroke, inGallery, openTab, pumpApp, tapMenu;
+    show drawStroke, inGallery, openTab, pumpApp;
 
 /// Presses [key] with Ctrl (and Shift) held, as on a computer keyboard.
 Future<void> ctrl(WidgetTester tester, LogicalKeyboardKey key,
@@ -25,33 +25,6 @@ Future<void> ctrl(WidgetTester tester, LogicalKeyboardKey key,
 }
 
 void main() {
-  group('Bigger paper', () {
-    testWidgets('shows at real size after picking it, growing right and down',
-        (tester) async {
-      await pumpApp(tester);
-      final paper = find.byKey(CanvasPageState.paperKey);
-      final before = tester.getRect(paper);
-      await tapMenu(tester, '画纸大小');
-      await tester.tap(find.text('4倍 · 宽和高都是 2 倍'));
-      await tester.pumpAndSettle();
-
-      final after = tester.getRect(paper);
-      expect(after.width, closeTo(before.width * 2, 2),
-          reason: 'twice as wide on screen, not shrunk to fit');
-      expect(after.height, closeTo(before.height * 2, 2));
-      expect(after.topLeft.dx, closeTo(before.topLeft.dx, 2),
-          reason: "what's drawn stays where it was");
-      expect(after.topLeft.dy, closeTo(before.topLeft.dy, 2));
-      expect(find.textContaining('画纸变大啦'), findsOneWidget);
-
-      // "Fit to screen" (the zoom chip) shows the whole sheet again.
-      await tester.tap(find.textContaining('% · 适应屏幕'));
-      await tester.pumpAndSettle();
-      expect(tester.getRect(paper).width, closeTo(before.width, 2));
-      await tester.pump(const Duration(seconds: 7));
-    });
-  });
-
   group('Keyboard shortcuts', () {
     testWidgets('Ctrl+Z undoes, Ctrl+Y and Ctrl+Shift+Z redo',
         (tester) async {

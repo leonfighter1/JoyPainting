@@ -1,5 +1,14 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-27: v3.0.0 (painted looks, resizable paper, download formats, tarot cards)
+- Asked, in steps: a beautiful tarot deck made with the app, one style with text, starting with 0 愚人; then, after seeing it, a semi-realistic look instead of cartoon, with the app gaining whatever that needs as real tools (chosen: semi-realistic painting, not photo-realistic; as brushes and options, not only display); then a paper resized by dragging (drawings keep their size, undoable), no zoom items in 视图, download as PNG/JPG/PDF, the tarot paper exactly the card; then version 3 and deploy.
+- Done: see FEATURES v3.0.0. The first card was cartoon-style (triangles placed by transforms); the semi-realistic one uses the new free shapes, gradients, blur and blend modes (488 strokes, 80 blurred, 84 blended). New paintings still fill the screen until a grip is dragged.
+- Checked by rendering: the card PNG is drawn from its saved file read back, and crops were looked at (arch, head, clouds).
+- Mistakes: MISTAKES rules 43 to 47.
+- Harness: PASS (analyze 0 issues, 279 tests, build web ok).
+- Not tested: drawing on top of the card on a real phone (speed with many blurred strokes); the grips with a real finger and mouse; PDF to the share menu and JPG to the gallery on real devices.
+- Next: cards I to XXI (`tool/tarot/deck.dart`); feedback on the 愚人 art.
+
 ## 2026-10-25: v2.2.0 (shortcuts, bigger paper, music, sample painting, copying)
 - Asked: common keyboard shortcuts in the browser; the bigger paper "not implemented"; music problems with settings from earlier versions (fine in incognito); five calm tracks with shuffle as default; then a sample painting, copying paintings, Ctrl+C for selected strokes, and default kid names 靖瑶 / Athena.
 - Causes found: the bigger paper worked but was shrunk to fit the screen, so nothing looked different. Music: with music already on from an earlier visit, the web player tried to start before any touch; the browser's audio start then never finished, and the player's queue waited on it forever. Incognito starts with music off, so it began only after a tap.

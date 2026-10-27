@@ -123,13 +123,10 @@ class S {
   String get newPainting => _t('新建画作', 'New painting');
   String get more => _t('更多', 'More');
   String get clear => _t('清空画布', 'Clear canvas');
-  String get saveToGallery => switch (_device.kind) {
-        DeviceKind.apple => _t('保存到“照片”', 'Save to Photos'),
-        DeviceKind.web => downloadImage,
-        DeviceKind.desktop => _t('保存到“图片”文件夹', 'Save to Pictures'),
-        DeviceKind.android => _t('保存到相册', 'Save to gallery'),
-      };
   String get downloadImage => _t('下载图片', 'Download image');
+  String get downloadAs => _t('选择下载格式', 'Download as');
+  String get downloadHintApps => _t('PNG 和 JPG 存进相册；PDF 在分享菜单里存到文件。',
+      'PNG and JPG go to your photos; save a PDF to Files from the share menu.');
   String get clearTitle => _t('清空画布？', 'Clear canvas?');
   String get clearBody =>
       _t('清空后可以用“撤销”找回。', 'You can bring it back with Undo.');
@@ -163,6 +160,7 @@ class S {
         BrushType.pencil => _t('铅笔', 'Pencil'),
         BrushType.marker => _t('马克笔', 'Marker'),
         BrushType.highlighter => _t('荧光笔', 'Highlighter'),
+        BrushType.soft => _t('柔边笔', 'Soft brush'),
         BrushType.spray => _t('喷枪', 'Spray'),
         BrushType.rainbow => _t('彩虹笔', 'Rainbow'),
         BrushType.stamp => _t('印章', 'Stamps'),
@@ -274,6 +272,24 @@ class S {
         ShapeKind.heart => _t('心形', 'Heart shape'),
       };
   String get fillShape => _t('填充', 'Fill');
+  String get freeShape => _t('自由形状', 'Free shape');
+  String get gradient => _t('渐变', 'Gradient');
+  String gradientName(GradientStyle g) => switch (g) {
+        GradientStyle.none => _t('不用', 'None'),
+        GradientStyle.lighter => _t('上亮', 'Lit top'),
+        GradientStyle.darker => _t('下暗', 'Dark bottom'),
+        GradientStyle.fade => _t('渐淡', 'Fade'),
+        GradientStyle.glow => _t('光晕', 'Glow'),
+        GradientStyle.rounded => _t('立体', 'Rounded'),
+      };
+  String get lightAndShadow => _t('光影', 'Light & shadow');
+  String blendName(StrokeBlend b) => switch (b) {
+        StrokeBlend.normal => _t('普通', 'Normal'),
+        StrokeBlend.multiply => _t('阴影', 'Shadow'),
+        StrokeBlend.screen => _t('提亮', 'Light'),
+        StrokeBlend.overlay => _t('叠加', 'Overlay'),
+        StrokeBlend.softLight => _t('柔光', 'Soft light'),
+      };
   String get eraserRange => _t('橡皮擦范围', 'Eraser area');
   String get opacity => _t('不透明度', 'Opacity');
   // Painting actions (top right)
@@ -353,8 +369,6 @@ class S {
   String get moreTools => _t('更多：大小、形状、透明度', 'More: size, shapes, opacity');
 
   // Zoom
-  String get zoomIn => _t('放大画布', 'Zoom in');
-  String get zoomOut => _t('缩小画布', 'Zoom out');
   String get fitScreen => _t('适应屏幕', 'Fit to screen');
   String get panCanvas => _t('拖动画板', 'Move the paper');
   String get keyboardShortcuts => _t('键盘快捷键', 'Keyboard shortcuts');
@@ -391,20 +405,11 @@ class S {
   String percent(double v) => '${(v * 100).round()}%';
   String get mirror => _t('对称绘画', 'Mirror drawing');
   String get paperColor => _t('画纸颜色', 'Paper color');
-  String get paperSize => _t('画纸大小', 'Paper size');
-  String get paperBiggerHint => _device.desktopOs
-      ? _t('画纸变大啦！按住空格键或点 ✋ 拖动，去画其他地方；点“适应屏幕”看整张',
-          'The paper is bigger! Hold Space or tap ✋ and drag to get to the rest; tap "Fit to screen" to see all of it')
-      : _t('画纸变大啦！用两根手指或点 ✋ 拖动，去画其他地方；点“适应屏幕”看整张',
-          'The paper is bigger! Drag with two fingers or tap ✋ to get to the rest; tap "Fit to screen" to see all of it');
-  String paperSizeName(double scale) => switch (scale) {
-        1 => _t('1倍 · 刚好一屏', '1× · one screen'),
-        4 => _t('4倍 · 宽和高都是 2 倍', '4× · twice as wide and tall'),
-        _ => _t('${scale.round()}倍', '${scale.round()}×'),
-      };
-  String get paperSizeHint => _t(
-      '画纸越大，能画的地方越多。选好后画纸按真实大小显示，拖动去画其他地方，点“适应屏幕”看整张。画好的部分不会被裁掉。',
-      'Bigger paper means more room to draw. It then shows at its real size: drag to get around, and tap "Fit to screen" to see all of it. Nothing drawn is ever cut off.');
+  String get paperDefaultSize => _t('画纸恢复默认大小', 'Default paper size');
+  String get paperWidthGrip =>
+      _t('拖动改变画纸宽度', 'Drag to change the paper width');
+  String get paperHeightGrip =>
+      _t('拖动改变画纸高度', 'Drag to change the paper height');
   List<String> get paperNames => _zh
       ? const ['纯白', '奶油', '樱花', '天空', '薄荷', '薰衣草']
       : const ['White', 'Cream', 'Blossom', 'Sky', 'Mint', 'Lavender'];

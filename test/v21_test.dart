@@ -321,7 +321,7 @@ void main() {
       expect(const S('zh').aboutBody, contains('浏览器'));
       Device.debugOverride = const Device(DeviceKind.apple);
       expect(const S('en').runsOn, 'for iPhone and iPad');
-      expect(const S('zh').saveToGallery, '保存到“照片”');
+      expect(const S('zh').savedToGallery, contains('照片'));
     });
 
     test('a mouse gets the scroll-wheel hint', () {

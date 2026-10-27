@@ -14,7 +14,7 @@ import 'package:jingyao_paint/l10n.dart';
 
 import 'test_helpers.dart';
 import 'widget_test.dart'
-    show drawStroke, inGallery, openTab, openTools, pumpApp, tapMenu;
+    show drawStroke, inGallery, openTab, openTools, pumpApp, tapMenu, zoomBy;
 
 PaintingDoc named(String id, String name, DateTime created) {
   final d = sampleDoc(id, created);
@@ -162,47 +162,47 @@ void main() {
   });
 
   group('Paper size', () {
-    test('a bigger paper can be undone and is saved with the painting',
+    test('a paper size can be undone and is saved with the painting',
         () async {
       final app = await createTestApp();
       final drawing = app.session.drawing;
-      drawing.setPaperScale(4);
-      expect(drawing.paperScale, 4);
+      drawing.setPaperSize(const Size(900, 1400));
+      expect(drawing.paperSize, const Size(900, 1400));
       drawing.undo();
-      expect(drawing.paperScale, 1);
+      expect(drawing.paperSize, isNull, reason: 'back to filling the screen');
       drawing.redo();
       drawing.add(sampleStroke());
       expect(await app.session.save(), isTrue);
       final saved = await app.store.load(app.session.id);
-      expect(saved!.paperScale, 4);
-      expect(PaintingDoc.decode(saved.encode()).paperScale, 4);
+      expect(saved!.paperSize, const Size(900, 1400));
+      expect(saved.meta.width, 900);
+      expect(PaintingDoc.decode(saved.encode()).paperSize,
+          const Size(900, 1400));
     });
 
-    testWidgets('4× paper is twice as wide and tall; chosen from the menu',
-        (tester) async {
-      final app = await pumpApp(tester);
-      final before = tester.getSize(find.byKey(CanvasPageState.paperKey));
-      await tapMenu(tester, '画纸大小');
-      await tester.tap(find.text('4倍 · 宽和高都是 2 倍'));
-      await tester.pumpAndSettle();
-      expect(app.session.drawing.paperScale, 4);
-      final paper = tester.widget<CustomPaint>(find.byKey(CanvasPageState.paperKey));
-      expect(paper.size.width, closeTo(before.width * 2, 1));
-      expect(paper.size.height, closeTo(before.height * 2, 1));
-      // Still drawable: the whole sheet is scaled to fit the screen.
-      await drawStroke(tester);
-      expect(app.session.drawing.strokes, hasLength(1));
-      await tester.pump(const Duration(seconds: 1));
+    test('sizes are whole pixels, 100 to 8000', () {
+      final drawing = DrawingController()
+        ..setPaperSize(const Size(20.4, 9000));
+      expect(drawing.paperSize, const Size(100, 8000));
+      drawing.setPaperSize(const Size(640.6, 480.2));
+      expect(drawing.paperSize, const Size(641, 480));
+    });
+
+    test('a 2× to 4× paper from v2.1 keeps the size it was saved at', () {
+      final old = sampleDoc('p', DateTime(2026)).toJson()
+        ..['paperScale'] = 4
+        ..['width'] = 1600
+        ..['height'] = 2400;
+      expect(PaintingDoc.fromJson(old).paperSize, const Size(1600, 2400));
+      final plain = sampleDoc('p', DateTime(2026)).toJson();
+      expect(PaintingDoc.fromJson(plain).paperSize, isNull,
+          reason: 'a 1× paper still fills the screen');
     });
 
     test('exports of very big papers stay within 4096 pixels', () {
       expect(exportRatioFor(const Size(800, 1200)), 2);
       expect(exportRatioFor(const Size(4000, 2600)) * 4000,
           closeTo(maxExportSide, 0.001));
-    });
-
-    test('paper sizes are 1 to 4', () {
-      expect(DrawingController.paperScales, [1, 2, 3, 4]);
     });
   });
 
@@ -300,7 +300,7 @@ void main() {
 
     testWidgets('dragging outside the paper moves it', (tester) async {
       final app = await pumpApp(tester);
-      await tapMenu(tester, '缩小画布'); // 80%: room around the paper
+      await zoomBy(tester, 0.8); // 80%: room around the paper
       final paper = tester.getRect(find.byKey(CanvasPageState.paperKey));
       final before = viewOf(tester).getTranslation();
       // Just left of the paper, inside the page.

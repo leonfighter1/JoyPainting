@@ -12,7 +12,6 @@ import 'package:perfect_freehand/perfect_freehand.dart';
 
 import '../app_theme.dart';
 import '../device.dart';
-import '../image_saver.dart';
 import '../l10n.dart';
 import '../painting_session.dart';
 import '../settings.dart';
@@ -95,6 +94,18 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   Size _room = Size.zero;
   String? _viewFor;
 
+  /// Where the paper was laid out last, before zooming.
+  PaperLayout _layout = (corner: Offset.zero, scale: 1);
+
+  /// While an edge grip is dragged, the paper keeps this place and scale
+  /// on screen, so it grows or shrinks from its top-left corner, right
+  /// under the finger.
+  final _resizeLayout = ValueNotifier<PaperLayout?>(null);
+
+  /// The edge grip being dragged. [moved] once the paper changed, so the
+  /// whole drag undoes in one step.
+  ({int pointer, Axis axis, Offset start, Size size, bool moved})? _resize;
+
   DrawingController get _drawing => widget.session.drawing;
   AppSettings get _settings => widget.settings;
   bool get _erasing => _settings.brush == BrushType.eraser;
@@ -138,6 +149,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     _eraserCursor.dispose();
     _tools.dispose();
     _viewReset.dispose();
+    _resizeLayout.dispose();
     view.dispose();
     super.dispose();
   }
@@ -248,30 +260,99 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     view.value = _scaledAround(view.value, focal, next / current);
   }
 
-  void _zoomCenter(double factor) =>
+  /// Zooms around the middle of the paper area (Ctrl + and Ctrl −).
+  void zoomCenter(double factor) =>
       _zoomAt(Offset(_room.width / 2, _room.height / 2), factor);
 
   /// Back to the whole paper on screen.
   void resetView() => _animateView(Matrix4.identity());
 
   /// Zooms so the paper shows at its real size (one paper point per screen
-  /// point), from its top-left corner. After picking a bigger paper this is
-  /// what makes it look bigger: fitted to the screen, a 4× sheet looks just
-  /// like the 1× one, only with everything drawn smaller. The paper grows
-  /// to the right and down, so what's drawn stays where it was, at the
-  /// size it was, with new room beyond the screen's edges.
+  /// point), from its top-left corner.
   void showActualSize() {
-    final room = _room;
-    final size = widget.session.canvasSize;
-    if (room.isEmpty || size.isEmpty) return;
-    final fitted = math.min(room.width / size.width, room.height / size.height);
-    final zoom = (1 / fitted).clamp(minZoom, maxZoom);
-    // The fitted sheet is centered: its top-left corner on screen.
-    final corner = Offset(
-      (room.width - size.width * fitted) / 2,
-      (room.height - size.height * fitted) / 2,
+    if (_room.isEmpty) return;
+    final zoom = (1 / _layout.scale).clamp(minZoom, maxZoom);
+    _animateView(_scaledAround(Matrix4.identity(), _layout.corner, zoom));
+  }
+
+  /// Where a paper of [size] sits in [room] before zooming: shrunk to fit
+  /// if it's bigger, never enlarged, and centered.
+  static PaperLayout fitPaper(Size room, Size size) {
+    final scale = math.min(
+      1.0,
+      math.min(room.width / size.width, room.height / size.height),
     );
-    _animateView(_scaledAround(Matrix4.identity(), corner, zoom));
+    return (
+      corner: Offset(
+        (room.width - size.width * scale) / 2,
+        (room.height - size.height * scale) / 2,
+      ),
+      scale: scale,
+    );
+  }
+
+  static Matrix4 _placing(PaperLayout l) =>
+      Matrix4.translationValues(l.corner.dx, l.corner.dy, 0)
+          .multiplied(Matrix4.diagonal3Values(l.scale, l.scale, 1));
+
+  // --- Resizing the paper ---------------------------------------------------
+
+  void _startResize(Axis axis, PointerDownEvent e) {
+    if (_resize != null || _activePointer != null || _pinching) return;
+    _resize = (
+      pointer: e.pointer,
+      axis: axis,
+      start: e.position,
+      size: widget.session.canvasSize,
+      moved: false,
+    );
+    _resizeLayout.value = _layout;
+  }
+
+  void _moveResize(PointerMoveEvent e) {
+    final r = _resize;
+    if (r == null || r.pointer != e.pointer) return;
+    // Screen points to paper points.
+    final d = (e.position - r.start) / (_layout.scale * zoomLevel(view.value));
+    final before = _drawing.paperSize;
+    _drawing.setPaperSize(
+      r.axis == Axis.horizontal
+          ? Size(r.size.width + d.dx, r.size.height)
+          : Size(r.size.width, r.size.height + d.dy),
+      recordUndo: !r.moved,
+    );
+    if (_drawing.paperSize != before) {
+      _resize = (
+        pointer: r.pointer,
+        axis: r.axis,
+        start: r.start,
+        size: r.size,
+        moved: true,
+      );
+    }
+  }
+
+  void _endResize(PointerEvent e) {
+    final r = _resize;
+    if (r == null || r.pointer != e.pointer) return;
+    _resize = null;
+    final held = _resizeLayout.value!;
+    final size = _drawing.paperSize ?? widget.session.canvasSize;
+    // Fit the new size on screen again without the paper jumping: the
+    // zoom takes over what the new layout changes.
+    view.value = view.value
+        .multiplied(_placing(held))
+        .multiplied(Matrix4.inverted(_placing(fitPaper(_room, size))));
+    _resizeLayout.value = null;
+  }
+
+  /// Makes the paper wider or taller by [step] paper points, for screen
+  /// readers and keyboards.
+  void _stepPaper(Axis axis, double step) {
+    final size = widget.session.canvasSize;
+    _drawing.setPaperSize(axis == Axis.horizontal
+        ? Size(size.width + step, size.height)
+        : Size(size.width, size.height + step));
   }
 
   void _animateView(Matrix4 end) {
@@ -355,11 +436,11 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
       if (key == LogicalKeyboardKey.equal ||
           key == LogicalKeyboardKey.add ||
           key == LogicalKeyboardKey.numpadAdd) {
-        return run(() => _zoomCenter(1.25));
+        return run(() => zoomCenter(1.25));
       }
       if (key == LogicalKeyboardKey.minus ||
           key == LogicalKeyboardKey.numpadSubtract) {
-        return run(() => _zoomCenter(0.8));
+        return run(() => zoomCenter(0.8));
       }
       if (e is KeyRepeatEvent) return false;
       if (key == LogicalKeyboardKey.digit0 ||
@@ -503,31 +584,45 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
         ? widget.session.canvasSize.width / 2
         : null;
     // The eraser always has a round tip; it never draws shapes.
-    final shape = _settings.brush.usesShapes ? _settings.shape : null;
+    final brush = _settings.brush;
+    final shape = brush.usesShapes ? _settings.shape : null;
+    // Gradients color lines and fills; spray dots and stamps stay plain.
+    final gradient = brush.usesColor && brush.kind == BrushKind.outline
+        ? _settings.gradient.forColor(_settings.color)
+        : null;
+    final blur = brush.blur * _settings.size * brush.sizeFactor;
+    final blend = brush.usesColor ? _settings.blend : StrokeBlend.normal;
     if (shape != null) {
       _drawing.begin(
         Stroke.shape(
           shape: shape,
           from: e.localPosition,
           to: e.localPosition,
-          brush: _settings.brush,
+          brush: brush,
           color: _settings.color,
           size: _settings.size,
           opacity: _settings.opacity,
           fill: _settings.fill,
           stamp: _settings.stamp,
           mirrorX: mirrorX,
+          gradient: gradient,
+          blur: blur,
+          blend: blend,
         ),
       );
     } else {
       _drawing.begin(
         Stroke(
-          brush: _settings.brush,
+          brush: brush,
           color: _settings.color,
           size: _settings.size,
           opacity: _settings.opacity,
           stamp: _settings.stamp,
           mirrorX: mirrorX,
+          fill: brush.usesShapes && _settings.freeShape,
+          gradient: gradient,
+          blur: blur,
+          blend: blend,
           usesRealPressure: e.kind == ui.PointerDeviceKind.stylus,
         ),
         _toPoint(e),
@@ -1058,70 +1153,6 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     }
   }
 
-  /// 1 to 4 screens' worth of paper. Undoable, like paper color.
-  Future<void> _pickPaperSize() async {
-    final s = S.of(context);
-    final current = _drawing.paperScale;
-    final picked = await showDialog<double>(
-      context: context,
-      builder: (context) {
-        final primary = Theme.of(context).colorScheme.primary;
-        return SimpleDialog(
-          title: Text(s.paperSize),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text(s.paperSizeHint),
-            ),
-            for (final scale in DrawingController.paperScales)
-              ListTile(
-                leading: SizedBox(
-                  width: 48,
-                  height: 40,
-                  child: Center(
-                    // The sheet drawn to scale (4× is twice as wide).
-                    child: Container(
-                      width: 22 * math.sqrt(scale),
-                      height: 18 * math.sqrt(scale),
-                      decoration: BoxDecoration(
-                        color: primary.withValues(alpha: 0.12),
-                        border: Border.all(color: primary, width: 1.5),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                  ),
-                ),
-                title: Text(s.paperSizeName(scale)),
-                selected: scale == current,
-                trailing: scale == current
-                    ? Icon(Icons.check_circle_rounded, color: primary)
-                    : null,
-                onTap: () => Navigator.pop(context, scale),
-              ),
-          ],
-        );
-      },
-    );
-    if (picked == null || picked == current || !mounted) return;
-    _drawing.setPaperScale(picked);
-    if (picked < current) {
-      resetView();
-      return;
-    }
-    // Shows the new room right away (after the paper has been laid out at
-    // its new size), and how to get around it.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      showActualSize();
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(
-          content: Text(s.paperBiggerHint),
-          duration: const Duration(seconds: 6),
-        ));
-    });
-  }
-
   Future<void> _confirmClear() async {
     final s = S.of(context);
     final ok = await showDialog<bool>(
@@ -1170,30 +1201,15 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
           ),
           DropMenuItem(
             icon: Icons.save_alt_rounded,
-            label: kIsWeb ? s.downloadImage : s.saveToGallery,
-            onSelected: _exportImage,
+            label: s.downloadImage,
+            onSelected: () =>
+                downloadPainting(context, widget.session.currentDoc()),
           ),
         ],
       ),
-      // Zoom without pinching, for anyone who can't use two fingers.
       DropMenuSection(
         title: s.menuView,
         items: [
-          DropMenuItem(
-            icon: Icons.zoom_in_rounded,
-            label: s.zoomIn,
-            onSelected: () => _zoomCenter(1.25),
-          ),
-          DropMenuItem(
-            icon: Icons.zoom_out_rounded,
-            label: s.zoomOut,
-            onSelected: () => _zoomCenter(0.8),
-          ),
-          DropMenuItem(
-            icon: Icons.fit_screen_rounded,
-            label: s.fitScreen,
-            onSelected: resetView,
-          ),
           DropMenuItem(
             icon: Icons.pan_tool_rounded,
             label: s.panCanvas,
@@ -1223,10 +1239,15 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
             label: s.paperColor,
             onSelected: _pickPaper,
           ),
+          // The paper is resized by its edge grips; this undoes all that.
           DropMenuItem(
             icon: Icons.aspect_ratio_rounded,
-            label: s.paperSize,
-            onSelected: _pickPaperSize,
+            label: s.paperDefaultSize,
+            enabled: _drawing.paperSize != null,
+            onSelected: () {
+              _drawing.setPaperSize(null);
+              resetView();
+            },
           ),
         ],
       ),
@@ -1325,25 +1346,6 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     final messenger = ScaffoldMessenger.of(context);
     if (await widget.session.newPainting()) {
       messenger.showSnackBar(SnackBar(content: Text(s.newPaintingStarted)));
-    }
-  }
-
-  Future<void> _exportImage() async {
-    final s = S.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final size = widget.session.canvasSize;
-    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final name = 'paint_${DateTime.now().millisecondsSinceEpoch}';
-    try {
-      final bytes = await _drawing.exportPng(size, pixelRatio);
-      await saveImage(bytes, name);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(kIsWeb ? s.downloaded('$name.png') : s.savedToGallery),
-        ),
-      );
-    } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(s.saveFailed(e))));
     }
   }
 
@@ -1653,14 +1655,15 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   static const toolsListKey = Key('toolsList');
   static const selectionBarKey = Key('selectionBar');
 
-  /// The paper, like a sketchbook sheet, inside a zoomable view.
+  /// The paper, like a sketchbook sheet, inside a zoomable view, with grips
+  /// on its right and bottom edges to make it wider or taller.
   ///
-  /// The paper fills the space available, but is never smaller than what's
-  /// already drawn. So when the space shrinks or changes shape (rotating a
-  /// tablet, opening a painting made on a bigger screen) the whole sheet is
-  /// scaled down to fit instead of cutting the drawing off. FittedBox and the
-  /// zoom Transform both map touches back to paper coordinates, so drawing
-  /// lands under the finger at any scale.
+  /// A painting has its own paper size once its grips are dragged; until
+  /// then the paper fills the space available, but is never smaller than
+  /// what's already drawn. A paper bigger than the space is scaled down to
+  /// fit (see [fitPaper]). FittedBox and the zoom Transform both map touches
+  /// back to paper coordinates, so drawing lands under the finger at any
+  /// scale.
   Widget _buildPaper(S s, CuteTheme cute) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
@@ -1668,7 +1671,8 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
         // An opened painting brings its own content and paper size.
         listenable: Listenable.merge([
           widget.session,
-          _drawing.paperScaleListenable,
+          _drawing.paperSizeListenable,
+          _resizeLayout,
           _panning,
         ]),
         builder: (context, _) => LayoutBuilder(
@@ -1676,14 +1680,14 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
             final room = constraints.biggest;
             _room = room;
             final drawn = _drawing.contentBounds;
-            // A bigger paper is more screens' worth of room, by area.
-            final grow = math.sqrt(_drawing.paperScale);
-            final size = Size(
-              math.max(room.width * grow, drawn.right),
-              math.max(room.height * grow, drawn.bottom),
-            );
+            final size = _drawing.paperSize ??
+                Size(
+                  math.max(room.width, drawn.right),
+                  math.max(room.height, drawn.bottom),
+                );
             widget.session.canvasSize = size;
-            return ClipRect(
+            final layout = _layout = _resizeLayout.value ?? fitPaper(room, size);
+            final paper = ClipRect(
               child: Listener(
                 // Sees every finger (in screen-area coordinates) to detect
                 // pinches; the paper's own listener below does the drawing.
@@ -1701,9 +1705,61 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                   valueListenable: view,
                   builder: (context, matrix, child) =>
                       Transform(key: zoomKey, transform: matrix, child: child),
-                  child: _paperSheet(s, cute, size),
+                  child: _paperSheet(s, cute, size, layout),
                 ),
               ),
+            );
+            return Stack(
+              children: [
+                Positioned.fill(child: paper),
+                // On top, outside the zoom: always the same size on screen.
+                ValueListenableBuilder(
+                  valueListenable: view,
+                  builder: (context, matrix, _) {
+                    final rect = MatrixUtils.transformRect(
+                        matrix, layout.corner & size * layout.scale);
+                    // The bottom grip stays clear of the floating buttons
+                    // in the bottom corners (the tools button is wide).
+                    final floats = {_settings.toolsCorner, _settings.undoCorner};
+                    final along = !floats.contains(Corner.bottomLeft)
+                        ? 0.25
+                        : !floats.contains(Corner.bottomRight)
+                        ? 0.75
+                        : 0.5;
+                    return Stack(
+                      children: [
+                        for (final axis in Axis.values)
+                          for (final (box, at) in [
+                            _gripPlace(
+                              room,
+                              axis == Axis.horizontal
+                                  ? rect.centerRight
+                                  : Offset(rect.left + rect.width * along,
+                                      rect.bottom),
+                            ),
+                          ])
+                          Positioned.fromRect(
+                            rect: box,
+                            child: _PaperGrip(
+                              axis: axis,
+                              alignment: at,
+                              label: axis == Axis.horizontal
+                                  ? s.paperWidthGrip
+                                  : s.paperHeightGrip,
+                              value: axis == Axis.horizontal
+                                  ? size.width
+                                  : size.height,
+                              onDown: (e) => _startResize(axis, e),
+                              onMove: _moveResize,
+                              onUp: _endResize,
+                              onStep: (step) => _stepPaper(axis, step),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             );
           },
         ),
@@ -1711,13 +1767,30 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     );
   }
 
+  /// Where a grip for the paper edge at [edge] goes: its 48×48 touch area
+  /// kept inside [room] (a paper filling the screen has its edges right at
+  /// the screen's), and where in that area the grip shows.
+  static (Rect, Alignment) _gripPlace(Size room, Offset edge) {
+    const half = 24.0;
+    final at = Offset(
+      edge.dx.clamp(8, math.max(8, room.width - 8)),
+      edge.dy.clamp(8, math.max(8, room.height - 8)),
+    );
+    final box = Rect.fromCenter(center: at, width: half * 2, height: half * 2);
+    final dx = box.left < 0 ? -box.left : math.min(0.0, room.width - box.right);
+    final dy = box.top < 0 ? -box.top : math.min(0.0, room.height - box.bottom);
+    final moved = box.shift(Offset(dx, dy));
+    return (moved, Alignment(-dx / half, -dy / half));
+  }
+
   /// Finds the zoom transform in tests.
   static const zoomKey = Key('zoom');
 
-  Widget _paperSheet(S s, CuteTheme cute, Size size) {
-    return Center(
-      child: AspectRatio(
-        aspectRatio: size.width / size.height,
+  Widget _paperSheet(S s, CuteTheme cute, Size size, PaperLayout layout) {
+    return Stack(
+      children: [
+        Positioned.fromRect(
+        rect: layout.corner & size * layout.scale,
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(cute.radius),
@@ -1753,6 +1826,9 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                         child: CustomPaint(
                           key: paperKey,
                           painter: _CanvasPainter(_drawing),
+                          // A big painting is costly to paint: let the
+                          // engine keep it while a stroke is drawn on top.
+                          isComplex: true,
                           foregroundPainter: CanvasOverlayPainter(
                             settings: _settings,
                             eraserCursor: _eraserCursor,
@@ -1763,6 +1839,12 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                             ink: cute.ink,
                           ),
                           size: size,
+                          child: RepaintBoundary(
+                            child: CustomPaint(
+                              painter: _CurrentStrokePainter(_drawing),
+                              size: size,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1773,6 +1855,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
           ),
         ),
       ),
+      ],
     );
   }
 
@@ -1780,20 +1863,119 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   static const paperKey = Key('paper');
 }
 
+/// The paper and everything finished on it. Repaints only when that
+/// changes; see [DrawingController.finishedRevision].
 class _CanvasPainter extends CustomPainter {
-  _CanvasPainter(this.controller) : super(repaint: controller);
+  _CanvasPainter(this.controller)
+      : super(repaint: controller.finishedRevision);
 
   final DrawingController controller;
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = controller.paper);
-    controller.paintStrokes(canvas, size);
+    controller.paintFinished(canvas, size);
   }
 
   @override
   bool shouldRepaint(_CanvasPainter oldDelegate) =>
       oldDelegate.controller != controller;
+}
+
+/// The stroke being drawn, on its own layer above the finished ones.
+class _CurrentStrokePainter extends CustomPainter {
+  _CurrentStrokePainter(this.controller) : super(repaint: controller);
+
+  final DrawingController controller;
+
+  @override
+  void paint(Canvas canvas, Size size) => controller.paintCurrent(canvas);
+
+  @override
+  bool shouldRepaint(_CurrentStrokePainter oldDelegate) =>
+      oldDelegate.controller != controller;
+}
+
+/// Where the paper sits in the paper area before zooming: its top-left
+/// corner and how much it's scaled down to fit.
+typedef PaperLayout = ({Offset corner, double scale});
+
+/// A grip on the middle of the paper's right edge ([Axis.horizontal]:
+/// drag to make it wider or narrower) or bottom edge (taller or shorter).
+/// Screen readers adjust it in steps.
+class _PaperGrip extends StatelessWidget {
+  const _PaperGrip({
+    required this.axis,
+    required this.alignment,
+    required this.label,
+    required this.value,
+    required this.onDown,
+    required this.onMove,
+    required this.onUp,
+    required this.onStep,
+  });
+
+  final Axis axis;
+
+  /// Where the grip shows in its touch area: on the paper's edge.
+  final Alignment alignment;
+  final String label;
+
+  /// The paper's width or height now.
+  final double value;
+  final void Function(PointerDownEvent) onDown;
+  final void Function(PointerMoveEvent) onMove;
+  final void Function(PointerEvent) onUp;
+  final void Function(double step) onStep;
+
+  static const step = 50.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final across = axis == Axis.horizontal;
+    return Semantics(
+      label: label,
+      value: value.round().toString(),
+      increasedValue: (value + step).round().toString(),
+      decreasedValue: (value - step).round().toString(),
+      onIncrease: () => onStep(step),
+      onDecrease: () => onStep(-step),
+      child: Tooltip(
+        message: label,
+        child: MouseRegion(
+          cursor: across
+              ? SystemMouseCursors.resizeLeftRight
+              : SystemMouseCursors.resizeUpDown,
+          child: Listener(
+            onPointerDown: onDown,
+            onPointerMove: onMove,
+            onPointerUp: onUp,
+            onPointerCancel: onUp,
+            behavior: HitTestBehavior.opaque,
+            child: Align(
+              alignment: alignment,
+              child: Container(
+                width: across ? 12 : 44,
+                height: across ? 44 : 12,
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: scheme.onPrimary, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: scheme.primary.withValues(alpha: 0.35),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The dashed box around the move tool's selection: [box], turned and
@@ -2374,7 +2556,19 @@ class _ToolPanel extends StatelessWidget {
         if (brush.usesShapes) ...[
           heading(s.shapes),
           wrap([
-            for (final shape in [null, ...ShapeKind.values])
+            _ToolChip(
+              icon: AppTheme.shapeIcon(null),
+              label: s.shapeName(null),
+              selected: settings.shape == null && !settings.freeShape,
+              onTap: () => settings.shape = null,
+            ),
+            _ToolChip(
+              icon: Icons.format_shapes_rounded,
+              label: s.freeShape,
+              selected: settings.freeShape,
+              onTap: () => settings.freeShape = true,
+            ),
+            for (final shape in ShapeKind.values)
               _ToolChip(
                 icon: AppTheme.shapeIcon(shape),
                 label: s.shapeName(shape),
@@ -2417,6 +2611,30 @@ class _ToolPanel extends StatelessWidget {
                   ),
                   onSelected: (_) => settings.stamp = shape,
                 ),
+              ),
+          ]),
+        ],
+        if (brush.usesColor && brush.kind == BrushKind.outline) ...[
+          heading(s.gradient),
+          wrap([
+            for (final g in GradientStyle.values)
+              _ToolChip(
+                icon: AppTheme.gradientIcon(g),
+                label: s.gradientName(g),
+                selected: settings.gradient == g,
+                onTap: () => settings.gradient = g,
+              ),
+          ]),
+        ],
+        if (brush.usesColor) ...[
+          heading(s.lightAndShadow),
+          wrap([
+            for (final b in AppTheme.blends)
+              _ToolChip(
+                icon: AppTheme.blendIcon(b),
+                label: s.blendName(b),
+                selected: settings.blend == b,
+                onTap: () => settings.blend = b,
               ),
           ]),
         ],
@@ -2806,7 +3024,8 @@ class _PaperChoice extends StatelessWidget {
   }
 }
 
-/// Shows how big, what color and how see-through the next stroke will be.
+/// Shows how big, what color and how see-through the next stroke will be,
+/// with its gradient and soft edge.
 class _SizePreview extends StatelessWidget {
   const _SizePreview({required this.settings});
 
@@ -2821,34 +3040,63 @@ class _SizePreview extends StatelessWidget {
       BrushType.rainbow => Colors.white,
       _ => settings.color,
     };
-    return SizedBox(
-      width: 44,
-      height: 48,
-      child: Center(
-        child: Container(
-          width: d,
-          height: d,
-          decoration: BoxDecoration(
-            color: fill.withValues(alpha: settings.opacity * brush.opacity),
-            gradient: brush == BrushType.rainbow
-                ? SweepGradient(
-                    colors: [
-                      for (var h = 0; h <= 360; h += 60)
-                        HSVColor.fromAHSV(
-                          settings.opacity,
-                          h % 360,
-                          0.6,
-                          0.97,
-                        ).toColor(),
-                    ],
-                  )
-                : null,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.black26),
-          ),
-        ),
+    final alpha = settings.opacity * brush.opacity;
+    final gradient = brush.usesColor && brush.kind == BrushKind.outline
+        ? settings.gradient.forColor(settings.color)
+        : null;
+    Widget dot = Container(
+      width: d,
+      height: d,
+      decoration: BoxDecoration(
+        color: fill.withValues(alpha: alpha),
+        gradient: brush == BrushType.rainbow
+            ? SweepGradient(
+                colors: [
+                  for (var h = 0; h <= 360; h += 60)
+                    HSVColor.fromAHSV(
+                      settings.opacity,
+                      h % 360,
+                      0.6,
+                      0.97,
+                    ).toColor(),
+                ],
+              )
+            : gradient == null
+            ? null
+            : _boxGradient(gradient, alpha),
+        shape: BoxShape.circle,
+        border: brush.blur > 0 ? null : Border.all(color: Colors.black26),
       ),
     );
+    if (brush.blur > 0) {
+      final sigma = d * brush.blur / 2;
+      dot = ImageFiltered(
+        imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+        child: dot,
+      );
+    }
+    return SizedBox(width: 44, height: 48, child: Center(child: dot));
+  }
+
+  /// [g] as a box decoration's gradient, faded by [alpha].
+  static Gradient _boxGradient(StrokeGradient g, double alpha) {
+    Alignment at(Offset f) => Alignment(f.dx * 2 - 1, f.dy * 2 - 1);
+    final colors = [
+      for (final c in g.colors) c.withValues(alpha: c.a * alpha),
+    ];
+    return g.radial
+        ? RadialGradient(
+            center: at(g.from),
+            radius: (g.to - g.from).distance,
+            colors: colors,
+            stops: g.stops,
+          )
+        : LinearGradient(
+            begin: at(g.from),
+            end: at(g.to),
+            colors: colors,
+            stops: g.stops,
+          );
   }
 }
 
