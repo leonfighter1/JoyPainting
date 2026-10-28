@@ -24,9 +24,9 @@ const _cream = Color(0xFFFFF6E5);
 
 /// The paper's color at [at] with [strokes] on it.
 Future<Color> colorAt(List<Stroke> strokes, Offset at,
-    {Color paper = Colors.white, ui.Image? finished}) async {
+    {Color paper = Colors.white, void Function(Canvas canvas)? painter}) async {
   final s = await PaperSampler.sample(at,
-      size: _size, paper: paper, strokes: strokes, finished: finished);
+      size: _size, paper: paper, strokes: strokes, painter: painter);
   s.patch.dispose();
   return s.color;
 }
@@ -73,13 +73,10 @@ void main() {
             brush: BrushType.highlighter, color: const Color(0xFFFFC107)),
       ];
       final cache = StrokeLayerCache();
-      final recorder = ui.PictureRecorder();
-      cache.paint(Canvas(recorder), _size, strokes, Colors.white, 2);
-      recorder.endRecording().dispose();
-      final finished = cache.imageOf(strokes, _size);
-      expect(finished, isNotNull);
+      void kept(Canvas canvas) =>
+          cache.paint(canvas, _size, strokes, Colors.white, 2);
       for (final at in const [Offset(10, 20), Offset(45, 20), Offset(10, 5)]) {
-        expect(await colorAt(strokes, at, finished: finished),
+        expect(await colorAt(strokes, at, painter: kept),
             near(await colorAt(strokes, at)), reason: '$at');
       }
     });

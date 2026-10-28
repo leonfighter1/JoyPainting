@@ -17,7 +17,8 @@ import 'replay_timeline.dart';
 /// painting stays on screen for two seconds before it loops. [onProgress]
 /// hears 0 to 1; [cancelled] stops early (the result is then null).
 Future<Uint8List?> replayGif(List<Stroke> strokes, Size size, Color paper,
-    {int maxSide = 400,
+    {List<PaintingLayer> layers = const [PaintingLayer.base],
+    int maxSide = 400,
     int fps = 10,
     double maxSeconds = 10,
     void Function(double done)? onProgress,
@@ -28,7 +29,7 @@ Future<Uint8List?> replayGif(List<Stroke> strokes, Size size, Color paper,
   final scale = maxSide / math.max(size.width, size.height);
   final width = math.max(1, (size.width * scale).round());
   final height = math.max(1, (size.height * scale).round());
-  final cache = StrokeLayerCache();
+  final cache = LayeredCache();
   final pixels = <Uint8List>[];
   try {
     for (var i = 0; i < frames; i++) {
@@ -36,7 +37,7 @@ Future<Uint8List?> replayGif(List<Stroke> strokes, Size size, Color paper,
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder)..scale(width / size.width);
       paintReplayFrame(canvas, size, timeline,
-          timeline.total * i / (frames - 1), paper, cache, scale);
+          timeline.total * i / (frames - 1), paper, layers, cache, scale);
       final image = await recorder.endRecording().toImage(width, height);
       final data =
           await image.toByteData(format: ui.ImageByteFormat.rawRgba);

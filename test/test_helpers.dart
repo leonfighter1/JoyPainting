@@ -19,8 +19,8 @@ final tinyPng = base64Decode(
 
 /// Thumbnails are faked because real PNG encoding never completes under the
 /// fake clock widget tests run on.
-Future<Uint8List> fakeThumbnailer(
-        List<Stroke> strokes, Size size, Color paper) async =>
+Future<Uint8List> fakeThumbnailer(List<Stroke> strokes, Size size, Color paper,
+        List<PaintingLayer> layers) async =>
     tinyPng;
 
 class TestApp {

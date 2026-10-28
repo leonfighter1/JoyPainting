@@ -20,6 +20,7 @@ import 'canvas/canvas_menu.dart';
 import 'canvas/canvas_view.dart';
 import 'canvas/color_widgets.dart';
 import 'canvas/floating_controls.dart';
+import 'canvas/layer_panel.dart';
 import 'canvas/overlay_painter.dart';
 import 'canvas/paper_resizer.dart';
 import 'canvas/paper_view.dart';
@@ -74,7 +75,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
 
   /// The finished drawing kept as a picture, so a big painting isn't
   /// painted again for every new stroke or eraser move.
-  final layerCache = StrokeLayerCache();
+  final layerCache = LayeredCache();
 
   /// Pixels per paper point [layerCache] is kept at: what the screen shows
   /// at the current zoom step.
@@ -344,8 +345,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
       return paperPixels(
           size: size,
           paper: _drawing.paper,
-          strokes: _drawing.strokes,
-          finished: layerCache.imageOf(_drawing.strokes, size),
+          painter: (canvas) => _paintKept(canvas, size),
           // Browsers work it out on the screen's own thread: fewer pixels.
           maxSide: kIsWeb ? 1024 : 2048);
     },
@@ -357,15 +357,18 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   /// The brush the picker goes back to.
   BrushType _brushBeforePicker = BrushType.pen;
 
-  /// The color seen at [at] on the paper, read from the kept picture.
+  /// The color seen at [at] on the paper, read from the kept pictures.
   Future<PaperSample> _samplePaper(Offset at) {
     final size = widget.session.canvasSize;
     return PaperSampler.sample(at,
         size: size,
         paper: _drawing.paper,
-        strokes: _drawing.strokes,
-        finished: layerCache.imageOf(_drawing.strokes, size));
+        painter: (canvas) => _paintKept(canvas, size));
   }
+
+  /// Every shown layer, from the kept pictures (as on screen).
+  void _paintKept(Canvas canvas, Size size) => layerCache.paint(canvas, size,
+      _drawing.strokes, _drawing.layers, _drawing.paper, _cacheRatio.value);
 
   /// A screen position in the canvas stack's coordinates.
   Offset _onStage(Offset global) {
@@ -396,8 +399,17 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     // Ignore extra fingers here: a second finger starts a pinch (handled by
     // the frame listener), and nothing draws until every finger lifts.
     if (_activePointer != null || _view.pinching) return;
+    final tool = _toolForTouch;
     _activePointer = e.pointer;
-    (_tool = _toolForTouch).down(ToolPointer(e));
+    // Nothing goes onto a hidden or locked layer; say why. The touch stays
+    // taken, so it doesn't move the paper either.
+    if (!_drawing.canDrawOnActive &&
+        (tool == _drawTool || tool == _textTool || tool == _fillTool)) {
+      _tool = null;
+      _explainLayer();
+      return;
+    }
+    (_tool = tool).down(ToolPointer(e));
   }
 
   void _onMove(PointerMoveEvent e) {
@@ -410,6 +422,32 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     _activePointer = null;
     _tool?.up(ToolPointer(e));
     _tool = null;
+  }
+
+  // --- Layers --------------------------------------------------------------
+
+  /// The layers row at the top of the tools drawer, at the advanced level.
+  Widget? get _layersRow => _settings.level.layers
+      ? LayersRow(drawing: _drawing, onOpen: _openLayers)
+      : null;
+
+  Future<void> _openLayers() {
+    final size = widget.session.canvasSize;
+    return showLayerSheet(
+      context,
+      drawing: _drawing,
+      paperSize: size,
+      thumbnail: (id) =>
+          layerCache.imageOf(id, _drawing.strokesOn(id), size),
+    );
+  }
+
+  void _explainLayer() {
+    final s = S.of(context);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(_drawing.active.visible ? s.layerLocked : s.layerHidden)));
   }
 
   // --- Move tool: select, move, resize, turn ------------------------------
@@ -717,6 +755,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                           onClose: _closeTools,
                           onTogglePin: _togglePaletteLock,
                           onMoreColors: _pickColor,
+                          top: _layersRow,
                         ),
                       ),
                   ],
@@ -733,6 +772,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
               onUnpin: _togglePaletteLock,
               onMore: _openTools,
               onMoreColors: _pickColor,
+              top: _layersRow,
             );
           },
         ),

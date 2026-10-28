@@ -17,14 +17,15 @@ import 'settings.dart';
 /// Renders a thumbnail for the gallery. Swappable so widget tests can skip
 /// real image encoding, which doesn't complete under fake async.
 typedef Thumbnailer = Future<Uint8List> Function(
-    List<Stroke> strokes, Size size, Color paper);
+    List<Stroke> strokes, Size size, Color paper, List<PaintingLayer> layers);
 
 /// Longest side of a gallery thumbnail, in pixels.
 const thumbnailMaxSide = 360.0;
 
-Future<Uint8List> renderThumbnail(List<Stroke> strokes, Size size, Color paper) {
+Future<Uint8List> renderThumbnail(
+    List<Stroke> strokes, Size size, Color paper, List<PaintingLayer> layers) {
   final scale = thumbnailMaxSide / math.max(size.width, size.height);
-  return renderPng(strokes, size, scale, paper: paper);
+  return renderPng(strokes, size, scale, paper: paper, layers: layers);
 }
 
 /// The painting currently open on the canvas, and keeping it saved.
@@ -181,13 +182,14 @@ class PaintingSession extends ChangeNotifier {
     final strokes = List<Stroke>.of(drawing.strokes);
     final paper = drawing.paper;
     final paperSize = drawing.paperSize;
+    final layers = drawing.layers;
     final size = paperSize ??
         (canvasSize.isEmpty ? _boundsOf(strokes) : canvasSize);
     final paintingId = id;
     if (name.isEmpty) name = await _nextName();
     final paintingName = name;
     try {
-      final thumbnail = await thumbnailer(strokes, size, paper);
+      final thumbnail = await thumbnailer(strokes, size, paper, layers);
       await store.save(
         PaintingDoc(
           meta: PaintingMeta(
@@ -202,6 +204,7 @@ class PaintingSession extends ChangeNotifier {
           strokes: strokes,
           paper: paper,
           paperSize: paperSize,
+          layers: layers,
         ),
         thumbnail,
       );
@@ -249,6 +252,7 @@ class PaintingSession extends ChangeNotifier {
       strokes: strokes,
       paper: drawing.paper,
       paperSize: drawing.paperSize,
+      layers: drawing.layers,
     );
   }
 
@@ -329,6 +333,7 @@ class PaintingSession extends ChangeNotifier {
       strokes: doc.strokes,
       paper: doc.paper,
       paperSize: doc.paperSize,
+      layers: doc.layers,
     ));
   }
 
@@ -350,13 +355,14 @@ class PaintingSession extends ChangeNotifier {
       strokes: incoming.strokes,
       paper: incoming.paper,
       paperSize: incoming.paperSize,
+      layers: incoming.layers,
     );
     try {
       final size = Size(copy.meta.width, copy.meta.height);
       await store.save(
         copy,
         await thumbnailer(copy.strokes,
-            size.isEmpty ? _boundsOf(copy.strokes) : size, copy.paper),
+            size.isEmpty ? _boundsOf(copy.strokes) : size, copy.paper, copy.layers),
       );
       return copy;
     } catch (e) {
@@ -395,7 +401,8 @@ class PaintingSession extends ChangeNotifier {
   void _show(PaintingDoc doc) {
     _reset(doc.meta.id, doc.meta.createdAt, doc.strokes, doc.paper,
         size: doc.paperSize ?? Size(doc.meta.width, doc.meta.height),
-        paperSize: doc.paperSize);
+        paperSize: doc.paperSize,
+        layers: doc.layers);
     name = doc.meta.name;
     _persisted = true;
     settings.lastPaintingId = id;
@@ -406,12 +413,14 @@ class PaintingSession extends ChangeNotifier {
   /// canvas has room for", as for a new painting.
   void _reset(
       String newId, DateTime created, List<Stroke> strokes, Color paper,
-      {Size size = Size.zero, Size? paperSize}) {
+      {Size size = Size.zero,
+      Size? paperSize,
+      List<PaintingLayer> layers = const [PaintingLayer.base]}) {
     id = newId;
     name = '';
     createdAt = created;
     canvasSize = size.isEmpty ? Size.zero : size;
-    drawing.load(strokes, paper: paper, paperSize: paperSize);
+    drawing.load(strokes, paper: paper, paperSize: paperSize, layers: layers);
     _savedRevision = drawing.revision;
     // Loading notifies listeners, which schedules an autosave; nothing
     // changed yet, so drop it.

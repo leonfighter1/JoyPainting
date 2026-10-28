@@ -134,6 +134,26 @@ class S {
   String get saveGif => _t('存成 GIF 动图', 'Save as GIF');
   String get makingGif => _t('正在制作 GIF…', 'Making the GIF…');
   String replayFileName(String name) => '${name}_${_t('回放', 'replay')}.gif';
+  String get layers => _t('图层', 'Layers');
+  String layerName(int n) => _t('图层 $n', 'Layer $n');
+  String layersButton(String name, int count) =>
+      _t('$name（共 $count 层）', '$name ($count in all)');
+  String get addLayer => _t('新建图层', 'New layer');
+  String get deleteLayer => _t('删除图层', 'Delete layer');
+  String deleteLayerBody(String name) =>
+      _t('「$name」上画的东西会一起删除。可以撤销。', 'What is drawn on "$name" goes too. You can undo it.');
+  String get mergeDown => _t('向下合并', 'Merge down');
+  String get renameLayer => _t('重命名图层', 'Rename layer');
+  String get showLayer => _t('显示图层', 'Show layer');
+  String get hideLayer => _t('隐藏图层', 'Hide layer');
+  String get lockLayer => _t('锁定图层', 'Lock layer');
+  String get unlockLayer => _t('解锁图层', 'Unlock layer');
+  String get layerOpacity => _t('图层不透明度', 'Layer opacity');
+  String get layerHidden =>
+      _t('这个图层隐藏了，先让它显示出来再画。', 'This layer is hidden: show it to draw on it.');
+  String get layerLocked =>
+      _t('这个图层锁住了，先解锁再画。', 'This layer is locked: unlock it to draw on it.');
+  String get tooManyLayers => _t('最多 10 个图层', '10 layers at most');
   String get neverBackedUp => _t('这些画还没有备份过', "These paintings haven't been backed up");
   String lastBackedUp(int days) => days <= 0
       ? _t('今天备份过', 'Backed up today')

@@ -9,26 +9,43 @@ import 'stroke.dart';
 
 /// What the drawing looked like before an edit, for undo and redo.
 class _Snapshot {
-  _Snapshot(List<Stroke> strokes, this.paper, this.paperSize)
+  _Snapshot(List<Stroke> strokes, this.paper, this.paperSize, this.layers,
+      this.activeLayer)
       : strokes = List.of(strokes);
 
   final List<Stroke> strokes;
   final Color paper;
   final Size? paperSize;
+  final List<PaintingLayer> layers;
+  final String activeLayer;
 }
 
-/// Holds the strokes and paper color of the open painting, plus its
-/// undo/redo history.
+/// Holds the strokes, layers and paper color of the open painting, plus
+/// its undo/redo history.
 ///
-/// Every edit (a stroke, clearing, moving or editing text, changing paper)
-/// records a snapshot first, so all of them can be undone. Strokes are never
-/// changed in place, so a snapshot only needs to copy the list.
+/// Every edit (a stroke, clearing, moving or editing text, changing paper,
+/// changing layers) records a snapshot first, so all of them can be undone.
+/// Strokes are never changed in place, so a snapshot only needs to copy the
+/// list.
+///
+/// [strokes] are kept in painting order: grouped by layer, bottom layer
+/// first, and in the order they were added within a layer. So the list
+/// alone, as older versions read it, still stacks them correctly.
 class DrawingController extends ChangeNotifier {
   final List<Stroke> strokes = [];
   final List<_Snapshot> _undo = [];
   final List<_Snapshot> _redo = [];
   Stroke? current;
   Color paper = Colors.white;
+
+  /// The painting's layers, bottom first; always at least one.
+  List<PaintingLayer> get layers => List.unmodifiable(_layers);
+  List<PaintingLayer> _layers = const [PaintingLayer.base];
+
+  /// The layer new strokes go on, and the only one strokes can be picked
+  /// from.
+  String get activeLayer => _active;
+  String _active = PaintingLayer.baseId;
 
   /// The paper's own size, or null for paper that fills the screen (and
   /// grows to fit what's drawn), as new paintings have. Strokes never
@@ -41,10 +58,10 @@ class DrawingController extends ChangeNotifier {
   /// Older steps are forgotten past this many, to bound memory.
   static const maxUndo = 100;
 
-  /// Bumped when what's finished (strokes, paper) changes, and on every
-  /// move of the eraser, which cuts into it; not while another stroke is
-  /// being drawn. The finished drawing has its own layer, so a big painting
-  /// isn't painted again for every point of a new stroke.
+  /// Bumped when what's finished (strokes, layers, paper) changes, and on
+  /// every move of the eraser, which cuts into it; not while another stroke
+  /// is being drawn. The finished drawing has its own layer, so a big
+  /// painting isn't painted again for every point of a new stroke.
   final finishedRevision = ValueNotifier<int>(0);
 
   bool get _erasing => current?.brush == BrushType.eraser;
@@ -65,8 +82,131 @@ class DrawingController extends ChangeNotifier {
       ? Rect.zero
       : strokes.map((s) => s.bounds).reduce((a, b) => a.expandToInclude(b));
 
+  // --- Layers -------------------------------------------------------------
+
+  PaintingLayer layer(String id) =>
+      _layers.firstWhere((l) => l.id == id, orElse: () => _layers.last);
+
+  PaintingLayer get active => layer(_active);
+
+  /// What a new stroke's `layer` is: null for the base layer.
+  String? get newStrokeLayer =>
+      _active == PaintingLayer.baseId ? null : _active;
+
+  /// Whether the active layer can be drawn on: shown and not locked.
+  bool get canDrawOnActive => active.visible && !active.locked;
+
+  /// The strokes on layer [id], in painting order.
+  List<Stroke> strokesOn(String id) => [
+        for (final s in strokes)
+          if (s.layerId == id) s,
+      ];
+
+  /// Makes [id] the layer new strokes go on. Not an edit: not undone.
+  void selectLayer(String id) {
+    if (_active == id || !_layers.any((l) => l.id == id)) return;
+    _active = id;
+    notifyListeners();
+  }
+
+  /// Adds an empty layer above the active one and makes it active.
+  /// Returns false when there are already [PaintingLayer.maxLayers].
+  bool addLayer() {
+    if (_layers.length >= PaintingLayer.maxLayers) return false;
+    _record();
+    var n = _layers.length;
+    String id;
+    do {
+      id = 'L${++n}';
+    } while (_layers.any((l) => l.id == id));
+    final at = _layers.indexWhere((l) => l.id == _active) + 1;
+    _layers = [..._layers]..insert(at, PaintingLayer(id: id));
+    _active = id;
+    _changed();
+    return true;
+  }
+
+  /// Deletes layer [id] with everything on it. The last layer stays.
+  void deleteLayer(String id) {
+    if (_layers.length <= 1) return;
+    final at = _layers.indexWhere((l) => l.id == id);
+    if (at < 0) return;
+    _record();
+    strokes.removeWhere((s) => s.layerId == id);
+    _layers = [..._layers]..removeAt(at);
+    if (_active == id) _active = _layers[at == 0 ? 0 : at - 1].id;
+    _changed();
+  }
+
+  /// Moves layer [id] to [index] (0 is the bottom).
+  void moveLayer(String id, int index) {
+    final from = _layers.indexWhere((l) => l.id == id);
+    final to = index.clamp(0, _layers.length - 1);
+    if (from < 0 || from == to) return;
+    _record();
+    final moved = [..._layers];
+    moved.insert(to, moved.removeAt(from));
+    _layers = moved;
+    _sortStrokes();
+    _changed();
+  }
+
+  /// Replaces a layer's name, visibility, opacity or lock with [changed]'s.
+  /// Pass `recordUndo: false` for the later steps of one slider drag.
+  void updateLayer(PaintingLayer changed, {bool recordUndo = true}) {
+    final at = _layers.indexWhere((l) => l.id == changed.id);
+    if (at < 0 || _layers[at] == changed) return;
+    if (recordUndo) _record();
+    _layers = [..._layers]..[at] = changed;
+    _changed();
+  }
+
+  /// Puts layer [id]'s strokes onto the layer below it, which becomes
+  /// active. The merged layer's own opacity is dropped.
+  void mergeDown(String id) {
+    final at = _layers.indexWhere((l) => l.id == id);
+    if (at <= 0) return;
+    _record();
+    final below = _layers[at - 1].id;
+    for (var i = 0; i < strokes.length; i++) {
+      if (strokes[i].layerId == id) strokes[i] = strokes[i].onLayer(below);
+    }
+    _layers = [..._layers]..removeAt(at);
+    _active = below;
+    _sortStrokes();
+    _changed();
+  }
+
+  /// Stable-sorts [strokes] into layer order.
+  void _sortStrokes() {
+    final order = {for (final (i, l) in _layers.indexed) l.id: i};
+    final indexed = [...strokes.indexed]..sort((a, b) {
+        final byLayer = order[a.$2.layerId]!.compareTo(order[b.$2.layerId]!);
+        return byLayer != 0 ? byLayer : a.$1.compareTo(b.$1);
+      });
+    strokes
+      ..clear()
+      ..addAll([for (final (_, s) in indexed) s]);
+  }
+
+  /// Where a new stroke on [layerId] goes: after the last stroke of its
+  /// layer or of any layer below it.
+  int _insertAt(String layerId) {
+    final mine = _layers.indexWhere((l) => l.id == layerId);
+    for (var i = strokes.length - 1; i >= 0; i--) {
+      final theirs = _layers.indexWhere((l) => l.id == strokes[i].layerId);
+      if (theirs <= mine) return i + 1;
+    }
+    return 0;
+  }
+
+  void _insert(Stroke s) => strokes.insert(_insertAt(s.layerId), s);
+
+  // --- Drawing ------------------------------------------------------------
+
   /// Starts [stroke]. Freehand strokes pass their first [point]; shape
-  /// strokes already have their outline.
+  /// strokes already have their outline. Tools give new strokes the
+  /// [newStrokeLayer].
   void begin(Stroke stroke, [PointVector? point]) {
     current = stroke;
     if (point != null) stroke.points.add(point);
@@ -107,15 +247,15 @@ class DrawingController extends ChangeNotifier {
       return;
     }
     _record();
-    strokes.add(current!..isComplete = true);
+    _insert(current!..isComplete = true);
     current = null;
     _changed();
   }
 
-  /// Adds a finished stroke, such as a new text item.
+  /// Adds a finished stroke, such as a new text item, on its layer.
   void add(Stroke stroke) {
     _record();
-    strokes.add(stroke);
+    _insert(stroke);
     _changed();
   }
 
@@ -144,11 +284,12 @@ class DrawingController extends ChangeNotifier {
     _changed();
   }
 
-  /// Adds finished strokes on top, as one edit (for example copies).
+  /// Adds finished strokes on top of their layers, as one edit (for
+  /// example copies).
   void addAll(List<Stroke> added) {
     if (added.isEmpty) return;
     _record();
-    strokes.addAll(added);
+    added.forEach(_insert);
     _changed();
   }
 
@@ -162,39 +303,43 @@ class DrawingController extends ChangeNotifier {
     _changed();
   }
 
-  /// The topmost stroke of any kind under [point], if any.
+  /// Whether [s] can be picked up: on the active layer, which is shown and
+  /// not locked.
+  bool pickable(Stroke s) => s.layerId == _active && canDrawOnActive;
+
+  /// The topmost stroke on the active layer under [point], if any.
   Stroke? hitStroke(Offset point) {
     for (final s in strokes.reversed) {
       // Eraser and blender strokes have no paint of their own to pick up.
-      if (!s.brush.isEffect && s.hits(point)) return s;
+      if (!s.brush.isEffect && pickable(s) && s.hits(point)) return s;
     }
     return null;
   }
 
-  /// Every visible stroke a selection box over [box] catches, in drawing
-  /// order.
+  /// Every stroke on the active layer a selection box over [box] catches,
+  /// in drawing order.
   List<Stroke> strokesIn(Rect box) => [
         for (final s in strokes)
-          if (!s.brush.isEffect && s.touches(box)) s,
+          if (!s.brush.isEffect && pickable(s) && s.touches(box)) s,
       ];
 
-  /// The topmost text item under [point], if any.
+  /// The topmost text item on the active layer under [point], if any.
   Stroke? hitText(Offset point) {
     for (final s in strokes.reversed) {
-      if (s.text != null && s.hits(point)) return s;
+      if (s.text != null && pickable(s) && s.hits(point)) return s;
     }
     return null;
   }
 
   void undo() {
     if (!canUndo) return;
-    _redo.add(_Snapshot(strokes, paper, paperSize));
+    _redo.add(_snapshot());
     _restore(_undo.removeLast());
   }
 
   void redo() {
     if (!canRedo) return;
-    _undo.add(_Snapshot(strokes, paper, paperSize));
+    _undo.add(_snapshot());
     _restore(_redo.removeLast());
   }
 
@@ -228,12 +373,24 @@ class DrawingController extends ChangeNotifier {
     _changed();
   }
 
-  /// Replaces the drawing with [loaded] strokes and forgets undo history.
+  /// Replaces the drawing with [loaded] strokes on [layers] (just the base
+  /// layer if none) and forgets undo history. Strokes on a layer that
+  /// isn't there go on the base layer.
   void load(List<Stroke> loaded,
-      {Color paper = Colors.white, Size? paperSize}) {
+      {Color paper = Colors.white,
+      Size? paperSize,
+      List<PaintingLayer> layers = const [PaintingLayer.base]}) {
+    _layers = layers.isEmpty ? const [PaintingLayer.base] : [...layers];
+    if (!_layers.any((l) => l.isBase)) _layers.insert(0, PaintingLayer.base);
+    final ids = {for (final l in _layers) l.id};
     strokes
       ..clear()
-      ..addAll(loaded);
+      ..addAll([
+        for (final s in loaded)
+          ids.contains(s.layerId) ? s : s.onLayer(PaintingLayer.baseId),
+      ]);
+    _sortStrokes();
+    _active = _layers.last.id;
     _undo.clear();
     _redo.clear();
     current = null;
@@ -244,8 +401,11 @@ class DrawingController extends ChangeNotifier {
     notifyListeners();
   }
 
+  _Snapshot _snapshot() =>
+      _Snapshot(strokes, paper, paperSize, _layers, _active);
+
   void _record() {
-    _undo.add(_Snapshot(strokes, paper, paperSize));
+    _undo.add(_snapshot());
     if (_undo.length > maxUndo) _undo.removeAt(0);
     _redo.clear();
   }
@@ -256,6 +416,8 @@ class DrawingController extends ChangeNotifier {
       ..addAll(s.strokes);
     paper = s.paper;
     paperSizeListenable.value = s.paperSize;
+    _layers = s.layers;
+    _active = s.activeLayer;
     _changed();
   }
 
@@ -266,19 +428,19 @@ class DrawingController extends ChangeNotifier {
   }
 
   /// Paints the finished strokes, and the eraser while it's being used
-  /// (it cuts into them).
+  /// (it cuts into its layer).
   void paintFinished(Canvas canvas, Size size) => paintStrokes(
       canvas, size, [...strokes, if (_erasing) ?current],
-      paper: paper);
+      paper: paper, layers: _layers);
 
   /// Paints the stroke being drawn, unless it's the eraser. A blender
-  /// stroke shows the finished drawing under it, blurred; [finished], a
-  /// picture of the finished strokes, saves painting them again.
+  /// stroke shows its layer under it, blurred; [finished], a picture of
+  /// that layer's finished strokes, saves painting them again.
   void paintCurrent(Canvas canvas, Size size, {ui.Image? finished}) {
     final c = current;
     if (c == null || _erasing) return;
     if (c.brush == BrushType.smudge) {
-      paintSmudgeOver(canvas, size, strokes, c,
+      paintSmudgeOver(canvas, size, strokesOn(c.layerId), c,
           paper: paper, finished: finished);
     } else {
       c.paint(canvas);

@@ -26,8 +26,12 @@ class ToolDrawer extends StatelessWidget {
     required this.onMoreColors,
     required this.onDrag,
     required this.onDragEnd,
+    this.top,
     super.key,
   });
+
+  /// Shown above the brushes (the layers row, at the advanced level).
+  final Widget? top;
 
   final AppSettings settings;
   final List<Color> palette;
@@ -107,6 +111,7 @@ class ToolDrawer extends StatelessWidget {
                 settings: settings,
                 palette: palette,
                 onMoreColors: onMoreColors,
+                top: top,
               ),
             ),
           ],
@@ -124,11 +129,15 @@ class ToolPanel extends StatelessWidget {
     required this.settings,
     required this.palette,
     required this.onMoreColors,
+    this.top,
   });
 
   final AppSettings settings;
   final List<Color> palette;
   final VoidCallback onMoreColors;
+
+  /// Shown above the brushes.
+  final Widget? top;
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +167,7 @@ class ToolPanel extends StatelessWidget {
       key: CanvasKeys.toolsList,
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
       children: [
+        ?top,
         wrap([
           for (final b in settings.level.brushes)
             BrushTile(
@@ -561,7 +571,11 @@ class SlidingToolDrawer extends StatelessWidget {
     required this.onClose,
     required this.onTogglePin,
     required this.onMoreColors,
+    this.top,
   });
+
+  /// Shown above the brushes in the drawer.
+  final Widget? top;
 
   final AnimationController progress;
 
@@ -614,6 +628,7 @@ class SlidingToolDrawer extends StatelessWidget {
               onToggleLock: onTogglePin,
               onClose: onClose,
               onMoreColors: onMoreColors,
+              top: top,
               // Dragging the header back toward its edge closes it.
               onDrag: (dx) => progress.value -= (fromLeft ? -dx : dx) / width,
               onDragEnd: (velocity) =>
@@ -643,7 +658,11 @@ class PinnedPaletteLayout extends StatelessWidget {
     required this.onUnpin,
     required this.onMore,
     required this.onMoreColors,
+    this.top,
   });
+
+  /// Shown above the brushes in the panel.
+  final Widget? top;
 
   final Widget stage;
   final double availableWidth;
@@ -686,6 +705,7 @@ class PinnedPaletteLayout extends StatelessWidget {
         onToggleLock: onUnpin,
         onClose: onUnpin,
         onMoreColors: onMoreColors,
+        top: top,
         onDrag: (_) {},
         onDragEnd: (_) {},
       ),

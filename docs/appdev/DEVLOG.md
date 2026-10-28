@@ -1,5 +1,14 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v5.0.0 (layers)
+- Done: F6 layers (model, undoable layer edits, strokes kept in layer order, per-layer rendering and kept pictures, layered exports/thumbnails/replay/GIF, active-layer-only picking, the layers panel at the advanced level, refusing to draw on hidden or locked layers). Released on its own as 5.0.0 (it changes how paintings are made and saved); the plan now puts F7 in 5.1.0 and F8 in 5.2.0.
+- Found while testing: a touch refused on a hidden layer was still seen by the zoom/pan listener as a drag outside the paper and moved the paper; the refused touch now stays taken. Two shape tests had to scroll to their chips, now below the layers row (MISTAKES rule 55).
+- Chrome benchmark after the change (3,058 strokes, one layer): drawing 5.7 + 1.5 ms per frame, erasing 5.8 + 1.3, undo 3.9 + 0.8, a fill 144 ms: as in 4.1.
+- Mistakes: none new (the blocked touch was caught by the new test).
+- Harness: PASS (analyze 0 issues, 373 tests, build web ok).
+- Not tested: a real tablet with many layers; how a layered painting looks when opened in 4.x (by design: flat, hidden layers shown).
+- Next: F7 (photo underlay, coloring pages) for 5.1.0.
+
 ## 2026-10-28: v4.2.0 (replay and GIF, backup reminders)
 - Done: F4 replay (timeline, partial strokes, frames from the kept picture, page with play/pause, speeds and a slider; GIF export encoded in the background, cancellable; entries in the ☰ menu and the gallery card menu) and F5 backup reminders (when to remind, the banner with one-tap backup and "later", per kid, a Settings switch, sooner in a browser without persistent storage). Tests turn the reminder off by default (`testDefaults`), as with the samples; backup_test turns it on.
 - 4.1.0 after pushing: the Web workflow deployed it (live version.json 4.1.0+14); the iOS workflow failed at "Start on the iPhone and iPad simulators": the iPhone was "not running" 30 s after launch, the iPad was fine. Every earlier iOS run passed. Logs and artifacts need a GitHub sign-in, so the cause is unknown (a crash from the new code, or the busy macOS runners); `ios_sim_smoke.sh` now puts the log's telling lines and the crash report into annotations, which this 4.2.0 push will show.

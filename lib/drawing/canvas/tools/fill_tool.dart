@@ -70,9 +70,12 @@ class FillTool extends CanvasTool {
       );
       final loops = await compute(fillOutlines, request);
       if (loops.isEmpty) return;
-      drawing.add(fillStroke(settings, [
-        for (final loop in loops) [for (final p in loop) p / image.ratio],
-      ]));
+      drawing.add(fillStroke(
+          settings,
+          [
+            for (final loop in loops) [for (final p in loop) p / image.ratio],
+          ],
+          layer: drawing.newStrokeLayer));
     } finally {
       busy.value = false;
     }
@@ -82,7 +85,9 @@ class FillTool extends CanvasTool {
 }
 
 /// A filled area in the chosen color, opacity and looks.
-Stroke fillStroke(AppSettings settings, List<List<Offset>> area) => Stroke(
+Stroke fillStroke(AppSettings settings, List<List<Offset>> area,
+        {String? layer}) =>
+    Stroke(
       brush: BrushType.pen,
       color: settings.color,
       size: 1,
@@ -94,4 +99,5 @@ Stroke fillStroke(AppSettings settings, List<List<Offset>> area) => Stroke(
       isComplete: true,
       points: [for (final p in area.first) PointVector(p.dx, p.dy, 0.5)],
       area: area,
+      layer: layer,
     );

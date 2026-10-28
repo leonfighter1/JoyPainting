@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 
 import 'brush_type.dart';
+import 'layers.dart';
 import 'shape_kind.dart';
 import 'stroke_style.dart';
 import 'stroke_texture.dart';
@@ -12,6 +13,7 @@ import 'stroke_transform.dart';
 import 'text_content.dart';
 
 export 'brush_type.dart';
+export 'layers.dart';
 export 'shape_kind.dart';
 export 'stroke_style.dart';
 export 'stroke_texture.dart';
@@ -41,6 +43,7 @@ class Stroke {
     this.texture = StrokeTexture.none,
     List<PointVector>? points,
     this.area,
+    this.layer,
     this.isComplete = false,
   })  : seed = seed ?? math.Random().nextInt(1 << 30),
         points = points ?? [];
@@ -53,6 +56,7 @@ class Stroke {
     required Color color,
     double opacity = 1,
     StrokeTransform? transform,
+    String? layer,
   }) =>
       Stroke(
         brush: BrushType.text,
@@ -63,6 +67,7 @@ class Stroke {
         seed: 0,
         text: content,
         transform: transform,
+        layer: layer,
         isComplete: true,
         points: [PointVector(anchor.dx, anchor.dy, 0.5)],
       );
@@ -78,7 +83,11 @@ class Stroke {
     }
     if (text != null) {
       return Stroke.text(
-          anchor: anchor + delta, content: text!, color: color, opacity: opacity);
+          anchor: anchor + delta,
+          content: text!,
+          color: color,
+          opacity: opacity,
+          layer: layer);
     }
     return _copy(
       delta: delta,
@@ -87,6 +96,7 @@ class Stroke {
       mirrorX: mirrorX == null ? null : mirrorX! + delta.dx,
       transform: null,
       gradient: gradient,
+      layer: layer,
     );
   }
 
@@ -103,13 +113,20 @@ class Stroke {
     Color? color,
     double? opacity,
     StrokeTransform? Function()? transform,
+    String? Function()? layer,
   }) {
     final c = color ?? this.color;
     final o = opacity ?? this.opacity;
     final t = transform == null ? this.transform : transform();
+    final l = layer == null ? this.layer : layer();
     if (text != null) {
       return Stroke.text(
-          anchor: anchor, content: text!, color: c, opacity: o, transform: t);
+          anchor: anchor,
+          content: text!,
+          color: c,
+          opacity: o,
+          transform: t,
+          layer: l);
     }
     return _copy(
       delta: Offset.zero,
@@ -118,6 +135,7 @@ class Stroke {
       mirrorX: mirrorX,
       transform: t,
       gradient: color == null ? gradient : null,
+      layer: l,
     );
   }
 
@@ -149,6 +167,7 @@ class Stroke {
       blend: blend,
       texture: texture,
       points: points.sublist(0, n),
+      layer: layer,
     );
   }
 
@@ -161,6 +180,7 @@ class Stroke {
     required double? mirrorX,
     required StrokeTransform? transform,
     required StrokeGradient? gradient,
+    String? layer,
   }) {
     if (shape != null) {
       return Stroke.shape(
@@ -180,6 +200,7 @@ class Stroke {
         blur: blur,
         blend: blend,
         texture: texture,
+        layer: layer,
         isComplete: true,
       );
     }
@@ -208,6 +229,7 @@ class Stroke {
           : [
               for (final loop in area!) [for (final p in loop) p + delta],
             ],
+      layer: layer,
     );
   }
 
@@ -289,6 +311,7 @@ class Stroke {
     double blur = 0,
     StrokeBlend blend = StrokeBlend.normal,
     StrokeTexture texture = StrokeTexture.none,
+    String? layer,
     bool isComplete = false,
   }) =>
       Stroke(
@@ -302,6 +325,7 @@ class Stroke {
         mirrorX: mirrorX,
         shape: shape,
         fill: fill && shape.closed,
+        layer: layer,
         transform: transform,
         gradient: gradient,
         blur: blur,
@@ -343,6 +367,17 @@ class Stroke {
   /// these; [points] hold the first outline too, so older versions still
   /// fill around it (smoothed, without the holes).
   final List<List<Offset>>? area;
+
+  /// The id of the layer it is on (see [PaintingLayer]); null for the base
+  /// layer, as in every painting from before layers.
+  final String? layer;
+
+  /// A copy on the layer [id] (the base layer for [PaintingLayer.baseId]).
+  Stroke onLayer(String id) =>
+      copyWith(layer: () => id == PaintingLayer.baseId ? null : id);
+
+  /// The id of its layer, the base layer's included.
+  String get layerId => layer ?? PaintingLayer.baseId;
 
   /// Set for text items; null otherwise.
   final TextContent? text;
@@ -541,6 +576,7 @@ class Stroke {
         if (blend != StrokeBlend.normal) 'blend': blend.name,
         if (texture != StrokeTexture.none) 'texture': texture.name,
         if (text != null) 'text': text!.toJson(),
+        if (layer != null) 'layer': layer,
         // Shapes are stored by their two corners and rebuilt on load.
         if (shape != null) ...{
           'shape': shape!.name,
@@ -568,6 +604,8 @@ class Stroke {
       };
 
   factory Stroke.fromJson(Map<String, Object?> json) {
+    // On a layer since v5 (none means the base layer).
+    final layer = json['layer'] as String?;
     // Paintings saved before v2.0 have no transform.
     final transform = StrokeTransform.fromJson(json['transform']);
     // Nor gradients, blur or blend before v2.3.
@@ -584,6 +622,7 @@ class Stroke {
         color: Color(json['color'] as int),
         opacity: (json['opacity'] as num? ?? 1).toDouble(),
         transform: transform,
+        layer: layer,
       );
     }
     final shape = ShapeKind.fromName(json['shape'] as String?);
@@ -610,6 +649,7 @@ class Stroke {
         blur: blur,
         blend: blend,
         texture: texture,
+        layer: layer,
         isComplete: true,
       );
     }
@@ -631,6 +671,7 @@ class Stroke {
       blend: blend,
       texture: texture,
       isComplete: true,
+      layer: layer,
       // Paint bucket areas since v4.1.
       area: switch (json['area']) {
         final List<Object?> loops => [

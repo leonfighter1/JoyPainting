@@ -532,6 +532,8 @@ void main() {
   testWidgets('drawing a rectangle with the shape tool', (tester) async {
     final app = await pumpApp(tester);
     await openTools(tester);
+    // Below the layers row (advanced): scroll to it first.
+    await scrollTools(tester, find.widgetWithText(ChoiceChip, '矩形'));
     await tester.tap(find.widgetWithText(ChoiceChip, '矩形'));
     await tester.pumpAndSettle();
     expect(app.settings.shape, ShapeKind.rectangle);
@@ -550,6 +552,7 @@ void main() {
     final fill = find.widgetWithText(ChoiceChip, '填充');
     await openTools(tester);
 
+    await scrollTools(tester, find.widgetWithText(ChoiceChip, '直线'));
     await tester.tap(find.widgetWithText(ChoiceChip, '直线'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(fill);

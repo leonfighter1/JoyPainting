@@ -39,6 +39,7 @@ class DrawTool extends CanvasTool {
       p.at,
       mirrorX: settings.mirror ? paperWidth() / 2 : null,
       stylus: p.stylus,
+      layer: drawing.newStrokeLayer,
     );
     // Shapes already have their outline; freehand strokes start at a point.
     drawing.begin(stroke, stroke.shape == null ? p.point : null);
@@ -82,7 +83,7 @@ class DrawTool extends CanvasTool {
 /// A new stroke starting at [at], with the brush, color, size, shape and
 /// looks chosen in [settings].
 Stroke newStroke(AppSettings settings, Offset at,
-    {double? mirrorX, bool stylus = false}) {
+    {double? mirrorX, bool stylus = false, String? layer}) {
   // The eraser always has a round tip; it never draws shapes.
   final brush = settings.brush;
   final shape = brush.usesShapes ? settings.shape : null;
@@ -109,6 +110,7 @@ Stroke newStroke(AppSettings settings, Offset at,
       blur: blur,
       blend: blend,
       texture: texture,
+      layer: layer,
     );
   }
   return Stroke(
@@ -124,5 +126,6 @@ Stroke newStroke(AppSettings settings, Offset at,
     blend: blend,
     texture: texture,
     usesRealPressure: stylus,
+    layer: layer,
   );
 }

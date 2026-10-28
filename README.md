@@ -7,7 +7,7 @@ The app starts in English and asks for a language, a theme, a drawing level and 
 
 What it does:
 
-- **Drawing levels** (功能等级: 初级 / 中级 / 高级, Beginner / Intermediate / Advanced): the tools drawer shows only what the level includes, so beginners aren't swamped. Beginner: pen, pencil, marker, spray, rainbow, stamps, the paint bucket, text, eraser, colors, shapes and size. Intermediate adds the highlighter, soft brush, move tool, color picker, opacity, free shapes and gradients. Advanced adds the blender, light & shadow and textures. Picked on first start, changed in Settings; paintings look the same at every level.
+- **Drawing levels** (功能等级: 初级 / 中级 / 高级, Beginner / Intermediate / Advanced): the tools drawer shows only what the level includes, so beginners aren't swamped. Beginner: pen, pencil, marker, spray, rainbow, stamps, the paint bucket, text, eraser, colors, shapes and size. Intermediate adds the highlighter, soft brush, move tool, color picker, opacity, free shapes and gradients. Advanced adds the blender, light & shadow, textures and layers. Picked on first start, changed in Settings; paintings look the same at every level.
 - **Drawing**:
   - 14 tools: pen, pencil, marker, highlighter, soft brush, blender, spray, rainbow, stamps, paint bucket, text, move, color picker and a round eraser.
   - **Paint bucket** (油漆桶): tap an area to fill it; small gaps in the lines around it are closed for you. The fill is a filled shape like any other: move, recolor, erase or undo it.
@@ -50,13 +50,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **4.2.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.0.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **4.2.0** | 2026-10-28 | Replay a painting stroke by stroke (with speeds and a slider) and save it as a GIF; backup reminders in My Paintings with a one-tap backup |
+| **5.0.0** | 2026-10-28 | Layers at the Advanced level: add, reorder, hide, lock, rename, merge and fade layers; the eraser and blender work on one layer; exports, replays and GIFs show the layers |
+| 4.2.0 | 2026-10-28 | Replay a painting stroke by stroke (with speeds and a slider) and save it as a GIF; backup reminders in My Paintings with a one-tap backup |
 | 4.1.0 | 2026-10-28 | The paint bucket, the color picker, big paintings that stay smooth (drawing, erasing and undoing), and a tidier code base behind the drawing screen |
 | 4.0.0 | 2026-10-27 | Drawing levels (beginner, intermediate, advanced) chosen on first start, realistic painting tools (the blender, four textures, overlay and soft light), a sample painting for each level, a text size slider, a clearer ☰ menu button |
 | 3.0.0 | 2026-10-27 | Painted looks (soft brush, gradients, light & shadow, free shapes, soft edges), a paper resized by dragging its edges (undoable, drawings keep their size), download as PNG, JPG or PDF, a simpler View menu (no zoom buttons), and a faster canvas for big paintings |
@@ -77,6 +78,33 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets).
+
+### 5.0.0 (2026-10-28): layers
+
+**New**
+- **Layers (图层)**, at the Advanced level: the tools drawer now starts with a 图层 row showing the layer you're drawing on and how many there are. Tap it to see the layers, top first:
+  - **新建图层 New layer** adds an empty layer above the current one (up to 10) and draws on it.
+  - Tap a layer to draw on it. Drag its little preview up or down to change the order.
+  - 👁 shows or hides a layer; 🔒 locks it so nothing can be drawn on it or picked from it by accident.
+  - The ⋮ menu of a layer renames it, merges it down into the layer below, or deletes it (it asks first if something is drawn on it).
+  - The slider at the bottom makes the current layer see-through.
+  - Every change to the layers can be undone.
+- **What layers are good for**: draw the outline on one layer and color under it on another; the eraser only erases the layer you're on, and the blender only mixes it. Hide a layer to see what's under it, or make a layer of shading see-through to soften it.
+
+**Changed**
+- At the Advanced level, the tools drawer has the 图层 row at the top; the brushes come below it.
+- New strokes, text, fills and pasted pictures go onto the current layer. The move tool, box selection and Ctrl+A only pick up things on the current layer.
+- On a hidden or locked layer, the brushes, text and the paint bucket don't draw; a message says why.
+- The color picker and the paint bucket see all shown layers together (fill the space between lines drawn on another layer).
+
+**Fixed**
+- Nothing that was broken before; see 4.2.0.
+
+**Good to know**
+- Paintings with one layer save exactly as before. A painting with layers opens in older versions with everything shown, stacked in the right order, but hidden layers appear, layer opacity is ignored, and an eraser on an upper layer erases the layers under it too.
+- Exports (PNG, JPG, PDF), printing, gallery thumbnails, the replay and the GIF all show the layers as you see them; hidden layers are left out.
+- Each layer keeps its own picture on screen, so drawing on one layer doesn't repaint the others; big paintings stay as smooth as in 4.1.
+- Not yet tried on a real tablet with many layers.
 
 ### 4.2.0 (2026-10-28): replay a painting, save it as a GIF, backup reminders
 
@@ -351,6 +379,7 @@ What the tests cover:
 - **`test/layer_cache_test.dart`**: the kept picture of a painting looks the same as painting every stroke (paint, shadows, see-through paint, the eraser, the blender), and is painted again only when it must (not for new strokes, erasing, undo or redo).
 - **`test/picker_test.dart`**: the color seen at a point (paint, paper, shadows, see-through paint), the picker's loupe and its return to the last brush, and picking a color off the canvas.
 - **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
+- **`test/layers_test.dart`**: layers in the drawing (adding above the active one, keeping strokes in layer order, moving, merging, deleting, undo), picking only from the active shown and unlocked layer, saving layers, painting them (the eraser on its own layer, hidden and see-through layers, one kept picture per layer), the layers panel, and refusing to draw on a hidden layer.
 - **`test/replay_test.dart`**: the replay's timeline (order, point by point, the 40-second limit), its last frame matching the painting, the eraser while replayed, the GIF (header, frames, cancelling) and the replay page (play, pause, playing to the end).
 - **`test/backup_test.dart`**: when the backup reminder shows (never backed up, changed since, a browser that may clear its storage, "later"), per kid, the one-tap backup exporting every painting, and the Settings switch.
 - **`test/web_store_test.dart`**: saving paintings in the browser (IndexedDB), moving old localStorage data over. Browser only: `flutter test --platform chrome test/web_store_test.dart` (the Web workflow runs it).
@@ -444,7 +473,7 @@ To install on a real iPhone or iPad, or to share through TestFlight, you need an
 ```
 lib/
   main.dart            app shell: tabs or side rail, theme, incoming files
-  drawing/             the drawing screen, strokes, drawing controller, text editor
+  drawing/             the drawing screen, strokes, layers, drawing controller, text editor
     canvas/            its parts: tools (draw, text, move, pan, picker, fill), selection, view, menu, paper, drawer
     render/            strokes into pictures: the kept picture, reading pixels, filling areas
     replay/            playing a painting back, and making the GIF

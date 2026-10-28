@@ -41,7 +41,7 @@ class ReplayPageState extends State<ReplayPage>
 
   /// Seconds into the replay.
   final time = ValueNotifier<double>(0);
-  final _cache = StrokeLayerCache();
+  final _cache = LayeredCache();
   late final Ticker _ticker = createTicker(_tick);
   Duration _last = Duration.zero;
   double speed = 1;
@@ -105,6 +105,7 @@ class ReplayPageState extends State<ReplayPage>
         widget.doc.strokes,
         _size,
         widget.doc.paper,
+        layers: widget.doc.layers,
         // Browsers encode on the screen's thread: fewer, smaller frames.
         maxSide: kIsWeb ? 320 : 400,
         fps: kIsWeb ? 8 : 10,
@@ -264,7 +265,7 @@ class _ReplayPainter extends CustomPainter {
     final ratio = math.min(
         3.0, 2048 / math.max(size.width, size.height));
     paintReplayFrame(canvas, size, page.timeline, page.time.value,
-        page.widget.doc.paper, page._cache, ratio);
+        page.widget.doc.paper, page.widget.doc.layers, page._cache, ratio);
   }
 
   @override

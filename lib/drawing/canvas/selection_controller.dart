@@ -189,27 +189,30 @@ class SelectionController {
     delete();
   }
 
-  /// Adds a copy of the clipboard, selected with the move tool, so it can
-  /// be dragged into place right away.
+  /// Adds a copy of the clipboard to the active layer, selected with the
+  /// move tool, so it can be dragged into place right away.
   void paste() {
     if (_clipboard.isEmpty) return;
     _pastes++;
     final copies = [
       for (final s in _clipboard)
-        s.moved(const Offset(24, 24) * _pastes.toDouble()),
+        s
+            .moved(const Offset(24, 24) * _pastes.toDouble())
+            .onLayer(drawing.activeLayer),
     ];
     settings.brush = BrushType.move;
     drawing.addAll(copies);
     select(copies);
   }
 
-  /// Everything on the paper, with the move tool (eraser and blender
-  /// strokes have no paint of their own, so they're never selected).
+  /// Everything on the active layer, with the move tool (eraser and
+  /// blender strokes have no paint of their own, so they're never
+  /// selected).
   void selectAll() {
     settings.brush = BrushType.move;
     select([
       for (final s in drawing.strokes)
-        if (!s.brush.isEffect) s,
+        if (!s.brush.isEffect && drawing.pickable(s)) s,
     ]);
   }
 
@@ -244,20 +247,21 @@ class SelectionController {
     } else if (_syncedBrush != BrushType.move) {
       // Eraser and blender strokes are never selected.
       final last = drawing.strokes.reversed
-          .where((s) => !s.brush.isEffect)
+          .where((s) => !s.brush.isEffect && drawing.pickable(s))
           .firstOrNull;
       select([?last]);
     }
     _syncedBrush = brush;
   }
 
-  /// Undo can remove selected strokes; the rest stay selected.
+  /// Undo can remove selected strokes, and another layer can become the
+  /// active one; the rest stay selected.
   void keepDrawnOnly() {
     if (_gesture != null) return;
     final sel = selected.value;
     final kept = [
       for (final s in sel)
-        if (drawing.strokes.contains(s)) s,
+        if (drawing.strokes.contains(s) && drawing.pickable(s)) s,
     ];
     if (kept.length != sel.length) select(kept);
   }

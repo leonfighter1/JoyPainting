@@ -21,13 +21,14 @@ class FinishedStrokesPainter extends CustomPainter {
       : super(repaint: Listenable.merge([controller.finishedRevision, ratio]));
 
   final DrawingController controller;
-  final StrokeLayerCache cache;
+  final LayeredCache cache;
   final ValueListenable<double> ratio;
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.drawRect(Offset.zero & size, Paint()..color = controller.paper);
-    cache.paint(canvas, size, controller.strokes, controller.paper, ratio.value,
+    cache.paint(canvas, size, controller.strokes, controller.layers,
+        controller.paper, ratio.value,
         eraser: controller.eraser);
   }
 
@@ -45,11 +46,14 @@ class CurrentStrokePainter extends CustomPainter {
       : super(repaint: controller);
 
   final DrawingController controller;
-  final StrokeLayerCache cache;
+  final LayeredCache cache;
 
   @override
-  void paint(Canvas canvas, Size size) => controller.paintCurrent(canvas, size,
-      finished: cache.imageOf(controller.strokes, size));
+  void paint(Canvas canvas, Size size) {
+    final layer = controller.current?.layerId ?? controller.activeLayer;
+    controller.paintCurrent(canvas, size,
+        finished: cache.imageOf(layer, controller.strokesOn(layer), size));
+  }
 
   @override
   bool shouldRepaint(CurrentStrokePainter oldDelegate) =>
@@ -165,7 +169,7 @@ class PaperSheet extends StatelessWidget {
 
   /// The finished drawing kept as a picture, at [cacheRatio] pixels per
   /// paper point.
-  final StrokeLayerCache cache;
+  final LayeredCache cache;
   final ValueListenable<double> cacheRatio;
   final CustomPainter overlay;
 

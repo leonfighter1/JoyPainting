@@ -7,16 +7,36 @@ import '../stroke.dart';
 
 /// Paints [strokes] in order over a paper of [size] and [paper] color.
 ///
-/// They go on their own layer so the eraser only removes ink, not the
-/// paper. A blender stroke shows a blurred picture of everything painted
-/// before it; see [Stroke.paintSmudge].
+/// They go on their own sheet so the eraser only removes ink, not the
+/// paper. With [layers], each shown layer is its own sheet, bottom first,
+/// at the layer's opacity: an eraser cuts only into its layer, and a
+/// blender mixes only its layer. A blender stroke shows a blurred picture
+/// of what was painted before it; see [Stroke.paintSmudge].
 void paintStrokes(Canvas canvas, Size size, List<Stroke> strokes,
-    {required Color paper}) {
-  canvas.saveLayer(Offset.zero & size, Paint());
-  for (var i = 0; i < strokes.length; i++) {
-    _paintAt(canvas, size, strokes, i, paper);
+    {required Color paper, List<PaintingLayer>? layers}) {
+  final page = Offset.zero & size;
+  if (layers == null ||
+      (layers.length == 1 && layers.single.visible && layers.single.opacity == 1)) {
+    canvas.saveLayer(page, Paint());
+    for (var i = 0; i < strokes.length; i++) {
+      _paintAt(canvas, size, strokes, i, paper);
+    }
+    canvas.restore();
+    return;
   }
-  canvas.restore();
+  for (final layer in layers) {
+    if (!layer.visible || layer.opacity <= 0) continue;
+    final own = [
+      for (final s in strokes)
+        if (s.layerId == layer.id) s,
+    ];
+    if (own.isEmpty) continue;
+    canvas.saveLayer(page, Paint()..color = Color.fromRGBO(0, 0, 0, layer.opacity));
+    for (var i = 0; i < own.length; i++) {
+      _paintAt(canvas, size, own, i, paper);
+    }
+    canvas.restore();
+  }
 }
 
 /// Paints strokes [from] up to [to] of [strokes] onto a canvas that already

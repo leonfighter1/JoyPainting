@@ -209,7 +209,8 @@ Future<void> printPainting(BuildContext context, PaintingDoc doc) async {
   try {
     final size = paintingSize(doc);
     final png = await renderPng(
-        doc.strokes, size, exportRatioFor(size), paper: doc.paper);
+        doc.strokes, size, exportRatioFor(size),
+            paper: doc.paper, layers: doc.layers);
     await navigator.push(MaterialPageRoute<void>(
       fullscreenDialog: true,
       builder: (_) => PrintPreviewPage(

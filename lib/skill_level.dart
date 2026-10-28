@@ -11,8 +11,8 @@ enum SkillLevel {
   /// free shapes and gradients.
   intermediate,
 
-  /// Everything: adds the blender, light and shadow, and textures, for
-  /// realistic paintings.
+  /// Everything: adds the blender, light and shadow, textures and layers,
+  /// for realistic paintings.
   advanced;
 
   static SkillLevel fromName(String? name) =>
@@ -49,4 +49,7 @@ enum SkillLevel {
   bool get gradients => _intermediate;
   bool get lightAndShadow => this == advanced;
   bool get textures => this == advanced;
+
+  /// Several layers, each shown, hidden, locked or faded on its own.
+  bool get layers => this == advanced;
 }

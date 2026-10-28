@@ -71,6 +71,7 @@ class PaintingDoc {
     required this.strokes,
     this.paper = const Color(0xFFFFFFFF),
     this.paperSize,
+    this.layers = const [PaintingLayer.base],
   });
 
   final PaintingMeta meta;
@@ -81,10 +82,16 @@ class PaintingDoc {
   /// `DrawingController.paperSize`.
   final Size? paperSize;
 
+  /// Its layers, bottom first (saved since v5; older paintings have only
+  /// the base layer).
+  final List<PaintingLayer> layers;
+
   Map<String, Object?> toJson() => {
         ...meta.toJson(),
         'paper': paper.toARGB32(),
         if (paperSize case final s?) 'paperSize': [s.width, s.height],
+        if (!PaintingLayer.isPlain(layers))
+          'layers': [for (final l in layers) l.toJson()],
         'strokes': [for (final s in strokes) s.toJson()],
       };
 
@@ -98,6 +105,7 @@ class PaintingDoc {
       meta: PaintingMeta.fromJson(json),
       paper: Color(json['paper'] as int? ?? 0xFFFFFFFF),
       paperSize: _paperSizeOf(json),
+      layers: PaintingLayer.listFromJson(json['layers']),
       strokes: [
         for (final s in json['strokes'] as List)
           Stroke.fromJson(s as Map<String, Object?>),
@@ -229,6 +237,7 @@ class PaintingStore extends ChangeNotifier {
       strokes: doc.strokes,
       paper: doc.paper,
       paperSize: doc.paperSize,
+      layers: doc.layers,
     );
   }
 
@@ -266,6 +275,7 @@ class PaintingStore extends ChangeNotifier {
                 strokes: doc.strokes,
                 paper: doc.paper,
                 paperSize: doc.paperSize,
+                layers: doc.layers,
               ).encode());
         }
         index[at] = index[at].copyWith(name: name);

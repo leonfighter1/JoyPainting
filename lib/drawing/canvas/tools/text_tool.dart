@@ -79,6 +79,7 @@ class TextTool extends CanvasTool {
           content: content,
           color: result.color!,
           opacity: settings.opacity,
+          layer: drawing.newStrokeLayer,
         ),
       );
     }
@@ -105,6 +106,7 @@ class TextTool extends CanvasTool {
           color: result.color!,
           opacity: item.opacity,
           transform: item.transform,
+          layer: item.layer,
         ),
       );
     }

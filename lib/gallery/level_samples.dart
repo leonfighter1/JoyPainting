@@ -63,6 +63,7 @@ abstract final class LevelSamples {
       ],
       paper: doc.paper,
       paperSize: doc.paperSize,
+      layers: doc.layers,
     );
   }
 }

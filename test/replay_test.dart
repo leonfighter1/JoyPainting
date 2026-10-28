@@ -21,7 +21,7 @@ const _size = Size(60, 40);
 Future<Uint8List> frameAt(ReplayTimeline timeline, double seconds) async {
   final recorder = ui.PictureRecorder();
   paintReplayFrame(Canvas(recorder), _size, timeline, seconds, Colors.white,
-      StrokeLayerCache(), 1);
+      const [PaintingLayer.base], LayeredCache(), 1);
   final image = await recorder.endRecording().toImage(60, 40);
   final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
   image.dispose();

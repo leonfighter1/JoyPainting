@@ -67,11 +67,13 @@ Future<ExportedFile> exportPainting(PaintingDoc doc, ExportFormat format) async 
   final size = paintingSize(doc);
   final Uint8List bytes = switch (format) {
     ExportFormat.png => await renderPng(
-        doc.strokes, size, exportRatioFor(size), paper: doc.paper),
+        doc.strokes, size, exportRatioFor(size),
+            paper: doc.paper, layers: doc.layers),
     ExportFormat.jpg => await _jpg(doc, size),
     ExportFormat.pdf => await buildPdf(
         await renderPng(
-            doc.strokes, size, exportRatioFor(size), paper: doc.paper),
+            doc.strokes, size, exportRatioFor(size),
+            paper: doc.paper, layers: doc.layers),
         size,
         PdfPageFormat.a4),
     ExportFormat.painting => PaintingFile.encode(doc),
@@ -81,7 +83,8 @@ Future<ExportedFile> exportPainting(PaintingDoc doc, ExportFormat format) async 
 
 Future<Uint8List> _jpg(PaintingDoc doc, Size size) async {
   final raw = await renderRgba(
-      doc.strokes, size, exportRatioFor(size), paper: doc.paper);
+      doc.strokes, size, exportRatioFor(size),
+            paper: doc.paper, layers: doc.layers);
   // JPEG encoding is pure Dart and can take a moment on big paintings, so
   // do it off the UI thread where the platform allows.
   return compute(_encodeJpg, raw);

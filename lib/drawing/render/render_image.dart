@@ -9,11 +9,11 @@ import 'paint_strokes.dart';
 /// Renders [strokes] on [paper] into an image of [size] times [pixelRatio]
 /// (each side at most 16384 pixels). The caller disposes it.
 Future<ui.Image> renderImage(List<Stroke> strokes, Size size, double pixelRatio,
-    {Color paper = Colors.white}) {
+    {Color paper = Colors.white, List<PaintingLayer>? layers}) {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder)..scale(pixelRatio);
   canvas.drawRect(Offset.zero & size, Paint()..color = paper);
-  paintStrokes(canvas, size, strokes, paper: paper);
+  paintStrokes(canvas, size, strokes, paper: paper, layers: layers);
   return recorder.endRecording().toImage(
       (size.width * pixelRatio).round().clamp(1, 1 << 14),
       (size.height * pixelRatio).round().clamp(1, 1 << 14));
@@ -21,8 +21,9 @@ Future<ui.Image> renderImage(List<Stroke> strokes, Size size, double pixelRatio,
 
 /// Renders [strokes] on [paper] as PNG bytes.
 Future<Uint8List> renderPng(List<Stroke> strokes, Size size, double pixelRatio,
-    {Color paper = Colors.white}) async {
-  final image = await renderImage(strokes, size, pixelRatio, paper: paper);
+    {Color paper = Colors.white, List<PaintingLayer>? layers}) async {
+  final image =
+      await renderImage(strokes, size, pixelRatio, paper: paper, layers: layers);
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   image.dispose();
   return data!.buffer.asUint8List();
@@ -32,8 +33,9 @@ Future<Uint8List> renderPng(List<Stroke> strokes, Size size, double pixelRatio,
 /// Flutter doesn't have built in (like JPEG).
 Future<({Uint8List rgba, int width, int height})> renderRgba(
     List<Stroke> strokes, Size size, double pixelRatio,
-    {Color paper = Colors.white}) async {
-  final image = await renderImage(strokes, size, pixelRatio, paper: paper);
+    {Color paper = Colors.white, List<PaintingLayer>? layers}) async {
+  final image =
+      await renderImage(strokes, size, pixelRatio, paper: paper, layers: layers);
   final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
   final result = (
     rgba: data!.buffer.asUint8List(),

@@ -67,24 +67,38 @@ class ReplayTimeline {
 }
 
 /// Paints the replay of [timeline] at [seconds] on a paper of [size]: the
-/// paper, the finished strokes from [cache] (at [ratio] pixels per point)
-/// and the stroke being drawn on top. The eraser cuts into what's painted,
-/// the blender mixes it, as when the painting was made.
-void paintReplayFrame(Canvas canvas, Size size, ReplayTimeline timeline,
-    double seconds, Color paper, StrokeLayerCache cache, double ratio) {
+/// paper, the finished strokes on [layers] from [cache] (at [ratio] pixels
+/// per point) and the stroke being drawn on top. The eraser cuts into its
+/// layer, the blender mixes it, as when the painting was made. Strokes come
+/// bottom layer first, so the layers above the one being drawn on are
+/// still empty.
+void paintReplayFrame(
+    Canvas canvas,
+    Size size,
+    ReplayTimeline timeline,
+    double seconds,
+    Color paper,
+    List<PaintingLayer> layers,
+    LayeredCache cache,
+    double ratio) {
   final now = timeline.at(seconds);
   final done = timeline.strokes.sublist(0, now.done);
   final drawing = now.drawing;
   canvas.drawRect(Offset.zero & size, Paint()..color = paper);
   if (drawing?.brush == BrushType.eraser) {
-    cache.paint(canvas, size, done, paper, ratio, eraser: drawing);
+    cache.paint(canvas, size, done, layers, paper, ratio, eraser: drawing);
     return;
   }
-  cache.paint(canvas, size, done, paper, ratio);
+  cache.paint(canvas, size, done, layers, paper, ratio);
   if (drawing == null) return;
   if (drawing.brush == BrushType.smudge) {
-    paintSmudgeOver(canvas, size, done, drawing,
-        paper: paper, finished: cache.imageOf(done, size));
+    final mine = [
+      for (final s in done)
+        if (s.layerId == drawing.layerId) s,
+    ];
+    paintSmudgeOver(canvas, size, mine, drawing,
+        paper: paper,
+        finished: cache.imageOf(drawing.layerId, mine, size));
   } else {
     drawing.paint(canvas);
   }

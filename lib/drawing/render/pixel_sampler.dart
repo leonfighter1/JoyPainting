@@ -25,14 +25,15 @@ class PaperSample {
 abstract final class PaperSampler {
   static const patchSize = 9;
 
-  /// The paper of [size] and [paper] color under [strokes], around [at].
-  /// [finished], a picture of exactly [strokes] (see
-  /// [StrokeLayerCache.imageOf]), saves painting them again.
+  /// The paper of [size] and [paper] color under [strokes] (on [layers]),
+  /// around [at]. [painter], which paints the strokes as kept pictures (see
+  /// [LayeredCache.paint]), saves painting them again.
   static Future<PaperSample> sample(Offset at,
       {required Size size,
       required Color paper,
-      required List<Stroke> strokes,
-      ui.Image? finished}) async {
+      List<Stroke> strokes = const [],
+      List<PaintingLayer>? layers,
+      void Function(Canvas canvas)? painter}) async {
     const half = patchSize / 2;
     // The patch's pixels are paper points, the middle one centered on [at].
     final area = Rect.fromLTWH(at.dx.floorToDouble() + 0.5 - half,
@@ -43,17 +44,10 @@ abstract final class PaperSampler {
       ..translate(-area.left, -area.top)
       ..clipRect(area)
       ..drawRect(area, Paint()..color = paper);
-    if (finished != null) {
-      final sx = finished.width / size.width;
-      final sy = finished.height / size.height;
-      canvas.drawImageRect(
-          finished,
-          Rect.fromLTRB(area.left * sx, area.top * sy, area.right * sx,
-              area.bottom * sy),
-          area,
-          Paint()..filterQuality = FilterQuality.medium);
+    if (painter != null) {
+      painter(canvas);
     } else {
-      paintStrokes(canvas, size, strokes, paper: paper);
+      paintStrokes(canvas, size, strokes, paper: paper, layers: layers);
     }
     final patch =
         await recorder.endRecording().toImage(patchSize, patchSize);
@@ -81,12 +75,13 @@ class PaperPixels {
 
 /// The paper of [size] and [paper] color under [strokes] as pixels: two
 /// per paper point, or fewer for a big paper (at most [maxSide] across).
-/// [finished], a picture of exactly [strokes], saves painting them again.
+/// [painter] paints the strokes from kept pictures, as for [PaperSampler].
 Future<PaperPixels> paperPixels(
     {required Size size,
     required Color paper,
-    required List<Stroke> strokes,
-    ui.Image? finished,
+    List<Stroke> strokes = const [],
+    List<PaintingLayer>? layers,
+    void Function(Canvas canvas)? painter,
     int maxSide = 2048}) async {
   final ratio = math.min(2.0, maxSide / math.max(size.width, size.height));
   final width = math.max(1, (size.width * ratio).round());
@@ -95,15 +90,10 @@ Future<PaperPixels> paperPixels(
   final canvas = Canvas(recorder)
     ..scale(width / size.width, height / size.height)
     ..drawRect(Offset.zero & size, Paint()..color = paper);
-  if (finished != null) {
-    canvas.drawImageRect(
-        finished,
-        Rect.fromLTWH(
-            0, 0, finished.width.toDouble(), finished.height.toDouble()),
-        Offset.zero & size,
-        Paint()..filterQuality = FilterQuality.medium);
+  if (painter != null) {
+    painter(canvas);
   } else {
-    paintStrokes(canvas, size, strokes, paper: paper);
+    paintStrokes(canvas, size, strokes, paper: paper, layers: layers);
   }
   final image = await recorder.endRecording().toImage(width, height);
   final data = (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
