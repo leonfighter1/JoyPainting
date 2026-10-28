@@ -543,6 +543,86 @@ extension StrokePainting on Stroke {
         true,
       ),
     ],
+    // A round sun with eight short rays and a lighter middle.
+    StampShape.sun: [
+      for (var i = 0; i < 8; i++)
+        (
+          () {
+            final a = i * math.pi / 4;
+            final tip = Offset.fromDirection(a, 1);
+            final l = Offset.fromDirection(a - 0.22, 0.62);
+            final r = Offset.fromDirection(a + 0.22, 0.62);
+            return Path()
+              ..moveTo(tip.dx, tip.dy)
+              ..lineTo(l.dx, l.dy)
+              ..lineTo(r.dx, r.dy)
+              ..close();
+          }(),
+          false,
+        ),
+      (Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: 0.55)), false),
+      (Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: 0.32)), true),
+    ],
+    // A leaf with a lighter middle vein.
+    StampShape.leaf: [
+      (
+        Path()
+          ..moveTo(0, -1)
+          ..quadraticBezierTo(0.85, -0.2, 0, 1)
+          ..quadraticBezierTo(-0.85, -0.2, 0, -1)
+          ..close(),
+        false,
+      ),
+      (
+        Path()
+          ..moveTo(-0.04, -0.75)
+          ..lineTo(0.04, -0.75)
+          ..lineTo(0.03, 0.85)
+          ..lineTo(-0.03, 0.85)
+          ..close(),
+        true,
+      ),
+    ],
+    // A paw print: a pad and four toes.
+    StampShape.paw: [
+      (
+        Path()
+          ..addOval(Rect.fromCenter(
+              center: const Offset(0, 0.38), width: 0.95, height: 0.78)),
+        false,
+      ),
+      for (final (x, y, w, h) in const [
+        (-0.62, -0.18, 0.34, 0.44),
+        (-0.24, -0.62, 0.36, 0.48),
+        (0.24, -0.62, 0.36, 0.48),
+        (0.62, -0.18, 0.34, 0.44),
+      ])
+        (
+          Path()
+            ..addOval(Rect.fromCenter(center: Offset(x, y), width: w, height: h)),
+          false,
+        ),
+    ],
+    // A music note: a slanted head, a stem and a flag.
+    StampShape.note: [
+      (
+        Path()
+          ..addOval(Rect.fromCenter(
+              center: const Offset(-0.3, 0.6), width: 0.72, height: 0.5)),
+        false,
+      ),
+      (
+        Path()
+          ..moveTo(0.0, 0.58)
+          ..lineTo(0.0, -0.95)
+          ..lineTo(0.13, -0.95)
+          ..quadraticBezierTo(0.2, -0.55, 0.62, -0.38)
+          ..quadraticBezierTo(0.3, -0.42, 0.13, -0.6)
+          ..lineTo(0.13, 0.58)
+          ..close(),
+        false,
+      ),
+    ],
   };
 
   static Path _star() {

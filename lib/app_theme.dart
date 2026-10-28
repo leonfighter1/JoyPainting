@@ -85,6 +85,20 @@ abstract final class AppTheme {
         ShapeKind.triangle => Icons.change_history_rounded,
         ShapeKind.star => Icons.star_border_rounded,
         ShapeKind.heart => Icons.favorite_border_rounded,
+        ShapeKind.roundedRect => Icons.rounded_corner_rounded,
+        ShapeKind.diamond => Icons.diamond_outlined,
+        ShapeKind.pentagon => Icons.pentagon_outlined,
+        ShapeKind.hexagon => Icons.hexagon_outlined,
+        ShapeKind.cross => Icons.add_rounded,
+        ShapeKind.cloud => Icons.cloud_outlined,
+        ShapeKind.moon => Icons.nightlight_outlined,
+        ShapeKind.drop => Icons.water_drop_outlined,
+        ShapeKind.lightning => Icons.bolt_rounded,
+        ShapeKind.bubble => Icons.chat_bubble_outline_rounded,
+        ShapeKind.doubleArrow => Icons.sync_alt_rounded,
+        ShapeKind.spiral => Icons.cyclone_rounded,
+        ShapeKind.arc => Icons.architecture_rounded,
+        ShapeKind.wave => Icons.waves_rounded,
       };
 
   static IconData gradientIcon(GradientStyle g) => switch (g) {
@@ -94,16 +108,14 @@ abstract final class AppTheme {
         GradientStyle.fade => Icons.gradient_rounded,
         GradientStyle.glow => Icons.flare_rounded,
         GradientStyle.rounded => Icons.circle_rounded,
+        GradientStyle.across => Icons.view_week_rounded,
+        GradientStyle.diagonal => Icons.north_west_rounded,
+        GradientStyle.rainbow => Icons.looks_rounded,
+        GradientStyle.contrast => Icons.compare_rounded,
       };
 
   /// The blend modes offered in the tools drawer, in order.
-  static const blends = [
-    StrokeBlend.normal,
-    StrokeBlend.multiply,
-    StrokeBlend.screen,
-    StrokeBlend.overlay,
-    StrokeBlend.softLight,
-  ];
+  static const blends = StrokeBlend.values;
 
   static IconData blendIcon(StrokeBlend b) => switch (b) {
         StrokeBlend.normal => Icons.brush_rounded,
@@ -111,6 +123,10 @@ abstract final class AppTheme {
         StrokeBlend.screen => Icons.light_mode_rounded,
         StrokeBlend.overlay => Icons.layers_rounded,
         StrokeBlend.softLight => Icons.tonality_rounded,
+        StrokeBlend.hardLight => Icons.wb_iridescent_rounded,
+        StrokeBlend.colorDodge => Icons.auto_awesome_rounded,
+        StrokeBlend.colorBurn => Icons.local_fire_department_rounded,
+        StrokeBlend.color => Icons.palette_rounded,
       };
 
   static IconData textureIcon(StrokeTexture t) => switch (t) {
@@ -119,12 +135,22 @@ abstract final class AppTheme {
         StrokeTexture.paper => Icons.description_rounded,
         StrokeTexture.charcoal => Icons.grain_rounded,
         StrokeTexture.bristle => Icons.texture_rounded,
+        StrokeTexture.crayon => Icons.draw_rounded,
+        StrokeTexture.watercolor => Icons.water_drop_rounded,
+        StrokeTexture.stipple => Icons.blur_on_rounded,
+        StrokeTexture.hatch => Icons.tag_rounded,
+        StrokeTexture.wood => Icons.view_stream_rounded,
+        StrokeTexture.sand => Icons.scatter_plot_rounded,
       };
 
   static IconData stampIcon(StampShape s) => switch (s) {
         StampShape.heart => Icons.favorite_rounded,
         StampShape.star => Icons.star_rounded,
         StampShape.flower => Icons.local_florist_rounded,
+        StampShape.sun => Icons.wb_sunny_rounded,
+        StampShape.leaf => Icons.eco_rounded,
+        StampShape.paw => Icons.pets_rounded,
+        StampShape.note => Icons.music_note_rounded,
       };
 
   /// Soft paper colors to draw on.

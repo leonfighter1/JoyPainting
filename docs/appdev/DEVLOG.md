@@ -1,5 +1,15 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v6.0.0 (adding tools)
+- 5.4.3 after pushing: Web and iOS passed (live version.json 5.4.3+24); that iOS run also covers 5.4.2's code.
+- Asked: make shapes, textures and the like an "add" feature, a multi-select popup that puts each choice in its own group, the drawer keeping only basic options; enrich shapes, textures and the other intermediate and advanced options. Later: add arc and wave shapes.
+- Done: `ToolCatalog` (basic options, what each level can add), `AppSettings.addedTools`, the drawer showing basic + added + chosen with 「＋ 添加」 per group and 添加工具 at the bottom, `showAddToolsSheet` with pictures drawn by the options themselves; 14 shapes, 4 stamps, 4 gradients, 4 light & shadow modes, 6 textures, each saved so older versions degrade gently (new shapes keep their outline as points).
+- Found by tests: two English "Glow"s (gradient and light mode; the light one is now "Shine"); the dots texture left the single sampled row nearly empty (bigger dots; the texture test reads several rows) and hatching never reached full paint (solid line cores). By eye: the cloud looked like a pile (flatter, four puffs); picked chips in the popup were too faint (filled now); gradient pictures in black all looked alike (blue for grays).
+- Mistakes: MISTAKES rule 66.
+- Harness: PASS (analyze 0 issues, 414 tests, build web ok).
+- Not tested: on a real device.
+- Next: from the plan, background cache rebuilds and replay keyframes (measure first).
+
 ## 2026-10-28: v5.4.3 (shapes with light & shadow)
 - 5.4.2 after pushing: Web passed (live version.json 5.4.2+23); iOS never ran ("The job was not acquired by Runner of type hosted even after multiple attempts", macOS runner capacity). No `gh` here to re-run it; this push runs it again.
 - Reported: with light & shadow on, shapes other than freehand and free shapes showed no trail; asked to look for other combinations too. Cause: my 5.4.2 change; `moveShapeEnd` didn't signal the layer to repaint. A new sweep test (`test/live_stroke_test.dart`) checks every brush × blend × shape the draw tool makes (560) as the screen repaints them: 336 failed on 5.4.2, none now; mirror, texture, low opacity and a see-through layer also pass.

@@ -92,10 +92,12 @@ void main() {
           texture: t,
         );
         final raw = await renderRgba([s], const Size(200, 40), 1);
-        // The red channel over the middle of the line: solid paint is
-        // 0x8B everywhere; grain makes it lighter in places.
+        // The red channel over the middle rows of the line: solid paint is
+        // 0x8B everywhere; grain makes it lighter in places (a pattern of
+        // dots or lines can leave one row nearly empty, so several rows).
         final reds = [
-          for (var x = 20; x < 180; x++) raw.rgba[(20 * raw.width + x) * 4],
+          for (var y = 16; y <= 24; y += 2)
+            for (var x = 20; x < 180; x++) raw.rgba[(y * raw.width + x) * 4],
         ];
         final lighter = reds.where((r) => r > 0x8B + 12).length;
         if (t == StrokeTexture.none) {

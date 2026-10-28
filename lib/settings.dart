@@ -149,6 +149,7 @@ class AppSettings extends ChangeNotifier {
   static const _kToolsCorner = 'toolsCorner';
   static const _kLayersCorner = 'layersCorner';
   static String _kSection(String section) => 'toolSection.$section';
+  static const _kAddedTools = 'addedTools';
   static const _kBrush = 'brush';
   static const _kColor = 'color';
   static const _kStamp = 'stamp';
@@ -325,6 +326,15 @@ class AppSettings extends ChangeNotifier {
 
   void setSectionOpen(String section, bool open) {
     _prefs.setBool(_kSection(section), open);
+    notifyListeners();
+  }
+
+  /// The drawer options added with 添加工具, as `group.name` keys (see
+  /// `ToolCatalog`). The basic ones always show, so they're not in it.
+  Set<String> get addedTools => {...?_prefs.getStringList(_kAddedTools)};
+
+  set addedTools(Set<String> value) {
+    _prefs.setStringList(_kAddedTools, value.toList()..sort());
     notifyListeners();
   }
 

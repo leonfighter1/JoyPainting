@@ -66,6 +66,7 @@
 63. Before changing how existing strokes paint, count how many strokes in the samples (and the local tarot cards) the change touches. If it would change approved art, put the new look behind a flag that only new strokes get.
 64. The stroke being drawn and the finished strokes are painted by different paths (`paintCurrent` over the paper; finished ones on their layer's own sheet). When a stroke looks wrong while drawing, check every per-stroke option (light & shadow, texture, opacity, layer) in both paths on white paper, and ask for the user's exact settings before settling on a cause.
 65. When strokes start going through a different paint or repaint path, list every way a stroke being drawn changes (`begin`, `extend`, `moveShapeEnd`, `cancel`, `end`) and check each one; then run `test/live_stroke_test.dart`, which draws every brush, light & shadow and shape while watching the screen's repaint signals.
+66. Every option in the tools drawer needs a name of its own in both languages: tests and screen readers find chips by their text, and two "Glow"s (a gradient and a light mode) broke both.
 
 ## Log
 

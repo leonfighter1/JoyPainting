@@ -270,6 +270,10 @@ class S {
         StampShape.heart => _t('爱心', 'Heart'),
         StampShape.star => _t('星星', 'Star'),
         StampShape.flower => _t('小花', 'Flower'),
+        StampShape.sun => _t('太阳', 'Sun'),
+        StampShape.leaf => _t('树叶', 'Leaf'),
+        StampShape.paw => _t('爪印', 'Paw'),
+        StampShape.note => _t('音符', 'Note'),
       };
   // Move tool and eraser hints
   String get moveHint => _t(
@@ -380,6 +384,20 @@ class S {
         ShapeKind.triangle => _t('三角形', 'Triangle'),
         ShapeKind.star => _t('星形', 'Star shape'),
         ShapeKind.heart => _t('心形', 'Heart shape'),
+        ShapeKind.roundedRect => _t('圆角矩形', 'Rounded box'),
+        ShapeKind.diamond => _t('菱形', 'Diamond'),
+        ShapeKind.pentagon => _t('五边形', 'Pentagon'),
+        ShapeKind.hexagon => _t('六边形', 'Hexagon'),
+        ShapeKind.cross => _t('十字', 'Cross'),
+        ShapeKind.cloud => _t('云朵', 'Cloud'),
+        ShapeKind.moon => _t('月亮', 'Moon'),
+        ShapeKind.drop => _t('水滴', 'Drop'),
+        ShapeKind.lightning => _t('闪电', 'Lightning'),
+        ShapeKind.bubble => _t('对话框', 'Speech bubble'),
+        ShapeKind.doubleArrow => _t('双向箭头', 'Double arrow'),
+        ShapeKind.spiral => _t('螺旋', 'Spiral'),
+        ShapeKind.arc => _t('弧形', 'Arc'),
+        ShapeKind.wave => _t('波浪形', 'Wave'),
       };
   String get fillShape => _t('填充', 'Fill');
   String get freeShape => _t('自由形状', 'Free shape');
@@ -391,6 +409,10 @@ class S {
         GradientStyle.fade => _t('渐淡', 'Fade'),
         GradientStyle.glow => _t('光晕', 'Glow'),
         GradientStyle.rounded => _t('立体', 'Rounded'),
+        GradientStyle.across => _t('左右', 'Side to side'),
+        GradientStyle.diagonal => _t('斜光', 'Diagonal'),
+        GradientStyle.rainbow => _t('彩虹', 'Rainbow'),
+        GradientStyle.contrast => _t('撞色', 'Opposites'),
       };
   String get lightAndShadow => _t('光影', 'Light & shadow');
   String blendName(StrokeBlend b) => switch (b) {
@@ -399,6 +421,10 @@ class S {
         StrokeBlend.screen => _t('提亮', 'Light'),
         StrokeBlend.overlay => _t('叠加', 'Overlay'),
         StrokeBlend.softLight => _t('柔光', 'Soft light'),
+        StrokeBlend.hardLight => _t('强光', 'Hard light'),
+        StrokeBlend.colorDodge => _t('发光', 'Shine'),
+        StrokeBlend.colorBurn => _t('加深', 'Deepen'),
+        StrokeBlend.color => _t('上色', 'Tint'),
       };
   String get texture => _t('纹理', 'Texture');
   String textureName(StrokeTexture t) => switch (t) {
@@ -407,7 +433,20 @@ class S {
         StrokeTexture.paper => _t('纸纹', 'Paper'),
         StrokeTexture.charcoal => _t('炭笔', 'Charcoal'),
         StrokeTexture.bristle => _t('笔刷痕', 'Bristles'),
+        StrokeTexture.crayon => _t('蜡笔', 'Crayon'),
+        StrokeTexture.watercolor => _t('水彩', 'Watercolor'),
+        StrokeTexture.stipple => _t('点彩', 'Dots'),
+        StrokeTexture.hatch => _t('排线', 'Hatching'),
+        StrokeTexture.wood => _t('木纹', 'Wood'),
+        StrokeTexture.sand => _t('砂纸', 'Sand'),
       };
+  String get addTools => _t('添加工具', 'Add tools');
+  String get addToolsHint => _t(
+      '选中想用的，放进「画笔与颜色」；再点一次可以拿掉。基本的一直都在。',
+      'Pick the ones you want in Brushes & Colors; tap again to take one away. The basic ones are always there.');
+  String get addMore => _t('添加', 'Add');
+  String get pickAll => _t('全选', 'All');
+  String get pickNone => _t('全不选', 'None');
   String get eraserRange => _t('橡皮擦范围', 'Eraser area');
   String get opacity => _t('不透明度', 'Opacity');
   // Painting actions (top right)

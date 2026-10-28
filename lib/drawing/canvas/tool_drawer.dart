@@ -11,8 +11,10 @@ import '../../theme/cute_theme.dart';
 import '../stroke.dart';
 import 'brush_tile.dart';
 import 'canvas_keys.dart';
+import 'add_tools_sheet.dart';
 import 'color_widgets.dart';
 import 'palette_strip.dart';
+import 'tool_catalog.dart';
 import 'tool_section.dart';
 
 /// The tools drawer that slides in from the side the tools button is on.
@@ -183,6 +185,25 @@ class ToolPanel extends StatelessWidget {
       ];
     }
 
+    /// [group]'s options the drawer shows (the basic ones, the added ones
+    /// and the one chosen), then [extra], then a chip to add more.
+    final added = settings.addedTools;
+    List<Widget> options(ToolGroup group, {List<Widget> extra = const []}) => [
+          for (final o in ToolCatalog.options(group, settings, s))
+            if (o.shownWith(added))
+              ToolChip(
+                glyph: o.glyph,
+                label: o.label,
+                selected: o.selected,
+                onTap: o.onSelect,
+              ),
+          ...extra,
+          AddToolChip(
+            group: group,
+            onTap: () => showAddToolsSheet(context, settings, first: group),
+          ),
+        ];
+
     return ListView(
       key: CanvasKeys.toolsList,
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
@@ -317,27 +338,7 @@ class ToolPanel extends StatelessWidget {
           ...section(
             ToolSection.shapes,
             s.shapes,
-            [
-              ToolChip(
-                icon: AppTheme.shapeIcon(null),
-                label: s.shapeName(null),
-                selected: settings.shape == null && !settings.freeShape,
-                onTap: () => settings.shape = null,
-              ),
-              if (settings.level.freeShape)
-                ToolChip(
-                  icon: Icons.format_shapes_rounded,
-                  label: s.freeShape,
-                  selected: settings.freeShape,
-                  onTap: () => settings.freeShape = true,
-                ),
-              for (final shape in ShapeKind.values)
-                ToolChip(
-                  icon: AppTheme.shapeIcon(shape),
-                  label: s.shapeName(shape),
-                  selected: settings.shape == shape,
-                  onTap: () => settings.shape = shape,
-                ),
+            options(ToolGroup.shapes, extra: [
               ToolChip(
                 icon: Icons.format_color_fill_rounded,
                 label: s.fillShape,
@@ -346,7 +347,7 @@ class ToolPanel extends StatelessWidget {
                 enabled: settings.shape?.closed ?? false,
                 onTap: () => settings.fill = !settings.fill,
               ),
-            ],
+            ]),
             chosen: settings.freeShape
                 ? s.freeShape
                 : settings.shape == null
@@ -354,47 +355,16 @@ class ToolPanel extends StatelessWidget {
                 : s.shapeName(settings.shape),
           ),
         if (brush == BrushType.stamp)
-          ...section(ToolSection.stamps, s.brushName(BrushType.stamp), [
-            for (final shape in StampShape.values)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  avatar: Icon(
-                    AppTheme.stampIcon(shape),
-                    size: 18,
-                    color: settings.stamp == shape
-                        ? cute.onColor(accent)
-                        : accent,
-                  ),
-                  label: Text(s.stampName(shape)),
-                  selected: settings.stamp == shape,
-                  showCheckmark: false,
-                  selectedColor: accent,
-                  labelStyle: TextStyle(
-                    color: settings.stamp == shape
-                        ? cute.onColor(accent)
-                        : cute.ink,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  onSelected: (_) => settings.stamp = shape,
-                ),
-              ),
-          ], chosen: s.stampName(settings.stamp)),
+          ...section(ToolSection.stamps, s.brushName(BrushType.stamp),
+              options(ToolGroup.stamps),
+              chosen: s.stampName(settings.stamp)),
         if (settings.level.gradients &&
             brush.usesColor &&
             brush.kind == BrushKind.outline)
           ...section(
             ToolSection.gradient,
             s.gradient,
-            [
-              for (final g in GradientStyle.values)
-                ToolChip(
-                  icon: AppTheme.gradientIcon(g),
-                  label: s.gradientName(g),
-                  selected: settings.gradient == g,
-                  onTap: () => settings.gradient = g,
-                ),
-            ],
+            options(ToolGroup.gradients),
             chosen: settings.gradient == GradientStyle.none
                 ? null
                 : s.gradientName(settings.gradient),
@@ -403,15 +373,7 @@ class ToolPanel extends StatelessWidget {
           ...section(
             ToolSection.lightAndShadow,
             s.lightAndShadow,
-            [
-              for (final b in AppTheme.blends)
-                ToolChip(
-                  icon: AppTheme.blendIcon(b),
-                  label: s.blendName(b),
-                  selected: settings.blend == b,
-                  onTap: () => settings.blend = b,
-                ),
-            ],
+            options(ToolGroup.blends),
             chosen: settings.blend == StrokeBlend.normal
                 ? null
                 : s.blendName(settings.blend),
@@ -420,19 +382,21 @@ class ToolPanel extends StatelessWidget {
           ...section(
             ToolSection.texture,
             s.texture,
-            [
-              for (final t in StrokeTexture.values)
-                ToolChip(
-                  icon: AppTheme.textureIcon(t),
-                  label: s.textureName(t),
-                  selected: settings.texture == t,
-                  onTap: () => settings.texture = t,
-                ),
-            ],
+            options(ToolGroup.textures),
             chosen: settings.texture == StrokeTexture.none
                 ? null
                 : s.textureName(settings.texture),
           ),
+        // More shapes, stamps, gradients, light and textures, all at once.
+        Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: OutlinedButton.icon(
+            key: const ValueKey('addToolsButton'),
+            icon: const Icon(Icons.add_box_rounded),
+            label: Text(s.addTools),
+            onPressed: () => showAddToolsSheet(context, settings),
+          ),
+        ),
         const Divider(height: 28),
         Row(
           children: [
@@ -452,19 +416,22 @@ class ToolPanel extends StatelessWidget {
   }
 }
 
-/// A shape or option chip. Colors come from the theme's contrast-checked
+/// A shape or option chip, with an [icon] or a [glyph] (a little picture
+/// in the chip's text color). Colors come from the theme's contrast-checked
 /// primary pair.
 class ToolChip extends StatelessWidget {
   const ToolChip({
     super.key,
-    required this.icon,
+    this.icon,
+    this.glyph,
     required this.label,
     required this.selected,
     required this.onTap,
     this.enabled = true,
-  });
+  }) : assert(icon != null || glyph != null);
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget Function(Color color)? glyph;
   final String label;
   final bool selected;
   final bool enabled;
@@ -478,7 +445,7 @@ class ToolChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 6),
       child: ChoiceChip(
-        avatar: Icon(icon, size: 18, color: fg),
+        avatar: glyph?.call(fg) ?? Icon(icon, size: 18, color: fg),
         label: Text(label),
         selected: selected && enabled,
         showCheckmark: false,

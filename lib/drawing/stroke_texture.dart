@@ -22,7 +22,27 @@ enum StrokeTexture {
   charcoal,
 
   /// Streaks of a bristle brush, running along the stroke.
-  bristle;
+  bristle,
+
+  // Since 6.0; older versions paint these without a texture.
+
+  /// Wax crayon: streaky, catching only the tops of the paper's tooth.
+  crayon,
+
+  /// Watercolor: pigment pooling in soft blotches.
+  watercolor,
+
+  /// Dots of paint side by side (点彩).
+  stipple,
+
+  /// Pen lines crossing each other (排线).
+  hatch,
+
+  /// The rings of wood grain.
+  wood,
+
+  /// Fine grit, like sandpaper.
+  sand;
 
   static StrokeTexture fromName(String? name) =>
       values.firstWhere((t) => t.name == name, orElse: () => none);
@@ -76,6 +96,29 @@ enum StrokeTexture {
       return ((x ~/ cell) + (y ~/ cell)).isEven ? across : down;
     }
 
+    // Dots on an 8-pixel grid, nudged a little, soft-edged; each stays
+    // inside its cell so the tile joins without seams.
+    double stipple(int x, int y) {
+      const cell = 8;
+      final gx = (x ~/ cell) * cell, gy = (y ~/ cell) * cell;
+      final cx = gx + cell / 2 + (mid.at(gx, gy, 8) - 0.5);
+      final cy = gy + cell / 2 + (coarse.at(gx, gy, 8) - 0.5);
+      final d = math.sqrt(
+          math.pow(x + 0.5 - cx, 2) + math.pow(y + 0.5 - cy, 2));
+      return 1 - smooth(2.4, 3.5, d) * 0.85;
+    }
+
+    // Lines 8 pixels apart in both diagonals.
+    double hatch(int x, int y) {
+      double lineAt(int v) {
+        final d = v % 8;
+        return 1 - smooth(0.9, 1.9, math.min(d, 8 - d).toDouble());
+      }
+
+      final lines = math.max(lineAt(x + y), lineAt(x - y + 256) * 0.85);
+      return 0.12 + 0.88 * lines;
+    }
+
     double alpha(int x, int y) => switch (t) {
           StrokeTexture.none => 1,
           StrokeTexture.canvas =>
@@ -89,6 +132,32 @@ enum StrokeTexture {
                   smooth(0.2, 0.8,
                       coarse.stretched(x, y, 128, 2) * 0.6 +
                           mid.stretched(x, y, 64, 4) * 0.4),
+          StrokeTexture.crayon => 0.1 +
+              0.9 *
+                  smooth(0.3, 0.5,
+                      coarse.stretched(x, y, 64, 4) * 0.35 +
+                          fine.at(x, y, 2) * 0.65),
+          StrokeTexture.watercolor => 0.5 +
+              0.5 *
+                  smooth(0.15, 0.85,
+                      coarse.at(x, y, 64) * 0.6 + mid.at(x, y, 16) * 0.4),
+          StrokeTexture.stipple => stipple(x, y),
+          StrokeTexture.hatch => hatch(x, y),
+          // Rings 16 pixels apart, wavering with the noise.
+          StrokeTexture.wood => 0.4 +
+              0.6 *
+                  smooth(0.2, 0.8,
+                      0.5 +
+                          0.5 *
+                              math.sin(2 *
+                                  math.pi *
+                                  (y / 16 +
+                                      coarse.at(x, y, 64) * 1.8 +
+                                      mid.stretched(x, y, 64, 8) * 0.3))),
+          StrokeTexture.sand => 1 -
+              0.75 *
+                  smooth(0.58, 0.7,
+                      fine.at(x, y, 2) * 0.7 + mid.at(x, y, 4) * 0.3),
         };
 
     // Group pixels by how much paint stays, and draw each group at once.

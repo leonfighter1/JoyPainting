@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:jingyao_paint/drawing/canvas/tool_catalog.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/family.dart';
 import 'package:jingyao_paint/gallery/painting_store.dart';
@@ -56,7 +57,7 @@ class TestApp {
 
 /// Most tests run in Chinese with the first-start setup already done, as
 /// the app was used before v2.1. [prefs] can change either.
-const testDefaults = <String, Object>{
+final testDefaults = <String, Object>{
   'flutter.language': 'zh',
   'flutter.onboarded': true,
   // Most tests want an empty My Paintings; v22_test covers the sample.
@@ -68,6 +69,13 @@ const testDefaults = <String, Object>{
   // backup reminder.
   'flutter.backupReminders': false,
   ...allSectionsOpen,
+  ...allToolsAdded,
+};
+
+/// Every option added to the drawer, as before 6.0: most tests pick shapes,
+/// textures and the rest directly. add_tools_test covers the basic ones.
+final allToolsAdded = <String, Object>{
+  'flutter.addedTools': ToolCatalog.addableKeys(),
 };
 
 /// Every tools drawer section open, as before 5.4: most tests pick options

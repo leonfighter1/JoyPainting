@@ -234,7 +234,10 @@ void main() {
         final original =
             shape(kind, brush: BrushType.stamp, fill: kind.closed);
         final json = original.toJson();
-        expect(json['points'], isEmpty, reason: 'points are rebuilt on load');
+        // Points are rebuilt on load; newer shapes keep an outline for
+        // older versions.
+        expect(json['points'], kind.savesOutline ? isNotEmpty : isEmpty,
+            reason: kind.name);
         final reloaded = Stroke.fromJson(json);
         expect(reloaded.shape, kind);
         expect(reloaded.fill, original.fill);

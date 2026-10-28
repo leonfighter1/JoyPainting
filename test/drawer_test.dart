@@ -18,7 +18,9 @@ Future<TestApp> pumpAsNew(WidgetTester tester) async => pumpApp(
     fresh: true,
     prefs: {
       for (final e in testDefaults.entries)
-        if (!allSectionsOpen.containsKey(e.key)) e.key: e.value,
+        if (!allSectionsOpen.containsKey(e.key) &&
+            !allToolsAdded.containsKey(e.key))
+          e.key: e.value,
     },
   ),
 );

@@ -118,7 +118,12 @@ enum BrushType {
 enum StampShape {
   heart,
   star,
-  flower;
+  flower,
+  // Since 6.0; older versions stamp hearts instead.
+  sun,
+  leaf,
+  paw,
+  note;
 
   static StampShape fromName(String? name) =>
       values.firstWhere((s) => s.name == name, orElse: () => heart);

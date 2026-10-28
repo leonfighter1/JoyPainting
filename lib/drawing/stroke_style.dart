@@ -14,7 +14,18 @@ enum StrokeBlend {
   /// Lightens what's underneath, like light falling on it.
   screen(BlendMode.screen),
   overlay(BlendMode.overlay),
-  softLight(BlendMode.softLight);
+  softLight(BlendMode.softLight),
+  // Since 6.0; older versions paint these normally.
+  hardLight(BlendMode.hardLight),
+
+  /// Brightens what's underneath, as if it glowed.
+  colorDodge(BlendMode.colorDodge),
+
+  /// Darkens and deepens what's underneath, like burnt edges.
+  colorBurn(BlendMode.colorBurn),
+
+  /// Gives what's underneath this color, keeping its light and shade.
+  color(BlendMode.color);
 
   const StrokeBlend(this.mode);
 
@@ -134,13 +145,36 @@ enum GradientStyle {
   glow,
 
   /// Lit from the top left, darker around the edge, like a ball.
-  rounded;
+  rounded,
+
+  // Since 6.0. Older versions read these from the file as they are saved:
+  // the colors, not the style.
+
+  /// Lighter on the left, darker on the right.
+  across,
+
+  /// Light from the top left corner to shade in the bottom right.
+  diagonal,
+
+  /// Through the colors of the rainbow, starting at the chosen one.
+  rainbow,
+
+  /// From the chosen color to its opposite on the color wheel.
+  contrast;
 
   StrokeGradient? forColor(Color c) {
     // Whole 8-bit colors, as they will be saved.
-    final light = Color(Color.lerp(c, Colors.white, 0.6)!.toARGB32());
-    final dark = Color(Color.lerp(c, Colors.black, 0.55)!.toARGB32());
+    Color whole(Color x) => Color(x.toARGB32());
+    final light = whole(Color.lerp(c, Colors.white, 0.6)!);
+    final dark = whole(Color.lerp(c, Colors.black, 0.55)!);
     final clear = c.withValues(alpha: 0);
+    // Black, white and grays have no hue: their rainbow starts at red.
+    final hsl = HSLColor.fromColor(c);
+    final hued = hsl.saturation < 0.15
+        ? HSLColor.fromAHSL(c.a, 0, 0.75, 0.55)
+        : hsl;
+    Color turned(double degrees) =>
+        whole(hued.withHue((hued.hue + degrees) % 360).toColor());
     return switch (this) {
       none => null,
       lighter => StrokeGradient(colors: [light, c]),
@@ -152,6 +186,17 @@ enum GradientStyle {
       rounded => StrokeGradient(
           colors: [light, c, dark], stops: const [0, 0.45, 1], radial: true,
           from: const Offset(0.38, 0.32), to: const Offset(1, 1)),
+      across => StrokeGradient(
+          colors: [light, c, dark], from: const Offset(0, 0.5),
+          to: const Offset(1, 0.5)),
+      diagonal => StrokeGradient(
+          colors: [light, dark], from: Offset.zero, to: const Offset(1, 1)),
+      rainbow => StrokeGradient(
+          colors: [for (var k = 0; k < 6; k++) turned(k * 60.0)],
+          from: const Offset(0, 0.5), to: const Offset(1, 0.5)),
+      contrast => StrokeGradient(
+          colors: [hsl.saturation < 0.15 ? c : turned(0), turned(180)],
+          from: Offset.zero, to: const Offset(1, 1)),
     };
   }
 

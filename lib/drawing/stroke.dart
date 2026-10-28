@@ -649,7 +649,13 @@ class Stroke {
       'fill': fill,
       'from': [_round(_from!.dx, 10), _round(_from!.dy, 10)],
       'to': [_round(_to!.dx, 10), _round(_to!.dy, 10)],
-      'points': const <num>[],
+      // Older versions don't know the newer shapes: they read this outline
+      // as a line (filled, if the shape is).
+      'points': shape!.savesOutline
+          ? [
+              for (final p in points) ...[_round(p.x, 10), _round(p.y, 10), 0.5],
+            ]
+          : const <num>[],
     } else ...{
       if (fill) 'fill': true,
       if (area != null)
