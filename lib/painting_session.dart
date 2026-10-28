@@ -17,13 +17,21 @@ import 'settings.dart';
 /// Renders a thumbnail for the gallery. Swappable so widget tests can skip
 /// real image encoding, which doesn't complete under fake async.
 typedef Thumbnailer = Future<Uint8List> Function(
-    List<Stroke> strokes, Size size, Color paper, List<PaintingLayer> layers);
+  List<Stroke> strokes,
+  Size size,
+  Color paper,
+  List<PaintingLayer> layers,
+);
 
 /// Longest side of a gallery thumbnail, in pixels.
 const thumbnailMaxSide = 360.0;
 
 Future<Uint8List> renderThumbnail(
-    List<Stroke> strokes, Size size, Color paper, List<PaintingLayer> layers) {
+  List<Stroke> strokes,
+  Size size,
+  Color paper,
+  List<PaintingLayer> layers,
+) {
   final scale = thumbnailMaxSide / math.max(size.width, size.height);
   return renderPng(strokes, size, scale, paper: paper, layers: layers);
 }
@@ -91,9 +99,7 @@ class PaintingSession extends ChangeNotifier {
   /// v2.1, which have no names.
   Future<void> restoreLast() async {
     await store.nameUnnamed(_s.defaultPaintingName);
-    // Before the first-start setup the language isn't chosen yet; the home
-    // page adds it then.
-    if (settings.onboarded.value) await addSampleOnce();
+    await addSampleOnce();
     final lastId = settings.lastPaintingId;
     if (lastId != null) {
       try {
@@ -183,8 +189,8 @@ class PaintingSession extends ChangeNotifier {
     final paper = drawing.paper;
     final paperSize = drawing.paperSize;
     final layers = drawing.layers;
-    final size = paperSize ??
-        (canvasSize.isEmpty ? _boundsOf(strokes) : canvasSize);
+    final size =
+        paperSize ?? (canvasSize.isEmpty ? _boundsOf(strokes) : canvasSize);
     final paintingId = id;
     if (name.isEmpty) name = await _nextName();
     final paintingName = name;
@@ -237,7 +243,8 @@ class PaintingSession extends ChangeNotifier {
   /// The open painting as a document, for sending or printing.
   PaintingDoc currentDoc() {
     final strokes = List<Stroke>.of(drawing.strokes);
-    final size = drawing.paperSize ??
+    final size =
+        drawing.paperSize ??
         (canvasSize.isEmpty ? _boundsOf(strokes) : canvasSize);
     return PaintingDoc(
       meta: PaintingMeta(
@@ -301,18 +308,39 @@ class PaintingSession extends ChangeNotifier {
 
   /// Puts the sample painting for the drawing level into the current kid's
   /// My Paintings, the first time only (see [LevelSamples]). A kid who
-  /// moves up a level gets that level's sample too.
-  Future<void> addSampleOnce() async {
+  /// moves up a level gets that level's sample too. True if one was added.
+  Future<bool> addSampleOnce() async {
     final level = settings.level;
-    if (settings.sampleAddedFor(level)) return;
+    // Not before the first-start setup (after a reset, say): the language
+    // isn't chosen yet. The home page adds it then.
+    if (!settings.onboarded.value || settings.sampleAddedFor(level)) {
+      return false;
+    }
     // Marked first, so two calls at once can't add it twice.
     settings.markSampleAdded(level);
+    final name = LevelSamples.name(level, _s);
+    makingSample.value = name;
     try {
-      await _addCopy(await LevelSamples.load(level, _s));
+      final added = await _addCopy(
+        await LevelSamples.load(level, _s),
+        thumbnail: await LevelSamples.thumbnail(level),
+      );
+      if (added != null) onSampleAdded?.call(name);
+      return added != null;
     } catch (e) {
       debugPrint('Sample painting not added: $e');
+      return false;
+    } finally {
+      makingSample.value = null;
     }
   }
+
+  /// The name of the sample painting being added (it can take a moment on
+  /// a big one), or null.
+  final makingSample = ValueNotifier<String?>(null);
+
+  /// Called with a sample painting's name once it's in My Paintings.
+  void Function(String name)? onSampleAdded;
 
   /// Adds a copy of [paintingId] named [name], next to it in My Paintings
   /// (the open one is saved first, so the copy has everything). Returns the
@@ -326,26 +354,31 @@ class PaintingSession extends ChangeNotifier {
       doc = await store.load(paintingId);
     }
     if (doc == null) return null;
-    return _addCopy(PaintingDoc(
-      meta: PaintingMeta(
-        id: '',
-        name: name,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        width: doc.meta.width,
-        height: doc.meta.height,
-        strokeCount: doc.strokes.length,
+    return _addCopy(
+      PaintingDoc(
+        meta: PaintingMeta(
+          id: '',
+          name: name,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          width: doc.meta.width,
+          height: doc.meta.height,
+          strokeCount: doc.strokes.length,
+        ),
+        strokes: doc.strokes,
+        paper: doc.paper,
+        paperSize: doc.paperSize,
+        layers: doc.layers,
       ),
-      strokes: doc.strokes,
-      paper: doc.paper,
-      paperSize: doc.paperSize,
-      layers: doc.layers,
-    ));
+    );
   }
 
   /// Stores [incoming] as a new painting (fresh id, its own name or the
   /// next free "My painting N"). Null if saving failed.
-  Future<PaintingDoc?> _addCopy(PaintingDoc incoming) async {
+  Future<PaintingDoc?> _addCopy(
+    PaintingDoc incoming, {
+    Uint8List? thumbnail,
+  }) async {
     final copy = PaintingDoc(
       meta: PaintingMeta(
         id: _newId(),
@@ -367,8 +400,13 @@ class PaintingSession extends ChangeNotifier {
       final size = Size(copy.meta.width, copy.meta.height);
       await store.save(
         copy,
-        await thumbnailer(copy.strokes,
-            size.isEmpty ? _boundsOf(copy.strokes) : size, copy.paper, copy.layers),
+        thumbnail ??
+            await thumbnailer(
+              copy.strokes,
+              size.isEmpty ? _boundsOf(copy.strokes) : size,
+              copy.paper,
+              copy.layers,
+            ),
       );
       return copy;
     } catch (e) {
@@ -405,10 +443,15 @@ class PaintingSession extends ChangeNotifier {
   }
 
   void _show(PaintingDoc doc) {
-    _reset(doc.meta.id, doc.meta.createdAt, doc.strokes, doc.paper,
-        size: doc.paperSize ?? Size(doc.meta.width, doc.meta.height),
-        paperSize: doc.paperSize,
-        layers: doc.layers);
+    _reset(
+      doc.meta.id,
+      doc.meta.createdAt,
+      doc.strokes,
+      doc.paper,
+      size: doc.paperSize ?? Size(doc.meta.width, doc.meta.height),
+      paperSize: doc.paperSize,
+      layers: doc.layers,
+    );
     name = doc.meta.name;
     _persisted = true;
     settings.lastPaintingId = id;
@@ -418,10 +461,14 @@ class PaintingSession extends ChangeNotifier {
   /// [size] is the painting's paper size; empty means "take whatever the
   /// canvas has room for", as for a new painting.
   void _reset(
-      String newId, DateTime created, List<Stroke> strokes, Color paper,
-      {Size size = Size.zero,
-      Size? paperSize,
-      List<PaintingLayer> layers = const [PaintingLayer.base]}) {
+    String newId,
+    DateTime created,
+    List<Stroke> strokes,
+    Color paper, {
+    Size size = Size.zero,
+    Size? paperSize,
+    List<PaintingLayer> layers = const [PaintingLayer.base],
+  }) {
     id = newId;
     name = '';
     createdAt = created;
@@ -448,6 +495,7 @@ class PaintingSession extends ChangeNotifier {
   void dispose() {
     _autosave?.cancel();
     drawing.dispose();
+    makingSample.dispose();
     super.dispose();
   }
 }

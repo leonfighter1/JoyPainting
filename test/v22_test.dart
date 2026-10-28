@@ -240,7 +240,7 @@ void main() {
       );
       await app.session.restoreLast();
       var paintings = await app.store.list();
-      expect([for (final m in paintings) m.name], ['快乐的一天']);
+      expect([for (final m in paintings) m.name], ['快乐的一天（示例）']);
       final doc = (await app.store.load(paintings.single.id))!;
       expect(doc.paper, SamplePainting.paper);
       expect(doc.strokes.length, greaterThan(50));
@@ -256,7 +256,7 @@ void main() {
       await app.session.delete(paintings.single.id);
       await app.session.restoreLast();
       paintings = await app.store.list();
-      expect(paintings.where((m) => m.name == '快乐的一天'), isEmpty);
+      expect(paintings.where((m) => m.name == '快乐的一天（示例）'), isEmpty);
     });
 
     testWidgets('a new install gets it after the setup, named in English', (
@@ -268,7 +268,7 @@ void main() {
       await tester.ensureVisible(find.byKey(OnboardingPage.startKey));
       await tester.tap(find.byKey(OnboardingPage.startKey));
       await tester.pumpAndSettle();
-      expect([for (final m in await app.store.list()) m.name], ['A Happy Day']);
+      expect([for (final m in await app.store.list()) m.name], ['A Happy Day (sample)']);
     });
   });
 

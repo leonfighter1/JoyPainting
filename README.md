@@ -35,7 +35,7 @@ What it does:
   - Autosave, and a gallery (我的画作) with names, dates and a year filter.
   - Export: check paintings (the year filter helps) and export one as its `.jypaint` or several as one `.zip`. Import reads both.
   - Every painting gets a name ("My painting 1" / "我的画作 1"); rename or copy it from the title or its gallery card.
-  - A sample painting for each kid, matching their level: 快乐的一天 / A Happy Day (beginner: pens, shapes and stamps), 海边的晚霞 / Sunset by the Sea (intermediate: soft brush, gradients, free shapes) or 湖畔晨光 / Dawn on the Lake (advanced: a realistic painting with textures, the blender and light & shadow). Picking another level later brings that one too, once.
+  - A sample painting for each kid, matching their level: 快乐的一天 / A Happy Day (beginner: pens, shapes and stamps), 海边的晚霞 / Sunset by the Sea (intermediate: soft brush, gradients, free shapes) or 湖畔晨光 / Dawn on the Lake (advanced: a realistic painting with textures, the blender and light & shadow). Their names end in 「（示例）」 / "(sample)". Picking another level later brings that one too, once, with a card at the top while it is being made.
   - **A photo to trace** (导入照片): put a picture under your drawing, half see-through (Intermediate and up).
   - **Coloring book** (涂色本): 8 line drawings to color in; the lines stay locked on top, so brushes, the paint bucket and the eraser work under them.
   - **Replay** (回放作画过程): watch a painting draw itself again, stroke by stroke, at ½× to 4×, and save the replay as a looping GIF.
@@ -54,13 +54,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.4.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.4.1**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **5.4.0** | 2026-10-28 | A tidier brushes & colors drawer (groups that open and close, size and opacity under the colors), the layers button floating next to it, 3 quiet seconds between music tracks, a wider keyboard shortcut list |
+| **5.4.1** | 2026-10-28 | Thin lines with a texture show again; picking a level no longer stalls while its sample painting is added (a card says it's being made); sample paintings are named "（示例）" |
+| 5.4.0 | 2026-10-28 | A tidier brushes & colors drawer (groups that open and close, size and opacity under the colors), the layers button floating next to it, 3 quiet seconds between music tracks, a wider keyboard shortcut list |
 | 5.3.1 | 2026-10-28 | Download or send a picture without its photo; in a browser, Settings says whether the paintings are kept and can ask the browser to keep them |
 | 5.3.0 | 2026-10-28 | A coloring book in My Paintings: 8 line drawings to color in, the lines locked on top so coloring, filling and erasing go under them |
 | 5.2.0 | 2026-10-28 | Turn the paper with two fingers (snaps straight; R on a computer), from the Intermediate level |
@@ -87,6 +88,22 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 5.4.1 (2026-10-28): thin textured lines, quicker samples
+
+**New**
+- While a sample painting is being put into My Paintings (after picking a level), a card at the top says so, with a progress bar, and a message says when it's there.
+
+**Changed**
+- Sample paintings are named as samples: 快乐的一天（示例）, 海边的晚霞（示例）, 湖畔晨光（示例） (in English, "(sample)"). Ones already in My Paintings keep their names.
+
+**Fixed**
+- **A thin line with a texture (纹理) could barely show, or not at all** (the bristles texture with the thinnest pen): on thin lines the grain now gives way, so the line shows; from a size of about 8 the texture looks as before. Lines drawn earlier look as they did.
+- **Picking the Intermediate or Advanced level stalled the app for seconds** while it painted the sample's little picture for My Paintings (4 s in Chrome for 湖畔晨光): the pictures now come ready-made with the app.
+- Resetting the app no longer adds a sample painting before the first-start setup.
+
+**Good to know**
+- The texture fix is clearest on ordinary (not high-resolution) screens, where thin lines have the fewest pixels.
 
 ### 5.4.0 (2026-10-28): a tidier drawer
 

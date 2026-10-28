@@ -82,8 +82,13 @@ class DrawTool extends CanvasTool {
 
 /// A new stroke starting at [at], with the brush, color, size, shape and
 /// looks chosen in [settings].
-Stroke newStroke(AppSettings settings, Offset at,
-    {double? mirrorX, bool stylus = false, String? layer}) {
+Stroke newStroke(
+  AppSettings settings,
+  Offset at, {
+  double? mirrorX,
+  bool stylus = false,
+  String? layer,
+}) {
   // The eraser always has a round tip; it never draws shapes.
   final brush = settings.brush;
   final shape = brush.usesShapes ? settings.shape : null;
@@ -110,6 +115,7 @@ Stroke newStroke(AppSettings settings, Offset at,
       blur: blur,
       blend: blend,
       texture: texture,
+      fadesGrain: true,
       layer: layer,
     );
   }
@@ -125,6 +131,7 @@ Stroke newStroke(AppSettings settings, Offset at,
     blur: blur,
     blend: blend,
     texture: texture,
+    fadesGrain: true,
     usesRealPressure: stylus,
     layer: layer,
   );

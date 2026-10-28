@@ -47,7 +47,10 @@ extension StrokePainting on Stroke {
     // Bubble and text fade together, so the bubble doesn't show through.
     final translucent = alpha < 1;
     if (translucent) {
-      canvas.saveLayer(bounds.inflate(2), Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
+      canvas.saveLayer(
+        bounds.inflate(2),
+        Paint()..color = Color.fromRGBO(0, 0, 0, alpha),
+      );
     }
     if (text!.bubble) {
       canvas.drawRRect(
@@ -70,8 +73,10 @@ extension StrokePainting on Stroke {
     final textured =
         texture != StrokeTexture.none && brush.usesTexture && text == null;
     if (blended || textured) {
-      canvas.saveLayer(text != null ? textBounds.inflate(2) : _bounds,
-          Paint()..blendMode = blend.mode);
+      canvas.saveLayer(
+        text != null ? textBounds.inflate(2) : _bounds,
+        Paint()..blendMode = blend.mode,
+      );
     }
     _paintContent(canvas);
     if (textured) _paintTexture(canvas);
@@ -80,13 +85,46 @@ extension StrokePainting on Stroke {
 
   /// Masks the stroke just painted with its texture. Bristles follow a
   /// line along its length; areas get the grain along their longest side.
+  ///
+  /// The grain is coarser than a thin line, so it would take most of it
+  /// away (bristles, all of it): lines thinner than [fullTextureWidth]
+  /// keep part of their paint solid, all of it at a width of 1 (strokes
+  /// drawn since 5.4.1, see [fadesGrain]).
   void _paintTexture(Canvas canvas) {
-    if (texture == StrokeTexture.bristle && !fill && points.length > 1) {
-      _paintBristles(canvas);
-    } else {
-      texture.mask(canvas, _bounds, angle: _mainAngle);
+    final strength = fill || !fadesGrain
+        ? 1.0
+        : ((width - 1) / (fullTextureWidth - 1)).clamp(0.0, 1.0);
+    if (strength == 0) return;
+    void grain(BlendMode mode) {
+      if (texture == StrokeTexture.bristle && !fill && points.length > 1) {
+        _paintBristles(canvas, mode);
+      } else {
+        texture.mask(canvas, _bounds, angle: _mainAngle, mode: mode);
+      }
     }
+
+    if (strength == 1) return grain(BlendMode.dstIn);
+    // Paint kept: the solid share everywhere, plus the grain's share.
+    canvas
+      ..saveLayer(_bounds, Paint()..blendMode = BlendMode.dstIn)
+      ..drawRect(
+        _bounds,
+        Paint()..color = Color.fromRGBO(255, 255, 255, 1 - strength),
+      )
+      ..saveLayer(
+        _bounds,
+        Paint()
+          ..blendMode = BlendMode.plus
+          ..color = Color.fromRGBO(255, 255, 255, strength),
+      );
+    grain(BlendMode.srcOver);
+    canvas
+      ..restore()
+      ..restore();
   }
+
+  /// Lines at least this wide show their texture fully.
+  static const fullTextureWidth = 8.0;
 
   /// The direction the points mostly run in (radians).
   double get _mainAngle {
@@ -110,7 +148,7 @@ extension StrokePainting on Stroke {
 
   /// Keeps the paint only where the hairs of a bristle brush drag it along
   /// the line: streaks of different strength, some running dry early.
-  void _paintBristles(Canvas canvas) {
+  void _paintBristles(Canvas canvas, BlendMode mode) {
     final pts = [for (final p in points) p as Offset];
     Offset normalAt(int i) {
       final d = pts[math.min(pts.length - 1, i + 1)] - pts[math.max(0, i - 1)];
@@ -122,9 +160,10 @@ extension StrokePainting on Stroke {
     final normals = [for (var i = 0; i < pts.length; i++) normalAt(i)];
     final rnd = math.Random(seed);
     final hairs = (width / 1.5).clamp(5, 48).round();
-    canvas.saveLayer(_bounds, Paint()..blendMode = BlendMode.dstIn);
+    canvas.saveLayer(_bounds, Paint()..blendMode = mode);
     for (var h = 0; h < hairs; h++) {
-      final across = ((h + 0.5) / hairs - 0.5) * width * 1.05 +
+      final across =
+          ((h + 0.5) / hairs - 0.5) * width * 1.05 +
           (rnd.nextDouble() - 0.5) * width / hairs;
       final strength = 0.4 + 0.6 * rnd.nextDouble();
       final start = (rnd.nextDouble() * 0.1 * pts.length).floor();
@@ -151,7 +190,9 @@ extension StrokePainting on Stroke {
           i == from ? hair.moveTo(p.dx, p.dy) : hair.lineTo(p.dx, p.dy);
         }
         canvas.drawPath(
-            hair, paint..color = Color.fromRGBO(255, 255, 255, strength * fade));
+          hair,
+          paint..color = Color.fromRGBO(255, 255, 255, strength * fade),
+        );
       }
     }
     canvas.restore();
@@ -203,12 +244,13 @@ extension StrokePainting on Stroke {
     if (blur > 0) paint.maskFilter = MaskFilter.blur(BlurStyle.normal, blur);
     if (shape != null && !fill) {
       canvas.drawPath(
-          _shapePath,
-          paint
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = width
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round);
+        _shapePath,
+        paint
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = width
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
+      );
     } else {
       canvas.drawPath(fill ? _fillArea : path, paint);
     }
@@ -226,17 +268,22 @@ extension StrokePainting on Stroke {
     if (brush == BrushType.eraser) {
       // dstOut removes existing ink in proportion to alpha, so a
       // half-opacity eraser fades ink instead of removing it.
-      canvas.drawPath(fill ? _fillArea : path, Paint()
-        ..isAntiAlias = true
-        ..blendMode = BlendMode.dstOut
-        ..color = Color.fromRGBO(0, 0, 0, opacity));
+      canvas.drawPath(
+        fill ? _fillArea : path,
+        Paint()
+          ..isAntiAlias = true
+          ..blendMode = BlendMode.dstOut
+          ..color = Color.fromRGBO(0, 0, 0, opacity),
+      );
       return;
     }
     final alpha = _alpha;
     if (fill) {
       // A free shape: one filled area, so a translucent paint is enough.
-      canvas.drawPath(_fillArea, _ink(alpha,
-          solid: brush == BrushType.rainbow ? _rainbowAt(0) : null));
+      canvas.drawPath(
+        _fillArea,
+        _ink(alpha, solid: brush == BrushType.rainbow ? _rainbowAt(0) : null),
+      );
       return;
     }
     if (brush.kind == BrushKind.outline) {
@@ -249,7 +296,10 @@ extension StrokePainting on Stroke {
     // layer and fade the whole layer, so overlaps don't get darker.
     final translucent = alpha < 1;
     if (translucent) {
-      canvas.saveLayer(_bounds, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
+      canvas.saveLayer(
+        _bounds,
+        Paint()..color = Color.fromRGBO(0, 0, 0, alpha),
+      );
     }
     final solid = color.withValues(alpha: 1);
     switch (brush.kind) {
@@ -268,8 +318,10 @@ extension StrokePainting on Stroke {
   /// How see-through the whole stroke is. A gradient's colors carry
   /// their own see-through-ness, so then [color] doesn't count.
   double get _alpha =>
-      ((gradient == null ? color.a : 1) * opacity * brush.opacity)
-          .clamp(0.0, 1.0);
+      ((gradient == null ? color.a : 1) * opacity * brush.opacity).clamp(
+        0.0,
+        1.0,
+      );
 
   /// The paint for lines and filled areas, faded to [alpha]: the stroke's
   /// gradient, or [solid] (its color by default), with soft edges when it
@@ -299,37 +351,49 @@ extension StrokePainting on Stroke {
       // A filled eraser shape clears its whole area.
       final erase = Color.fromRGBO(0, 0, 0, opacity);
       if (fill) {
-        canvas.drawPath(outline, Paint()
-          ..blendMode = BlendMode.dstOut
-          ..color = erase);
+        canvas.drawPath(
+          outline,
+          Paint()
+            ..blendMode = BlendMode.dstOut
+            ..color = erase,
+        );
       }
-      canvas.drawPath(outline, linePaint
-        ..blendMode = BlendMode.dstOut
-        ..color = erase);
+      canvas.drawPath(
+        outline,
+        linePaint
+          ..blendMode = BlendMode.dstOut
+          ..color = erase,
+      );
       return;
     }
     // Fill and outline overlap, so fade them together in one layer.
     final alpha = _alpha;
     final translucent = alpha < 1;
     if (translucent) {
-      canvas.saveLayer(_bounds, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
+      canvas.saveLayer(
+        _bounds,
+        Paint()..color = Color.fromRGBO(0, 0, 0, alpha),
+      );
     }
     final solid = color.withValues(alpha: 1);
     if (fill) {
-      canvas.drawPath(outline,
-          _ink(1, solid: brush == BrushType.rainbow ? _rainbowAt(0) : null));
+      canvas.drawPath(
+        outline,
+        _ink(1, solid: brush == BrushType.rainbow ? _rainbowAt(0) : null),
+      );
     }
     switch (brush.kind) {
       // Text never becomes a shape; treat it like a plain outline.
       case BrushKind.outline || BrushKind.text:
         // Exact geometry keeps corners crisp.
         canvas.drawPath(
-            outline,
-            _ink(1)
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = width
-              ..strokeCap = StrokeCap.round
-              ..strokeJoin = StrokeJoin.round);
+          outline,
+          _ink(1)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = width
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round,
+        );
       case BrushKind.spray:
         _paintSpray(canvas, solid);
       case BrushKind.rainbow:
@@ -341,8 +405,11 @@ extension StrokePainting on Stroke {
   }
 
   Color _rainbowAt(double distance) => HSVColor.fromAHSV(
-          1, ((seed % 360) + distance * 1.2) % 360, 0.6, 0.97)
-      .toColor();
+    1,
+    ((seed % 360) + distance * 1.2) % 360,
+    0.6,
+    0.97,
+  ).toColor();
 
   void _paintSpray(Canvas canvas, Color solid) {
     final radius = math.max(2.0, width / 2);
@@ -353,15 +420,18 @@ extension StrokePainting on Stroke {
       final a = i == 0 ? points[0] : points[i - 1];
       final b = points[i];
       final rnd = math.Random(seed * 7919 + i);
-      final steps =
-          i == 0 ? 1 : math.max(1, ((b - a).distance / (radius * 0.5)).ceil());
+      final steps = i == 0
+          ? 1
+          : math.max(1, ((b - a).distance / (radius * 0.5)).ceil());
       final perStep = (radius * radius / 10).clamp(6, 50).round();
       for (var s = 0; s < steps; s++) {
         final center = Offset.lerp(a, b, s / steps)!;
         for (var k = 0; k < perStep; k++) {
           final angle = rnd.nextDouble() * 2 * math.pi;
           final dist = radius * math.sqrt(rnd.nextDouble());
-          _sprayDots.add(center + Offset(math.cos(angle), math.sin(angle)) * dist);
+          _sprayDots.add(
+            center + Offset(math.cos(angle), math.sin(angle)) * dist,
+          );
         }
       }
     }
@@ -383,8 +453,13 @@ extension StrokePainting on Stroke {
       ..strokeWidth = width;
     final hueAt = _rainbowAt;
     if (points.length == 1) {
-      canvas.drawCircle(points.first, width / 2,
-          paint..style = PaintingStyle.fill..color = hueAt(0));
+      canvas.drawCircle(
+        points.first,
+        width / 2,
+        paint
+          ..style = PaintingStyle.fill
+          ..color = hueAt(0),
+      );
       return;
     }
     var travelled = 0.0;
@@ -452,14 +527,21 @@ extension StrokePainting on Stroke {
     StampShape.flower: [
       for (var i = 0; i < 5; i++)
         (
-          Path()
-            ..addOval(Rect.fromCircle(
-              center: Offset.fromDirection(i * 2 * math.pi / 5 - math.pi / 2, 0.52),
+          Path()..addOval(
+            Rect.fromCircle(
+              center: Offset.fromDirection(
+                i * 2 * math.pi / 5 - math.pi / 2,
+                0.52,
+              ),
               radius: 0.42,
-            )),
+            ),
+          ),
           false,
         ),
-      (Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: 0.3)), true),
+      (
+        Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: 0.3)),
+        true,
+      ),
     ],
   };
 

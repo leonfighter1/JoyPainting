@@ -34,7 +34,10 @@ enum StrokeTexture {
 
   /// Masks what was just painted in [area] with this texture, its grain
   /// turned by [angle] (radians). Call inside a layer holding the stroke.
-  void mask(Canvas canvas, Rect area, {double angle = 0}) {
+  /// With another [mode] (srcOver), paints the grain as a mask instead:
+  /// opaque where the paint stays.
+  void mask(Canvas canvas, Rect area,
+      {double angle = 0, BlendMode mode = BlendMode.dstIn}) {
     if (this == none) return;
     final tile = _tiles[this] ??= _makeTile(this);
     final m = Matrix4.identity()
@@ -43,7 +46,7 @@ enum StrokeTexture {
     canvas.drawRect(
       area,
       Paint()
-        ..blendMode = BlendMode.dstIn
+        ..blendMode = mode
         ..shader = ImageShader(
             tile, TileMode.repeated, TileMode.repeated, m.storage,
             filterQuality: FilterQuality.low),

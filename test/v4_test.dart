@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jingyao_paint/app_theme.dart' show kThemeIds;
 import 'package:jingyao_paint/drawing/canvas_page.dart';
@@ -8,6 +10,7 @@ import 'package:jingyao_paint/drawing/drawing_controller.dart';
 import 'package:jingyao_paint/drawing/render/render_image.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/gallery/level_samples.dart';
+import 'package:jingyao_paint/gallery/sample_progress_card.dart';
 import 'package:jingyao_paint/l10n.dart';
 import 'package:jingyao_paint/onboarding_page.dart';
 import 'package:jingyao_paint/settings.dart';
@@ -32,37 +35,48 @@ import 'widget_test.dart'
         scrollTools;
 
 /// A straight line across the paper, a point every 2px.
-Stroke line(Offset from, Offset to,
-        {BrushType brush = BrushType.marker,
-        Color color = const Color(0xFF8B3A1A),
-        double size = 10,
-        double opacity = 1,
-        StrokeTexture texture = StrokeTexture.none}) =>
-    Stroke(
-      brush: brush,
-      color: color,
-      size: size,
-      opacity: opacity,
-      usesRealPressure: false,
-      seed: 5,
-      texture: texture,
-      isComplete: true,
-      points: [
-        for (var t = 0.0; t <= 1; t += 2 / (to - from).distance)
-          PointVector(Offset.lerp(from, to, t)!.dx,
-              Offset.lerp(from, to, t)!.dy, 0.5),
-      ],
-    );
+Stroke line(
+  Offset from,
+  Offset to, {
+  BrushType brush = BrushType.marker,
+  Color color = const Color(0xFF8B3A1A),
+  double size = 10,
+  double opacity = 1,
+  StrokeTexture texture = StrokeTexture.none,
+  bool fadesGrain = false,
+}) => Stroke(
+  brush: brush,
+  color: color,
+  size: size,
+  opacity: opacity,
+  usesRealPressure: false,
+  seed: 5,
+  texture: texture,
+  fadesGrain: fadesGrain,
+  isComplete: true,
+  points: [
+    for (var t = 0.0; t <= 1; t += 2 / (to - from).distance)
+      PointVector(
+        Offset.lerp(from, to, t)!.dx,
+        Offset.lerp(from, to, t)!.dy,
+        0.5,
+      ),
+  ],
+);
 
 /// Red on the left half of a 60×40 paper, blue on the right.
 List<Stroke> redBlue() => [
-      box(const Rect.fromLTWH(0, 0, 30, 40), const Color(0xFFFF0000)),
-      box(const Rect.fromLTWH(30, 0, 30, 40), const Color(0xFF0000FF)),
-    ];
+  box(const Rect.fromLTWH(0, 0, 30, 40), const Color(0xFFFF0000)),
+  box(const Rect.fromLTWH(30, 0, 30, 40), const Color(0xFF0000FF)),
+];
 
 Stroke blender({double opacity = 1}) => line(
-    const Offset(30, 2), const Offset(30, 38),
-    brush: BrushType.smudge, size: 6, opacity: opacity);
+  const Offset(30, 2),
+  const Offset(30, 38),
+  brush: BrushType.smudge,
+  size: 6,
+  opacity: opacity,
+);
 
 const _wide = Size(60, 40);
 
@@ -70,10 +84,13 @@ void main() {
   group('Textures', () {
     test('a texture lets the paper show through the paint', () async {
       for (final t in StrokeTexture.values) {
-        final s = line(const Offset(4, 20), const Offset(196, 20),
-            size: 20, texture: t);
-        final raw =
-            await renderRgba([s], const Size(200, 40), 1);
+        final s = line(
+          const Offset(4, 20),
+          const Offset(196, 20),
+          size: 20,
+          texture: t,
+        );
+        final raw = await renderRgba([s], const Size(200, 40), 1);
         // The red channel over the middle of the line: solid paint is
         // 0x8B everywhere; grain makes it lighter in places.
         final reds = [
@@ -84,25 +101,123 @@ void main() {
           expect(lighter, 0, reason: 'plain paint is solid');
         } else {
           expect(lighter, greaterThan(8), reason: t.name);
-          expect(reds.where((r) => r < 0x8B + 12), isNotEmpty,
-              reason: '${t.name} still paints');
+          expect(
+            reds.where((r) => r < 0x8B + 12),
+            isNotEmpty,
+            reason: '${t.name} still paints',
+          );
         }
       }
     });
 
+    test('a thin textured line drawn now still shows: the grain fades on '
+        'thin lines; older strokes keep their full grain', () async {
+      /// Columns along the line where it shows, and its darkest red.
+      Future<(int, int)> seen(Stroke s) async {
+        final raw = await renderRgba([s], const Size(200, 40), 1);
+        var shown = 0, darkest = 255;
+        for (var x = 20; x < 180; x++) {
+          var column = 255;
+          for (var y = 17; y <= 23; y++) {
+            column = math.min(column, raw.rgba[(y * raw.width + x) * 4]);
+          }
+          if (column < 230) shown++;
+          darkest = math.min(darkest, column);
+        }
+        return (shown, darkest);
+      }
+
+      for (final size in [1.0, 2.0, 3.0]) {
+        final (plainShown, plainDarkest) = await seen(
+          line(const Offset(10, 20), const Offset(190, 20), size: size),
+        );
+        for (final t in StrokeTexture.values) {
+          final (shown, darkest) = await seen(
+            line(
+              const Offset(10, 20),
+              const Offset(190, 20),
+              size: size,
+              texture: t,
+              fadesGrain: true,
+            ),
+          );
+          expect(shown, plainShown, reason: '${t.name} at size $size');
+          expect(
+            darkest,
+            lessThan(plainDarkest + 60),
+            reason: '${t.name} at size $size is about as dark',
+          );
+        }
+      }
+
+      // Strokes from before (the samples, older paintings) look as they did.
+      final old = line(
+        const Offset(10, 20),
+        const Offset(190, 20),
+        size: 1,
+        texture: StrokeTexture.bristle,
+      );
+      final now = line(
+        const Offset(10, 20),
+        const Offset(190, 20),
+        size: 1,
+        texture: StrokeTexture.bristle,
+        fadesGrain: true,
+      );
+      expect((await seen(old)).$1, lessThan((await seen(now)).$1),
+          reason: 'the old stroke keeps its full grain');
+
+      // The flag is saved, and kept by moves and copies; only with a texture.
+      expect(now.toJson()['fadesGrain'], isTrue);
+      expect(Stroke.fromJson(now.toJson()).fadesGrain, isTrue);
+      expect(now.moved(const Offset(3, 0)).fadesGrain, isTrue);
+      expect(Stroke.fromJson(old.toJson()).fadesGrain, isFalse);
+      expect(
+        line(
+          const Offset(0, 0),
+          const Offset(9, 9),
+          fadesGrain: true,
+        ).toJson().containsKey('fadesGrain'),
+        isFalse,
+      );
+    });
+
+    testWidgets('strokes drawn on the canvas fade their grain when thin', (
+      tester,
+    ) async {
+      final app = await pumpApp(tester);
+      app.settings
+        ..texture = StrokeTexture.paper
+        ..shape = ShapeKind.line;
+      await drawStroke(tester);
+      app.settings.shape = null;
+      await tester.dragFrom(const Offset(80, 520), const Offset(150, 0));
+      await tester.pump();
+      final strokes = app.session.drawing.strokes;
+      expect(strokes, hasLength(2));
+      expect(strokes.every((s) => s.fadesGrain), isTrue);
+      await tester.pump(const Duration(seconds: 1));
+    });
+
     test('textures are saved and look the same when reopened', () async {
       for (final t in StrokeTexture.values) {
-        final s = line(const Offset(4, 20), const Offset(56, 20),
-            size: 20, texture: t);
+        final s = line(
+          const Offset(4, 20),
+          const Offset(56, 20),
+          size: 20,
+          texture: t,
+        );
         final back = Stroke.fromJson(s.toJson());
         expect(back.texture, t);
         final a = await renderRgba([s], _wide, 1);
         final b = await renderRgba([back], _wide, 1);
         expect(a.rgba, b.rgba, reason: t.name);
       }
-      expect(line(Offset.zero, const Offset(9, 9)).toJson(),
-          isNot(contains('texture')),
-          reason: 'plain strokes keep their old file format');
+      expect(
+        line(Offset.zero, const Offset(9, 9)).toJson(),
+        isNot(contains('texture')),
+        reason: 'plain strokes keep their old file format',
+      );
     });
 
     test('filled shapes and moved strokes keep their texture', () {
@@ -120,8 +235,10 @@ void main() {
       );
       expect(s.texture, StrokeTexture.none);
       expect(textured.moved(const Offset(5, 5)).texture, StrokeTexture.canvas);
-      expect(textured.copyWith(color: Colors.red).texture,
-          StrokeTexture.canvas);
+      expect(
+        textured.copyWith(color: Colors.red).texture,
+        StrokeTexture.canvas,
+      );
       expect(Stroke.fromJson(textured.toJson()).texture, StrokeTexture.canvas);
     });
   });
@@ -143,9 +260,18 @@ void main() {
     });
 
     test('opacity sets how much it mixes', () async {
-      final strong = await pixel([...redBlue(), blender()], 28, 20, size: _wide);
+      final strong = await pixel(
+        [...redBlue(), blender()],
+        28,
+        20,
+        size: _wide,
+      );
       final weak = await pixel(
-          [...redBlue(), blender(opacity: 0.3)], 28, 20, size: _wide);
+        [...redBlue(), blender(opacity: 0.3)],
+        28,
+        20,
+        size: _wide,
+      );
       expect(b8(strong), greaterThan(b8(weak)));
       expect(b8(weak), greaterThan(0));
     });
@@ -158,8 +284,12 @@ void main() {
         final image = await recorder.endRecording().toImage(60, 40);
         final data = await image.toByteData();
         final i = (20 * 60 + 30) * 4;
-        return Color.fromARGB(255, data!.getUint8(i), data.getUint8(i + 1),
-            data.getUint8(i + 2));
+        return Color.fromARGB(
+          255,
+          data!.getUint8(i),
+          data.getUint8(i + 1),
+          data.getUint8(i + 2),
+        );
       }
 
       final before = await mid();
@@ -188,12 +318,14 @@ void main() {
     test('shows the blend while it is being drawn', () async {
       final drawing = DrawingController()..load(redBlue());
       drawing.begin(
-          Stroke(
-              brush: BrushType.smudge,
-              color: Colors.black,
-              size: 6,
-              usesRealPressure: false),
-          const PointVector(30, 2, 0.5));
+        Stroke(
+          brush: BrushType.smudge,
+          color: Colors.black,
+          size: 6,
+          usesRealPressure: false,
+        ),
+        const PointVector(30, 2, 0.5),
+      );
       for (var y = 4.0; y <= 38; y += 2) {
         drawing.extend(PointVector(30, y, 0.5));
       }
@@ -215,13 +347,24 @@ void main() {
   group('Levels', () {
     test('each level shows more; beginners get the simple tools', () {
       expect(SkillLevel.beginner.brushes, [
-        BrushType.pen, BrushType.pencil, BrushType.marker, BrushType.spray,
-        BrushType.rainbow, BrushType.stamp, BrushType.bucket, BrushType.text,
+        BrushType.pen,
+        BrushType.pencil,
+        BrushType.marker,
+        BrushType.spray,
+        BrushType.rainbow,
+        BrushType.stamp,
+        BrushType.bucket,
+        BrushType.text,
         BrushType.eraser,
       ]);
-      expect(SkillLevel.intermediate.brushes,
-          containsAll([BrushType.highlighter, BrushType.soft, BrushType.move]));
-      expect(SkillLevel.intermediate.brushes, isNot(contains(BrushType.smudge)));
+      expect(
+        SkillLevel.intermediate.brushes,
+        containsAll([BrushType.highlighter, BrushType.soft, BrushType.move]),
+      );
+      expect(
+        SkillLevel.intermediate.brushes,
+        isNot(contains(BrushType.smudge)),
+      );
       expect(SkillLevel.advanced.brushes, BrushType.values);
       for (final level in SkillLevel.values) {
         expect(level.brushes, containsAll(SkillLevel.beginner.brushes));
@@ -232,8 +375,7 @@ void main() {
       expect(SkillLevel.advanced.lightAndShadow, isTrue);
     });
 
-    test('a new install starts at beginner; the level is remembered',
-        () async {
+    test('a new install starts at beginner; the level is remembered', () async {
       SharedPreferences.setMockInitialValues({});
       final settings = await AppSettings.load();
       expect(settings.level, SkillLevel.beginner);
@@ -271,8 +413,10 @@ void main() {
     });
 
     testWidgets('beginners see the simple tools only', (tester) async {
-      await pumpApp(tester,
-          app: await createTestApp(prefs: {'flutter.level': 'beginner'}));
+      await pumpApp(
+        tester,
+        app: await createTestApp(prefs: {'flutter.level': 'beginner'}),
+      );
       await openTools(tester);
       expect(find.text('钢笔'), findsOneWidget);
       expect(find.text('柔边笔'), findsNothing);
@@ -280,11 +424,16 @@ void main() {
       expect(find.text('选择移动'), findsNothing);
       await scrollTools(tester, find.byIcon(Icons.line_weight_rounded));
       for (final hidden in ['自由形状', '渐变', '光影', '纹理']) {
-        expect(find.text(hidden, skipOffstage: false), findsNothing,
-            reason: hidden);
+        expect(
+          find.text(hidden, skipOffstage: false),
+          findsNothing,
+          reason: hidden,
+        );
       }
-      expect(find.byIcon(Icons.opacity_rounded, skipOffstage: false),
-          findsNothing);
+      expect(
+        find.byIcon(Icons.opacity_rounded, skipOffstage: false),
+        findsNothing,
+      );
     });
 
     testWidgets('advanced shows the blender and textures; a texture goes on '
@@ -293,8 +442,11 @@ void main() {
       await openTools(tester);
       await tester.tap(find.text('晕染笔'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('颜色会晕开'), findsOneWidget,
-          reason: 'what the blender does');
+      expect(
+        find.textContaining('颜色会晕开'),
+        findsOneWidget,
+        reason: 'what the blender does',
+      );
 
       app.settings.brush = BrushType.pencil;
       await tester.pumpAndSettle();
@@ -305,27 +457,37 @@ void main() {
       expect(app.settings.texture, StrokeTexture.charcoal);
       await closeTools(tester);
       await drawStroke(tester);
-      expect(app.session.drawing.strokes.single.texture,
-          StrokeTexture.charcoal);
+      expect(
+        app.session.drawing.strokes.single.texture,
+        StrokeTexture.charcoal,
+      );
       await tester.pump(const Duration(seconds: 1));
     });
 
     testWidgets('the level is changed in Settings', (tester) async {
-      final app = await pumpApp(tester,
-          app: await createTestApp(prefs: {'flutter.level': 'beginner'}));
+      final app = await pumpApp(
+        tester,
+        app: await createTestApp(prefs: {'flutter.level': 'beginner'}),
+      );
       await openSettings(tester);
       final tile = find.byKey(SkillLevelCard.tileKey(SkillLevel.advanced));
-      await tester.scrollUntilVisible(tile, 200,
-          scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        tile,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.ensureVisible(tile);
       await tester.pumpAndSettle();
       await tester.tap(tile);
       await tester.pumpAndSettle();
       expect(app.settings.level, SkillLevel.advanced);
       expect(
-          find.descendant(
-              of: tile, matching: find.byIcon(Icons.check_circle_rounded)),
-          findsOneWidget);
+        find.descendant(
+          of: tile,
+          matching: find.byIcon(Icons.check_circle_rounded),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('the first start asks for a level', (tester) async {
@@ -349,29 +511,49 @@ void main() {
       testWidgets('theme $id: textures and levels meet accessibility '
           'guidelines', (tester) async {
         final handle = tester.ensureSemantics();
-        await pumpApp(tester,
-            app: await createTestApp(prefs: {'flutter.theme': id}),
-            screen: const Size(393, 1200));
+        await pumpApp(
+          tester,
+          app: await createTestApp(prefs: {'flutter.theme': id}),
+          screen: const Size(393, 1200),
+        );
         await openTools(tester);
         await scrollTools(tester, find.widgetWithText(ChoiceChip, '笔刷痕'));
-        await expectLater(tester, meetsGuideline(textContrastGuideline),
-            reason: '$id text contrast');
-        await expectLater(tester, meetsGuideline(androidTapTargetGuideline),
-            reason: '$id tap targets');
-        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline),
-            reason: '$id labels');
+        await expectLater(
+          tester,
+          meetsGuideline(textContrastGuideline),
+          reason: '$id text contrast',
+        );
+        await expectLater(
+          tester,
+          meetsGuideline(androidTapTargetGuideline),
+          reason: '$id tap targets',
+        );
+        await expectLater(
+          tester,
+          meetsGuideline(labeledTapTargetGuideline),
+          reason: '$id labels',
+        );
         await closeTools(tester);
 
         await openSettings(tester);
         final card = find.byType(SkillLevelCard);
-        await tester.scrollUntilVisible(card, 200,
-            scrollable: find.byType(Scrollable).first);
+        await tester.scrollUntilVisible(
+          card,
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
         await tester.ensureVisible(card);
         await tester.pumpAndSettle();
-        await expectLater(tester, meetsGuideline(textContrastGuideline),
-            reason: '$id settings text contrast');
-        await expectLater(tester, meetsGuideline(androidTapTargetGuideline),
-            reason: '$id settings tap targets');
+        await expectLater(
+          tester,
+          meetsGuideline(textContrastGuideline),
+          reason: '$id settings text contrast',
+        );
+        await expectLater(
+          tester,
+          meetsGuideline(androidTapTargetGuideline),
+          reason: '$id settings tap targets',
+        );
         handle.dispose();
       });
     }
@@ -386,14 +568,19 @@ void main() {
       expect(size.height, greaterThanOrEqualTo(48), reason: 'easy to tap');
       await tester.tap(find.byIcon(MenuButton.icon));
       await tester.pumpAndSettle();
-      expect(find.widgetWithIcon(ListTile, Icons.settings_rounded),
-          findsOneWidget);
+      expect(
+        find.widgetWithIcon(ListTile, Icons.settings_rounded),
+        findsOneWidget,
+      );
       await tester.tapAt(const Offset(5, 600));
       await tester.pumpAndSettle();
 
       await openTab(tester, 1);
-      expect(find.byIcon(MenuButton.icon), findsOneWidget,
-          reason: 'My Paintings has the same button');
+      expect(
+        find.byIcon(MenuButton.icon),
+        findsOneWidget,
+        reason: 'My Paintings has the same button',
+      );
     });
   });
 
@@ -412,26 +599,33 @@ void main() {
       expect(settings.textScale.value, 1);
     });
 
-    testWidgets('the buttons and the slider make all text bigger',
-        (tester) async {
+    testWidgets('the buttons and the slider make all text bigger', (
+      tester,
+    ) async {
       final app = await pumpApp(tester);
       await openSettings(tester);
       final larger = find.byTooltip('文字大一点');
-      await tester.scrollUntilVisible(larger, 200,
-          scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        larger,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.ensureVisible(larger);
       await tester.pumpAndSettle();
       await tester.tap(larger);
       await tester.pumpAndSettle();
       expect(app.settings.textScale.value, closeTo(1.1, 1e-9));
       expect(
-          MediaQuery.textScalerOf(tester.element(find.byType(TextSizeCard)))
-              .scale(10),
-          closeTo(11, 0.01),
-          reason: 'every page gets the bigger text');
+        MediaQuery.textScalerOf(tester.element(find.byType(TextSizeCard)))
+            .scale(10),
+        closeTo(11, 0.01),
+        reason: 'every page gets the bigger text',
+      );
 
       await tester.drag(
-          find.byKey(TextSizeCard.sliderKey), const Offset(600, 0));
+        find.byKey(TextSizeCard.sliderKey),
+        const Offset(600, 0),
+      );
       await tester.pumpAndSettle();
       expect(app.settings.textScale.value, AppSettings.maxTextScale);
       final smaller = find.byTooltip('文字小一点');
@@ -444,19 +638,25 @@ void main() {
     });
 
     for (final language in ['zh', 'en']) {
-      testWidgets('the largest text still fits a small phone ($language)',
-          (tester) async {
-        final app = await createTestApp(prefs: {
-          'flutter.language': language,
-          'flutter.textScale': AppSettings.maxTextScale,
-        });
+      testWidgets('the largest text still fits a small phone ($language)', (
+        tester,
+      ) async {
+        final app = await createTestApp(
+          prefs: {
+            'flutter.language': language,
+            'flutter.textScale': AppSettings.maxTextScale,
+          },
+        );
         await pumpApp(tester, app: app, screen: const Size(360, 640));
         app.settings.brush = BrushType.stamp;
         await tester.pumpAndSettle();
         await openTools(tester);
         expect(tester.takeException(), isNull, reason: 'tools');
-        await tester.tap(find.byTooltip(
-            language == 'zh' ? '收起画笔和颜色' : 'Close brushes and colors'));
+        await tester.tap(
+          find.byTooltip(
+            language == 'zh' ? '收起画笔和颜色' : 'Close brushes and colors',
+          ),
+        );
         await tester.pumpAndSettle();
         for (final tab in [1, 0]) {
           await openTab(tester, tab);
@@ -464,8 +664,10 @@ void main() {
         }
         await openSettings(tester);
         await tester.scrollUntilVisible(
-            find.byIcon(Icons.info_outline_rounded), 300,
-            scrollable: find.byType(Scrollable).first);
+          find.byIcon(Icons.info_outline_rounded),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
         expect(tester.takeException(), isNull, reason: 'settings');
         await leaveSettings(tester);
       });
@@ -475,40 +677,64 @@ void main() {
       testWidgets('theme $id: the text size controls meet accessibility '
           'guidelines', (tester) async {
         final handle = tester.ensureSemantics();
-        await pumpApp(tester,
-            app: await createTestApp(prefs: {'flutter.theme': id}),
-            screen: const Size(393, 1200));
-        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline),
-            reason: '$id menu button label');
+        await pumpApp(
+          tester,
+          app: await createTestApp(prefs: {'flutter.theme': id}),
+          screen: const Size(393, 1200),
+        );
+        await expectLater(
+          tester,
+          meetsGuideline(labeledTapTargetGuideline),
+          reason: '$id menu button label',
+        );
         await openSettings(tester);
         final card = find.byType(TextSizeCard);
-        await tester.scrollUntilVisible(card, 200,
-            scrollable: find.byType(Scrollable).first);
+        await tester.scrollUntilVisible(
+          card,
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
         await tester.ensureVisible(card);
         await tester.pumpAndSettle();
-        await expectLater(tester, meetsGuideline(textContrastGuideline),
-            reason: '$id text contrast');
-        await expectLater(tester, meetsGuideline(androidTapTargetGuideline),
-            reason: '$id tap targets');
-        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline),
-            reason: '$id labels');
+        await expectLater(
+          tester,
+          meetsGuideline(textContrastGuideline),
+          reason: '$id text contrast',
+        );
+        await expectLater(
+          tester,
+          meetsGuideline(androidTapTargetGuideline),
+          reason: '$id tap targets',
+        );
+        await expectLater(
+          tester,
+          meetsGuideline(labeledTapTargetGuideline),
+          reason: '$id labels',
+        );
         handle.dispose();
       });
     }
   });
 
   group('Sample paintings for each level', () {
-    testWidgets('each opens at its own size and uses its level\'s tools',
-        (tester) async {
+    testWidgets('each opens at its own size and uses its level\'s tools', (
+      tester,
+    ) async {
       for (final level in SkillLevel.values) {
-        final doc = (await tester
-            .runAsync(() => LevelSamples.load(level, const S('zh'))))!;
+        final doc = (await tester.runAsync(
+          () => LevelSamples.load(level, const S('zh')),
+        ))!;
         expect(doc.paperSize, const Size(1200, 800), reason: level.name);
         expect(doc.strokes.length, greaterThan(50), reason: level.name);
         final brushes = doc.strokes.map((s) => s.brush).toSet();
-        expect(brushes.every(level.allows), isTrue,
-            reason: '${level.name} uses only its own brushes: $brushes');
-        final textures = doc.strokes.any((s) => s.texture != StrokeTexture.none);
+        expect(
+          brushes.every(level.allows),
+          isTrue,
+          reason: '${level.name} uses only its own brushes: $brushes',
+        );
+        final textures = doc.strokes.any(
+          (s) => s.texture != StrokeTexture.none,
+        );
         final blends = doc.strokes.any((s) => s.blend != StrokeBlend.normal);
         final gradients = doc.strokes.any((s) => s.gradient != null);
         switch (level) {
@@ -523,51 +749,100 @@ void main() {
       }
     });
 
-    testWidgets('names and the sun\'s greeting follow the language',
-        (tester) async {
+    testWidgets('names and the sun\'s greeting follow the language', (
+      tester,
+    ) async {
       final en = (await tester.runAsync(
-          () => LevelSamples.load(SkillLevel.beginner, const S('en'))))!;
-      expect(en.meta.name, 'A Happy Day');
+        () => LevelSamples.load(SkillLevel.beginner, const S('en')),
+      ))!;
+      expect(en.meta.name, 'A Happy Day (sample)');
       final words = en.strokes.map((s) => s.text?.text).whereType<String>();
       expect(words, contains('Hello!'));
       expect(words, isNot(contains('你好呀！')));
       final lake = (await tester.runAsync(
-          () => LevelSamples.load(SkillLevel.advanced, const S('zh'))))!;
-      expect(lake.meta.name, '湖畔晨光');
+        () => LevelSamples.load(SkillLevel.advanced, const S('zh')),
+      ))!;
+      expect(lake.meta.name, '湖畔晨光（示例）');
     });
 
     testWidgets('a kid gets their level\'s sample once, and another when '
         'they pick another level', (tester) async {
-      final app = await createTestApp(prefs: {
-        'flutter.level': 'advanced',
-        'flutter.samplesAdded': <String>[],
-      });
+      final app = await createTestApp(
+        prefs: {
+          'flutter.level': 'advanced',
+          'flutter.samplesAdded': <String>[],
+        },
+      );
       await app.session.addSampleOnce();
       await app.session.addSampleOnce();
       var list = await app.store.list();
-      expect([for (final m in list) m.name], ['湖畔晨光'], reason: 'once');
+      expect([for (final m in list) m.name], ['湖畔晨光（示例）'], reason: 'once');
 
       app.settings.level = SkillLevel.intermediate;
       await app.session.addSampleOnce();
       list = await app.store.list();
-      expect({for (final m in list) m.name}, {'湖畔晨光', '海边的晚霞'});
+      expect({for (final m in list) m.name}, {'湖畔晨光（示例）', '海边的晚霞（示例）'});
       expect(app.settings.sampleAddedFor(SkillLevel.beginner), isFalse);
     });
 
-    testWidgets('picking another level in the app brings its sample',
-        (tester) async {
-      final app = await createTestApp(prefs: {
-        'flutter.level': 'beginner',
-        'flutter.samplesAdded': <String>['beginner'],
-      });
+    testWidgets('picking another level in the app brings its sample, with a '
+        'card while it\'s made and a message once it\'s in', (tester) async {
+      final app = await createTestApp(
+        prefs: {
+          'flutter.level': 'beginner',
+          'flutter.samplesAdded': <String>['beginner'],
+        },
+      );
       await pumpApp(tester, app: app);
+
+      // While one is being made (here it's done before the next frame, so
+      // the session's state is set by hand), a card says so, over any page.
+      app.session.makingSample.value = '湖畔晨光（示例）';
+      await tester.pump();
+      expect(find.byType(SampleProgressCard), findsOneWidget);
+      expect(find.text('正在把「湖畔晨光（示例）」放进我的画作…'), findsOneWidget);
+      app.session.makingSample.value = null;
+      await tester.pump();
+      expect(find.byType(SampleProgressCard), findsNothing);
+
       app.settings.level = SkillLevel.advanced;
       for (var i = 0; i < 5; i++) {
         await tester.pumpAndSettle();
       }
+      expect(find.byType(SampleProgressCard), findsNothing);
+      expect(find.text('「湖畔晨光（示例）」已经放进我的画作了'), findsOneWidget);
       final list = await app.store.list();
-      expect([for (final m in list) m.name], contains('湖畔晨光'));
+      expect([for (final m in list) m.name], contains('湖畔晨光（示例）'));
       expect(app.settings.sampleAddedFor(SkillLevel.advanced), isTrue);
+    });
+
+    testWidgets('a big sample comes with its thumbnail painted beforehand', (
+      tester,
+    ) async {
+      final app = await createTestApp(
+        prefs: {
+          'flutter.level': 'advanced',
+          'flutter.samplesAdded': <String>[],
+        },
+      );
+      final making = <String?>[];
+      app.session.makingSample.addListener(
+        () => making.add(app.session.makingSample.value),
+      );
+      String? ready;
+      app.session.onSampleAdded = (name) => ready = name;
+      expect(await app.session.addSampleOnce(), isTrue);
+      expect(making, ['湖畔晨光（示例）', null]);
+      expect(ready, '湖畔晨光（示例）');
+      final id = (await app.store.list()).single.id;
+      final painted = await rootBundle.load('assets/samples/advanced.png');
+      expect(await app.store.thumbnail(id), painted.buffer.asUint8List());
+      expect(await app.session.addSampleOnce(), isFalse, reason: 'once');
+      expect(
+        await LevelSamples.thumbnail(SkillLevel.beginner),
+        isNull,
+        reason: 'its greeting follows the language: painted when added',
+      );
     });
 
     test('kids from before v4 count as having the beginner sample', () async {

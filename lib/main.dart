@@ -8,6 +8,7 @@ import 'app_theme.dart';
 import 'drawing/canvas_page.dart';
 import 'family.dart';
 import 'gallery/gallery_page.dart';
+import 'gallery/sample_progress_card.dart';
 import 'gallery/store_backend.dart';
 import 'l10n.dart';
 import 'music/background_music.dart';
@@ -47,14 +48,16 @@ Future<void> main() async {
     library: music,
     engine: AudioPlayersEngine(),
   )..start();
-  runApp(PaintApp(
-    settings: settings,
-    session: session,
-    themes: themes,
-    music: music,
-    family: family,
-    player: player,
-  ));
+  runApp(
+    PaintApp(
+      settings: settings,
+      session: session,
+      themes: themes,
+      music: music,
+      family: family,
+      player: player,
+    ),
+  );
 }
 
 /// Lists the bundled fonts' licenses on Flutter's licenses page, as the
@@ -63,8 +66,9 @@ void _registerFontLicenses() {
   LicenseRegistry.addLicense(() async* {
     for (final font in kFonts) {
       if (font.licenseAsset case final asset?) {
-        yield LicenseEntryWithLineBreaks(
-            [font.family!], await rootBundle.loadString(asset));
+        yield LicenseEntryWithLineBreaks([
+          font.family!,
+        ], await rootBundle.loadString(asset));
       }
     }
   });
@@ -97,8 +101,10 @@ class PaintApp extends StatelessWidget {
       _cache.putIfAbsent((themeId, fontId), () {
         // An unknown saved theme id (say, a removed theme) falls back to the
         // first bundled one.
-        final spec = themes.firstWhere((t) => t.id == themeId,
-            orElse: () => themes.first);
+        final spec = themes.firstWhere(
+          (t) => t.id == themeId,
+          orElse: () => themes.first,
+        );
         return CuteTheme.build(spec, fontFamily: fontById(fontId).family);
       });
 
@@ -129,9 +135,10 @@ class PaintApp extends StatelessWidget {
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.linear(
-                MediaQuery.textScalerOf(context).scale(16) /
-                    16 *
-                    settings.textScale.value),
+              MediaQuery.textScalerOf(context).scale(16) /
+                  16 *
+                  settings.textScale.value,
+            ),
           ),
           child: Listener(
             behavior: HitTestBehavior.translucent,
@@ -190,18 +197,46 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    widget.session.onSaveError = _showSaveError;
+    widget.session
+      ..onSaveError = _showSaveError
+      ..onSampleAdded = _showSampleAdded
+      ..makingSample.addListener(_onMakingSample);
     widget.player?.onError = _showMusicError;
-    // Right after the first-start setup (other times it's already there).
-    widget.session.addSampleOnce();
     _level = widget.settings.level;
     widget.settings.addListener(_onSettings);
-    // After the first frame, so the snackbar and translations are ready.
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) => IncomingFiles.listen(_openIncoming));
+    // After the first frame, so the snackbar, the progress card and
+    // translations are ready.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      IncomingFiles.listen(_openIncoming);
+      // One being added already (a kid's first start)...
+      _onMakingSample();
+      // ...or right after the first-start setup (other times it's there).
+      widget.session.addSampleOnce();
+    });
   }
 
   late SkillLevel _level;
+
+  /// Says a sample painting is being added while it is: a big one takes a
+  /// moment.
+  OverlayEntry? _sampleProgress;
+
+  void _onMakingSample() {
+    _sampleProgress?.remove();
+    _sampleProgress = null;
+    final name = widget.session.makingSample.value;
+    if (name == null || !mounted) return;
+    _sampleProgress = OverlayEntry(
+      builder: (_) => SampleProgressCard(name: name),
+    );
+    Overlay.of(context, rootOverlay: true).insert(_sampleProgress!);
+  }
+
+  void _showSampleAdded(String name) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(S.of(context).sampleReady(name))));
+  }
 
   /// Picking another level brings that level's sample painting (once).
   void _onSettings() {
@@ -213,15 +248,24 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   /// A painting file opened from another app (Android "open with").
   Future<void> _openIncoming(Uint8List bytes) async {
     if (!mounted) return;
-    await importBytes(ScaffoldMessenger.of(context), S.of(context),
-        widget.session, bytes, () => _selectTab(0));
+    await importBytes(
+      ScaffoldMessenger.of(context),
+      S.of(context),
+      widget.session,
+      bytes,
+      () => _selectTab(0),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     widget.settings.removeListener(_onSettings);
-    widget.session.onSaveError = null;
+    widget.session
+      ..onSaveError = null
+      ..onSampleAdded = null
+      ..makingSample.removeListener(_onMakingSample);
+    _sampleProgress?.remove();
     widget.player?.onError = null;
     super.dispose();
   }
@@ -235,14 +279,15 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   void _showMusicError(Object error) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(S.of(context).musicPlayFailed)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(S.of(context).musicPlayFailed)));
   }
 
   void _showSaveError(Object error) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(S.of(context).autosaveFailed(error))));
+      SnackBar(content: Text(S.of(context).autosaveFailed(error))),
+    );
   }
 
   /// Screens at least this wide get a side navigation rail.
@@ -250,15 +295,16 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   void _openSettings() {
     widget.session.save();
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) =>
-          SettingsPage(
-        settings: widget.settings,
-        themes: widget.themes,
-        music: widget.music,
-        family: widget.family,
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SettingsPage(
+          settings: widget.settings,
+          themes: widget.themes,
+          music: widget.music,
+          family: widget.family,
+        ),
       ),
-    ));
+    );
   }
 
   void _selectTab(int i) {
@@ -294,8 +340,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         ),
       ],
     );
-    final indicator =
-        navColor(_tab).withValues(alpha: ThemeSpec.navIndicatorAlpha);
+    final indicator = navColor(_tab)
+        .withValues(alpha: ThemeSpec.navIndicatorAlpha);
 
     // Tablets and turned phones: tabs move to a side rail, leaving the full
     // height for the paper (Material's guidance for medium+ widths).
@@ -304,8 +350,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         body: Row(
           children: [
             ClipRRect(
-              borderRadius:
-                  BorderRadius.horizontal(right: Radius.circular(cute.radius)),
+              borderRadius: BorderRadius.horizontal(
+                right: Radius.circular(cute.radius),
+              ),
               child: NavigationRail(
                 selectedIndex: _tab,
                 onDestinationSelected: _selectTab,
@@ -317,8 +364,11 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                       in destinations.indexed)
                     NavigationRailDestination(
                       icon: Icon(icon, color: navColor(i)),
-                      selectedIcon:
-                          Icon(selectedIcon, color: navColor(i), size: 28),
+                      selectedIcon: Icon(
+                        selectedIcon,
+                        color: navColor(i),
+                        size: 28,
+                      ),
                       label: Text(label),
                     ),
                 ],

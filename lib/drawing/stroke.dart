@@ -43,13 +43,14 @@ class Stroke {
     this.blur = 0,
     this.blend = StrokeBlend.normal,
     this.texture = StrokeTexture.none,
+    this.fadesGrain = false,
     List<PointVector>? points,
     this.area,
     this.layer,
     this.photo,
     this.isComplete = false,
-  })  : seed = seed ?? math.Random().nextInt(1 << 30),
-        points = points ?? [];
+  }) : seed = seed ?? math.Random().nextInt(1 << 30),
+       points = points ?? [];
 
   /// A text item anchored at [anchor] (its left, center or right edge,
   /// depending on alignment, at the top of the text).
@@ -60,20 +61,19 @@ class Stroke {
     double opacity = 1,
     StrokeTransform? transform,
     String? layer,
-  }) =>
-      Stroke(
-        brush: BrushType.text,
-        color: color,
-        size: content.fontSize / BrushType.text.sizeFactor,
-        opacity: opacity,
-        usesRealPressure: false,
-        seed: 0,
-        text: content,
-        transform: transform,
-        layer: layer,
-        isComplete: true,
-        points: [PointVector(anchor.dx, anchor.dy, 0.5)],
-      );
+  }) => Stroke(
+    brush: BrushType.text,
+    color: color,
+    size: content.fontSize / BrushType.text.sizeFactor,
+    opacity: opacity,
+    usesRealPressure: false,
+    seed: 0,
+    text: content,
+    transform: transform,
+    layer: layer,
+    isComplete: true,
+    points: [PointVector(anchor.dx, anchor.dy, 0.5)],
+  );
 
   /// A picture placed with its top-left corner at [topLeft]: a photo to
   /// trace, say. It moves, turns, resizes and fades like any stroke. Older
@@ -83,19 +83,18 @@ class Stroke {
     required StrokePhoto photo,
     double opacity = 1,
     String? layer,
-  }) =>
-      Stroke(
-        brush: BrushType.pen,
-        color: const Color(0xFF000000),
-        size: 0.01,
-        opacity: opacity,
-        usesRealPressure: false,
-        seed: 0,
-        photo: photo,
-        layer: layer,
-        isComplete: true,
-        points: [PointVector(topLeft.dx, topLeft.dy, 0.5)],
-      );
+  }) => Stroke(
+    brush: BrushType.pen,
+    color: const Color(0xFF000000),
+    size: 0.01,
+    opacity: opacity,
+    usesRealPressure: false,
+    seed: 0,
+    photo: photo,
+    layer: layer,
+    isComplete: true,
+    points: [PointVector(topLeft.dx, topLeft.dy, 0.5)],
+  );
 
   /// A copy of any stroke shifted by [delta]. Strokes are never changed in
   /// place (undo snapshots rely on that), so moving makes a new one. The
@@ -108,11 +107,12 @@ class Stroke {
     }
     if (text != null) {
       return Stroke.text(
-          anchor: anchor + delta,
-          content: text!,
-          color: color,
-          opacity: opacity,
-          layer: layer);
+        anchor: anchor + delta,
+        content: text!,
+        color: color,
+        opacity: opacity,
+        layer: layer,
+      );
     }
     return _copy(
       delta: delta,
@@ -146,12 +146,13 @@ class Stroke {
     final l = layer == null ? this.layer : layer();
     if (text != null) {
       return Stroke.text(
-          anchor: anchor,
-          content: text!,
-          color: c,
-          opacity: o,
-          transform: t,
-          layer: l);
+        anchor: anchor,
+        content: text!,
+        color: c,
+        opacity: o,
+        transform: t,
+        layer: l,
+      );
     }
     return _copy(
       delta: Offset.zero,
@@ -192,6 +193,7 @@ class Stroke {
       blur: blur,
       blend: blend,
       texture: texture,
+      fadesGrain: fadesGrain,
       points: points.sublist(0, n),
       layer: layer,
     );
@@ -226,6 +228,7 @@ class Stroke {
         blur: blur,
         blend: blend,
         texture: texture,
+        fadesGrain: fadesGrain,
         layer: layer,
         isComplete: true,
       );
@@ -245,6 +248,7 @@ class Stroke {
       blur: blur,
       blend: blend,
       texture: texture,
+      fadesGrain: fadesGrain,
       isComplete: true,
       points: [
         for (final p in points)
@@ -271,7 +275,10 @@ class Stroke {
     if (text != null) return textBounds.contains(p);
     if (photo != null) return _localBounds.contains(p);
     if (!_localBounds.inflate(reach).contains(p)) return false;
-    final candidates = [p, if (mirrorX case final m?) Offset(2 * m - p.dx, p.dy)];
+    final candidates = [
+      p,
+      if (mirrorX case final m?) Offset(2 * m - p.dx, p.dy),
+    ];
     final tolerance = width / 2 + reach;
     for (final q in candidates) {
       if (fill && _fillArea.contains(q)) return true;
@@ -290,7 +297,10 @@ class Stroke {
     final ab = b - a;
     final len2 = ab.distanceSquared;
     if (len2 == 0) return (p - a).distance;
-    final t = (((p - a).dx * ab.dx + (p - a).dy * ab.dy) / len2).clamp(0.0, 1.0);
+    final t = (((p - a).dx * ab.dx + (p - a).dy * ab.dy) / len2).clamp(
+      0.0,
+      1.0,
+    );
     return (p - (a + ab * t)).distance;
   }
 
@@ -311,7 +321,8 @@ class Stroke {
       for (var k = 0; k <= steps; k++) {
         final q = Offset.lerp(a, b, k / steps)!;
         if (box.contains(place(q))) return true;
-        if (mirrorX case final m? when box.contains(place(Offset(2 * m - q.dx, q.dy)))) {
+        if (mirrorX case final m?
+            when box.contains(place(Offset(2 * m - q.dx, q.dy)))) {
           return true;
         }
       }
@@ -339,28 +350,29 @@ class Stroke {
     double blur = 0,
     StrokeBlend blend = StrokeBlend.normal,
     StrokeTexture texture = StrokeTexture.none,
+    bool fadesGrain = false,
     String? layer,
     bool isComplete = false,
-  }) =>
-      Stroke(
-        brush: brush,
-        color: color,
-        size: size,
-        opacity: opacity,
-        usesRealPressure: false,
-        seed: seed,
-        stamp: stamp,
-        mirrorX: mirrorX,
-        shape: shape,
-        fill: fill && shape.closed,
-        layer: layer,
-        transform: transform,
-        gradient: gradient,
-        blur: blur,
-        blend: blend,
-        texture: texture,
-        isComplete: isComplete,
-      )..setShapeEnds(from, to);
+  }) => Stroke(
+    brush: brush,
+    color: color,
+    size: size,
+    opacity: opacity,
+    usesRealPressure: false,
+    seed: seed,
+    stamp: stamp,
+    mirrorX: mirrorX,
+    shape: shape,
+    fill: fill && shape.closed,
+    layer: layer,
+    transform: transform,
+    gradient: gradient,
+    blur: blur,
+    blend: blend,
+    texture: texture,
+    fadesGrain: fadesGrain,
+    isComplete: isComplete,
+  )..setShapeEnds(from, to);
 
   final BrushType brush;
   final Color color;
@@ -430,6 +442,11 @@ class Stroke {
   /// The grain its paint is laid with. Text, the eraser and the blender
   /// ignore it.
   final StrokeTexture texture;
+
+  /// Whether the grain gives way on a thin line, so the line still shows
+  /// (strokes drawn since 5.4.1, saved as `fadesGrain`). Older strokes keep
+  /// the full grain at any width, as they were painted with it.
+  final bool fadesGrain;
   TextPainter? _textPainter;
   Offset? _from;
   Offset? _to;
@@ -460,8 +477,7 @@ class Stroke {
   }
 
   /// A shape smaller than this (a tap rather than a drag) is discarded.
-  bool get isDegenerateShape =>
-      shape != null && (_to! - _from!).distance < 3;
+  bool get isDegenerateShape => shape != null && (_to! - _from!).distance < 3;
 
   Path get _shapePath =>
       shape!.path(_from!, _to!, arrowHead: math.max(14, width * 2.5));
@@ -482,10 +498,13 @@ class Stroke {
   Offset get anchor => points.first;
 
   TextPainter get _laidOutText => _textPainter ??= TextPainter(
-        text: TextSpan(text: text!.text, style: text!.style(color.withValues(alpha: 1))),
-        textAlign: text!.align,
-        textDirection: TextDirection.ltr,
-      )..layout();
+    text: TextSpan(
+      text: text!.text,
+      style: text!.style(color.withValues(alpha: 1)),
+    ),
+    textAlign: text!.align,
+    textDirection: TextDirection.ltr,
+  )..layout();
 
   /// Where the text's top-left corner goes, given its alignment.
   Offset get _textTopLeft {
@@ -548,7 +567,8 @@ class Stroke {
     final r = _bounds;
     if (mirrorX case final m?) {
       return r.expandToInclude(
-          Rect.fromLTRB(2 * m - r.right, r.top, 2 * m - r.left, r.bottom));
+        Rect.fromLTRB(2 * m - r.right, r.top, 2 * m - r.left, r.bottom),
+      );
     }
     return r;
   }
@@ -586,7 +606,11 @@ class Stroke {
       final p0 = pts[i];
       final p1 = pts[i + 1];
       path.quadraticBezierTo(
-          p0.dx, p0.dy, (p0.dx + p1.dx) / 2, (p0.dy + p1.dy) / 2);
+        p0.dx,
+        p0.dy,
+        (p0.dx + p1.dx) / 2,
+        (p0.dy + p1.dy) / 2,
+      );
     }
     return path..close();
   }
@@ -594,47 +618,48 @@ class Stroke {
   /// Points are stored as a flat [x, y, pressure, x, y, pressure, ...] list,
   /// rounded to keep saved files small.
   Map<String, Object?> toJson() => {
-        'brush': brush.name,
-        'color': color.toARGB32(),
-        'size': size,
-        'opacity': opacity,
-        'realPressure': usesRealPressure,
-        'seed': seed,
-        if (brush == BrushType.stamp) 'stamp': stamp.name,
-        if (mirrorX != null) 'mirrorX': _round(mirrorX!, 10),
-        if (transform != null) 'transform': transform!.toJson(),
-        if (gradient != null) 'gradient': gradient!.toJson(),
-        if (blur > 0) 'blur': _round(blur, 10),
-        if (blend != StrokeBlend.normal) 'blend': blend.name,
-        if (texture != StrokeTexture.none) 'texture': texture.name,
-        if (text != null) 'text': text!.toJson(),
-        if (layer != null) 'layer': layer,
-        if (photo != null) 'photo': photo!.toJson(),
-        // Shapes are stored by their two corners and rebuilt on load.
-        if (shape != null) ...{
-          'shape': shape!.name,
-          'fill': fill,
-          'from': [_round(_from!.dx, 10), _round(_from!.dy, 10)],
-          'to': [_round(_to!.dx, 10), _round(_to!.dy, 10)],
-          'points': const <num>[],
-        } else ...{
-          if (fill) 'fill': true,
-          if (area != null)
-            'area': [
-              for (final loop in area!)
-                [
-                  for (final p in loop) ...[_round(p.dx, 10), _round(p.dy, 10)],
-                ],
+    'brush': brush.name,
+    'color': color.toARGB32(),
+    'size': size,
+    'opacity': opacity,
+    'realPressure': usesRealPressure,
+    'seed': seed,
+    if (brush == BrushType.stamp) 'stamp': stamp.name,
+    if (mirrorX != null) 'mirrorX': _round(mirrorX!, 10),
+    if (transform != null) 'transform': transform!.toJson(),
+    if (gradient != null) 'gradient': gradient!.toJson(),
+    if (blur > 0) 'blur': _round(blur, 10),
+    if (blend != StrokeBlend.normal) 'blend': blend.name,
+    if (texture != StrokeTexture.none) 'texture': texture.name,
+    if (texture != StrokeTexture.none && fadesGrain) 'fadesGrain': true,
+    if (text != null) 'text': text!.toJson(),
+    if (layer != null) 'layer': layer,
+    if (photo != null) 'photo': photo!.toJson(),
+    // Shapes are stored by their two corners and rebuilt on load.
+    if (shape != null) ...{
+      'shape': shape!.name,
+      'fill': fill,
+      'from': [_round(_from!.dx, 10), _round(_from!.dy, 10)],
+      'to': [_round(_to!.dx, 10), _round(_to!.dy, 10)],
+      'points': const <num>[],
+    } else ...{
+      if (fill) 'fill': true,
+      if (area != null)
+        'area': [
+          for (final loop in area!)
+            [
+              for (final p in loop) ...[_round(p.dx, 10), _round(p.dy, 10)],
             ],
-          'points': [
-            for (final p in points) ...[
-              _round(p.x, 10),
-              _round(p.y, 10),
-              _round(p.pressure ?? 0.5, 100),
-            ],
-          ],
-        },
-      };
+        ],
+      'points': [
+        for (final p in points) ...[
+          _round(p.x, 10),
+          _round(p.y, 10),
+          _round(p.pressure ?? 0.5, 100),
+        ],
+      ],
+    },
+  };
 
   factory Stroke.fromJson(Map<String, Object?> json) {
     // On a layer since v5 (none means the base layer).
@@ -647,6 +672,8 @@ class Stroke {
     final blend = StrokeBlend.fromName(json['blend'] as String?);
     // Nor textures before v3.1.
     final texture = StrokeTexture.fromName(json['texture'] as String?);
+    // Nor a grain that gives way on thin lines before v5.4.1.
+    final fadesGrain = json['fadesGrain'] == true;
     if (json['text'] case final Map<String, Object?> text) {
       final p = (json['points'] as List).cast<num>();
       return Stroke.text(
@@ -682,6 +709,7 @@ class Stroke {
         blur: blur,
         blend: blend,
         texture: texture,
+        fadesGrain: fadesGrain,
         layer: layer,
         isComplete: true,
       );
@@ -703,6 +731,7 @@ class Stroke {
       blur: blur,
       blend: blend,
       texture: texture,
+      fadesGrain: fadesGrain,
       isComplete: true,
       // Pictures since v5.1.
       photo: StrokePhoto.fromJson(json['photo']),
@@ -710,19 +739,24 @@ class Stroke {
       // Paint bucket areas since v4.1.
       area: switch (json['area']) {
         final List<Object?> loops => [
-            for (final loop in loops.cast<List<Object?>>())
-              [
-                for (var i = 0; i + 1 < loop.length; i += 2)
-                  Offset((loop[i]! as num).toDouble(),
-                      (loop[i + 1]! as num).toDouble()),
-              ],
-          ],
+          for (final loop in loops.cast<List<Object?>>())
+            [
+              for (var i = 0; i + 1 < loop.length; i += 2)
+                Offset(
+                  (loop[i]! as num).toDouble(),
+                  (loop[i + 1]! as num).toDouble(),
+                ),
+            ],
+        ],
         _ => null,
       },
       points: [
         for (var i = 0; i + 2 < flat.length; i += 3)
-          PointVector(flat[i].toDouble(), flat[i + 1].toDouble(),
-              flat[i + 2].toDouble()),
+          PointVector(
+            flat[i].toDouble(),
+            flat[i + 1].toDouble(),
+            flat[i + 2].toDouble(),
+          ),
       ],
     );
   }

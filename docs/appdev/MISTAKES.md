@@ -62,8 +62,16 @@
 59. Release APKs are split per CPU type, which adds 4000 (x86_64), 2000 (arm64) or 1000 (armv7) to the version code. Build emulator APKs with `--split-per-abi` (or `tool\build_apk.ps1`); an unsplit APK has a lower code and fails to install over them as a downgrade.
 60. Every child of the canvas stacks must stay positioned (`Positioned`, `Positioned.fill`, `CornerFloat`), even when it shows nothing: a `Stack` with loose constraints sizes itself to its non-positioned children, so a builder returning `SizedBox.shrink()` collapses the paper area to 0×0 (NaN layout). Wrap the builder in the `Positioned`, not the other way round.
 61. When a new floating control goes on the paper, search the tests for strokes, drags and taps at fixed spots in its corner (on the 393×829 test phone too) and move them clear, so they don't land on the control.
+62. Don't run `dart format` on a whole existing file: the repo isn't laid out by the current formatter, so it rewrites hundreds of untouched lines and buries the real change. Format only new files, and match the layout around an edit by hand.
+63. Before changing how existing strokes paint, count how many strokes in the samples (and the local tarot cards) the change touches. If it would change approved art, put the new look behind a flag that only new strokes get.
 
 ## Log
+
+### 2026-10-28: The formatter rewrote whole files; a texture fix nearly changed the samples
+- **Symptom:** after `dart format` on six edited files, the diff showed 274 changed lines in `stroke.dart` and 522 in `v4_test.dart` for edits of a few lines each. And the first fix for thin textured lines (the grain fading on every thin stroke) would have changed 1,279 strokes of the approved 湖畔晨光 sample.
+- **Root cause:** the files were written in the formatter's older layout, and the new formatter rewraps everything. The texture fix was tried on test lines before checking which existing paintings use thin textured strokes.
+- **Fix:** kept the reformatting (no behavior change, analyze clean) and stopped formatting whole files; the texture fix only applies to strokes with `fadesGrain`, which new strokes get.
+- **Rule:** 62, 63.
 
 ### 2026-10-28: Test strokes landed on the new layers button
 - **Symptom:** five selection tests failed after the layers button was added (a stroke missing, a box selecting the wrong strokes).

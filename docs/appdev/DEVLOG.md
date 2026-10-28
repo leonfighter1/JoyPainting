@@ -1,5 +1,16 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v5.4.1 (thin textured lines, samples without the stall)
+- 5.4.0 after pushing: Web and iOS passed (live version.json 5.4.0+21).
+- Asked: a stall when changing the level (a progress bar while the sample is made, and "（示例）" in sample names); textured strokes showing no trail. The user later found the second fine on another computer.
+- Found by measuring (VM test, then a probe page in Chrome, `local_art/probe/`, not in git): adding a sample is mostly painting its gallery thumbnail, 4.2 s in Chrome for 湖畔晨光 and 2.7 s for 海边的晚霞; loading and saving it about 0.4 s. Textured strokes did show while drawing (Chrome, through the real canvas with simulated touches); asked, the user said to try a thin pen and a straight line: at size 1 the bristles texture hid the line entirely and the others left a faint dashed line (worst on 1× screens, which fits "fine on another computer").
+- Done: ready-made thumbnails for the intermediate and advanced samples; `makingSample` and `SampleProgressCard` while a sample is added, then a snackbar; sample names with （示例）; `fadesGrain` on new strokes so thin textured lines keep part of their paint (the samples and older paintings unchanged). Found by a test along the way: a reset could add the beginner sample before the first-start setup (`addSampleOnce` now waits for onboarding).
+- Checked by eye: the progress card on a phone (`local_art/screens/out/6_phone_sample_card.png`).
+- Mistakes: MISTAKES rules 62 and 63 (the formatter rewriting whole files; a texture fix that would have changed the approved advanced sample).
+- Harness: PASS (analyze 0 issues, 400 tests, build web ok).
+- Not tested: the progress card and the texture fix on a real phone or tablet.
+- Next: from the plan, background cache rebuilds and replay keyframes (measure first).
+
 ## 2026-10-28: v5.4.0 (a tidier drawer, the layers button, quiet between tracks)
 - After pushing 5.3.0 and 5.3.1: 5.3.0's Web passed and its iOS run was cancelled by the 5.3.1 push; 5.3.1's Web and iOS both passed (live version.json 5.3.1+20).
 - Asked (while 5.3.1 was being finished): drawer groups that open and close, everyday ones open by default; size and opacity under the colors; layers as their own draggable button next to the tools button; a 3-second pause after each music track; a shortcut list at least 500 wide that fits small screens.

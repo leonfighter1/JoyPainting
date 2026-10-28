@@ -54,6 +54,11 @@ class S {
   String get sampleGreeting => _t('你好呀！', 'Hello!');
   String get sampleSunsetName => _t('海边的晚霞', 'Sunset by the Sea');
   String get sampleLakeName => _t('湖畔晨光', 'Dawn on the Lake');
+  String sampleTitle(String name) => _t('$name（示例）', '$name (sample)');
+  String makingSample(String name) =>
+      _t('正在把「$name」放进我的画作…', 'Putting "$name" into My Paintings…');
+  String sampleReady(String name) =>
+      _t('「$name」已经放进我的画作了', '"$name" is in My Paintings');
   String get renameTitle => _t('给画作起个名字', 'Name this painting');
   String get nameLabel => _t('名字', 'Name');
   String get save => _t('保存', 'Save');
