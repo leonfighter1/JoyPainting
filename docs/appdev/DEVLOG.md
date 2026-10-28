@@ -7,6 +7,7 @@
 - Mistakes: none new.
 - Harness: PASS (analyze 0 issues, 418 tests, build web ok).
 - Not tested: on a real device.
+- After pushing: Web passed (live version.json 6.1.0+26). iOS failed at "Start on the iPhone and iPad simulators": the iPhone ran; the iPad was "not running" 30 s after launch, with no crash report and ordinary log lines up to the end (as with 4.1.0's iPhone, which the next run passed). This record's push runs the check again.
 - Next: from the plan, background cache rebuilds and replay keyframes (measure first).
 
 ## 2026-10-28: v6.0.0 (adding tools)
