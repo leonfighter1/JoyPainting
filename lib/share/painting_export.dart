@@ -63,16 +63,35 @@ String exportName(PaintingDoc doc, ExportFormat format) {
       '${two(d.hour)}${two(d.minute)}.${format.extension}';
 }
 
-Future<ExportedFile> exportPainting(PaintingDoc doc, ExportFormat format) async {
+/// Whether [doc] has a photo in it (to trace, see `Stroke.photo`).
+bool hasPhoto(PaintingDoc doc) => doc.strokes.any((s) => s.photo != null);
+
+/// [doc] without its photos: a picture of only what was drawn.
+PaintingDoc withoutPhotos(PaintingDoc doc) => PaintingDoc(
+      meta: doc.meta,
+      strokes: [
+        for (final s in doc.strokes)
+          if (s.photo == null) s,
+      ],
+      paper: doc.paper,
+      paperSize: doc.paperSize,
+      layers: doc.layers,
+    );
+
+/// [doc] as a file in [format]. Pictures and PDFs leave its photos out
+/// unless [photos]; a `.jypaint` always keeps everything.
+Future<ExportedFile> exportPainting(PaintingDoc doc, ExportFormat format,
+    {bool photos = true}) async {
   final size = paintingSize(doc);
+  final picture = photos ? doc : withoutPhotos(doc);
   final Uint8List bytes = switch (format) {
     ExportFormat.png => await renderPng(
-        doc.strokes, size, exportRatioFor(size),
+        picture.strokes, size, exportRatioFor(size),
             paper: doc.paper, layers: doc.layers),
-    ExportFormat.jpg => await _jpg(doc, size),
+    ExportFormat.jpg => await _jpg(picture, size),
     ExportFormat.pdf => await buildPdf(
         await renderPng(
-            doc.strokes, size, exportRatioFor(size),
+            picture.strokes, size, exportRatioFor(size),
             paper: doc.paper, layers: doc.layers),
         size,
         PdfPageFormat.a4),

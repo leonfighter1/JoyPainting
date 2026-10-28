@@ -196,8 +196,24 @@ class S {
   String get backupRemindersHint => _t(
       '画有一阵子没备份时，在「我的画作」上方提醒，一键把全部画作导出成一个文件。',
       'When the paintings have not been backed up for a while, My Paintings reminds you and exports them all as one file in one tap.');
+  String get storageKept => _t('这个浏览器会一直留着这些画', 'This browser keeps the paintings');
+  String get storageKeptHint => _t(
+      '浏览器答应了不会自己清除。清除浏览数据或换电脑前，还是要先备份。',
+      'It promised not to clear them by itself. Back them up before clearing browsing data or changing computers.');
+  String get storageAtRisk => _t('浏览器空间不够时，可能会清除这些画', 'The browser may clear the paintings when space runs low');
+  String get storageAtRiskHint => _t(
+      '记得经常备份。也可以请浏览器把它们留着。',
+      'Back them up often. You can also ask the browser to keep them.');
+  String get askToKeep => _t('请浏览器留着', 'Ask to keep them');
+  String get keepGranted => _t('浏览器答应留着这些画了', 'The browser will keep the paintings');
+  String get keepRefused => _t(
+      '浏览器没有答应。把这个网页加入书签或安装到桌面后，再试一次。',
+      'The browser said no. Bookmark this page or install it, then try again.');
   String get downloadImage => _t('下载图片', 'Download image');
   String get downloadAs => _t('选择下载格式', 'Download as');
+  String get exportPhotos => _t('照片也放进去', 'Include the photo');
+  String get exportPhotosHint => _t('关掉后，图片和 PDF 里只有画的部分',
+      'When off, pictures and PDFs show only what was drawn');
   String get downloadHintApps => _t('PNG 和 JPG 存进相册；PDF 在分享菜单里存到文件。',
       'PNG and JPG go to your photos; save a PDF to Files from the share menu.');
   String get clearTitle => _t('清空画布？', 'Clear canvas?');

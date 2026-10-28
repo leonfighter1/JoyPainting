@@ -53,13 +53,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.3.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.3.1**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **5.3.0** | 2026-10-28 | A coloring book in My Paintings: 8 line drawings to color in, the lines locked on top so coloring, filling and erasing go under them |
+| **5.3.1** | 2026-10-28 | Download or send a picture without its photo; in a browser, Settings says whether the paintings are kept and can ask the browser to keep them |
+| 5.3.0 | 2026-10-28 | A coloring book in My Paintings: 8 line drawings to color in, the lines locked on top so coloring, filling and erasing go under them |
 | 5.2.0 | 2026-10-28 | Turn the paper with two fingers (snaps straight; R on a computer), from the Intermediate level |
 | 5.1.0 | 2026-10-28 | Add a photo to trace (Intermediate and up): under the drawing, half see-through; on its own locked layer at the Advanced level |
 | 5.0.0 | 2026-10-28 | Layers at the Advanced level: add, reorder, hide, lock, rename, merge and fade layers; the eraser and blender work on one layer; exports, replays and GIFs show the layers |
@@ -83,7 +84,22 @@ The full list of what each version added, with the code and tests behind it, is 
 
 ## Release notes
 
-What changed in each version, newest first, in the app's own words (Chinese UI names in brackets).
+What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 5.3.1 (2026-10-28): pictures without the photo
+
+**New**
+- **Leave the photo out (照片也放进去)**: a painting with a photo to trace now asks, when you download or send it, whether the photo goes in too. Turn it off and the picture or PDF shows only your drawing. The painting file always keeps the photo.
+- **Is the browser keeping the paintings?** In a browser, Settings (under 备份提醒) says whether the browser promised to keep them. If it hasn't, 请浏览器留着 asks it to; if it says no, bookmarking the page or installing it usually helps.
+
+**Changed**
+- The download and send choices scroll when they don't fit on a small screen.
+
+**Fixed**
+- Nothing new; see 5.3.0.
+
+**Good to know**
+- Printing still prints what you see; hide the photo layer (Advanced) to print without it.
 
 ### 5.3.0 (2026-10-28): a coloring book
 
@@ -436,10 +452,10 @@ What the tests cover:
 - **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
 - **`test/rotation_test.dart`**: turning the paper with two fingers, snapping to a quarter turn, beginners only zooming, the R key, and a turned paper (angle on the chip, grips hidden, strokes under the finger).
 - **`test/coloring_test.dart`**: every coloring page (lines on a locked top layer, the layer under them active, the lines never picked up, closed areas the paint bucket fills without leaking) and opening one from My Paintings.
-- **`test/photo_test.dart`**: a photo on the paper (saved with its picture, moved, hit inside its box), painted at its opacity, made smaller and fitted, refused when unreadable, put under the drawing or on a locked layer at the bottom, and the menu item by level.
+- **`test/photo_test.dart`**: a photo on the paper (saved with its picture, moved, hit inside its box), painted at its opacity, made smaller and fitted, refused when unreadable, put under the drawing or on a locked layer at the bottom, the menu item by level, and leaving the photo out of pictures (the switch in the format sheet).
 - **`test/layers_test.dart`**: layers in the drawing (adding above the active one, keeping strokes in layer order, moving, merging, deleting, undo), picking only from the active shown and unlocked layer, saving layers, painting them (the eraser on its own layer, hidden and see-through layers, one kept picture per layer), the layers panel, and refusing to draw on a hidden layer.
 - **`test/replay_test.dart`**: the replay's timeline (order, point by point, the 40-second limit), its last frame matching the painting, the eraser while replayed, the GIF (header, frames, cancelling) and the replay page (play, pause, playing to the end).
-- **`test/backup_test.dart`**: when the backup reminder shows (never backed up, changed since, a browser that may clear its storage, "later"), per kid, the one-tap backup exporting every painting, and the Settings switch.
+- **`test/backup_test.dart`**: when the backup reminder shows (never backed up, changed since, a browser that may clear its storage, "later"), per kid, the one-tap backup exporting every painting, the Settings switch, and the browser's promise to keep the paintings (asking for it).
 - **`test/web_store_test.dart`**: saving paintings in the browser (IndexedDB), moving old localStorage data over. Browser only: `flutter test --platform chrome test/web_store_test.dart` (the Web workflow runs it).
 - **`test/model_test.dart`**: the painting store, autosave and import.
 - **`test/export_test.dart`**: real PNG, JPEG and PDF output, and `.jypaint` round trips.
@@ -550,7 +566,7 @@ ios/                   iOS host app (AppDelegate handles "Open in", Info.plist)
 tool/                  build_apk.ps1, watch_build.ps1, make_icons.ps1, make_music.dart, ios_sim_smoke.sh, android_smoke.ps1; samples/ (makes the level sample paintings in assets/samples/); coloring/ (makes the coloring pages in assets/coloring/); bench/ (how smooth big paintings are, in Chrome)
 integration_test/      the same measurement on a device (driven by test_driver/)
 local_art/             not in git: pictures made locally with the app's brushes
-docs/appdev/           FEATURES.md, MISTAKES.md, DEVLOG.md, TECH_PLAN.md (the improvement plan)
+docs/appdev/           FEATURES.md, MISTAKES.md, DEVLOG.md, TECH_PLAN.md (the improvement plan), DEVICE_CHECKLIST.md (what to try on a real device)
 test/                  see Tests above
 ```
 

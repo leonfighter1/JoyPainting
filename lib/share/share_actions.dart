@@ -14,19 +14,21 @@ import 'print_preview_page.dart';
 import 'web_send.dart';
 
 IconData _formatIcon(ExportFormat f) => switch (f) {
-      ExportFormat.png => Icons.image_rounded,
-      ExportFormat.jpg => Icons.photo_rounded,
-      ExportFormat.pdf => Icons.picture_as_pdf_rounded,
-      ExportFormat.painting => Icons.brush_rounded,
-    };
+  ExportFormat.png => Icons.image_rounded,
+  ExportFormat.jpg => Icons.photo_rounded,
+  ExportFormat.pdf => Icons.picture_as_pdf_rounded,
+  ExportFormat.painting => Icons.brush_rounded,
+};
 
 /// A sheet listing [formats] under [title] (and [hint]); the one tapped,
-/// or null if the sheet was closed.
+/// or null if the sheet was closed. With [photos], a switch above the
+/// formats sets whether pictures include the painting's photos.
 Future<ExportFormat?> pickExportFormat(
   BuildContext context, {
   required String title,
   String? hint,
   List<ExportFormat> formats = ExportFormat.values,
+  ValueNotifier<bool>? photos,
 }) {
   final s = S.of(context);
   return showModalBottomSheet<ExportFormat>(
@@ -35,41 +37,63 @@ Future<ExportFormat?> pickExportFormat(
     builder: (context) {
       final cute = CuteTheme.of(context);
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text(title,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w800)),
-            ),
-            if (hint != null)
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                child: Text(hint),
-              ),
-            for (final f in formats)
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: cute.spec.secondary,
-                  foregroundColor: cute.spec.onSecondary,
-                  child: Icon(_formatIcon(f)),
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w800),
                 ),
-                title: Text(s.formatName(f.name)),
-                subtitle: Text(s.formatHint(f.name)),
-                onTap: () => Navigator.pop(context, f),
               ),
-            const SizedBox(height: 8),
-          ],
+              if (hint != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                  child: Text(hint),
+                ),
+              if (photos != null)
+                ValueListenableBuilder<bool>(
+                  valueListenable: photos,
+                  builder: (context, on, _) => SwitchListTile(
+                    key: const ValueKey('exportPhotos'),
+                    secondary: Icon(
+                      Icons.photo_library_rounded,
+                      color: cute.spec.primary,
+                    ),
+                    title: Text(s.exportPhotos),
+                    subtitle: Text(s.exportPhotosHint),
+                    value: on,
+                    onChanged: (v) => photos.value = v,
+                  ),
+                ),
+              for (final f in formats)
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: cute.spec.secondary,
+                    foregroundColor: cute.spec.onSecondary,
+                    child: Icon(_formatIcon(f)),
+                  ),
+                  title: Text(s.formatName(f.name)),
+                  subtitle: Text(s.formatHint(f.name)),
+                  onTap: () => Navigator.pop(context, f),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       );
     },
   );
 }
+
+/// A switch's state for [pickExportFormat]: photos included, or null when
+/// [doc] has none.
+ValueNotifier<bool>? _photoChoice(PaintingDoc doc) =>
+    hasPhoto(doc) ? ValueNotifier(true) : null;
 
 /// Downloads [doc] as a PNG, JPG or PDF, as the user picks: a download in
 /// the browser; in the apps, pictures go to the photo gallery and a PDF to
@@ -78,23 +102,31 @@ Future<void> downloadPainting(BuildContext context, PaintingDoc doc) async {
   final s = S.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final origin = shareOrigin(context);
+  final photos = _photoChoice(doc);
   final format = await pickExportFormat(
     context,
     title: s.downloadAs,
     hint: kIsWeb ? null : s.downloadHintApps,
     formats: const [ExportFormat.png, ExportFormat.jpg, ExportFormat.pdf],
+    photos: photos,
   );
   if (format == null) return;
   try {
-    final file = await exportPainting(doc, format);
+    final file = await exportPainting(
+      doc,
+      format,
+      photos: photos?.value ?? true,
+    );
     if (kIsWeb) {
       downloadInBrowser(file.bytes, file.name, file.mimeType);
       messenger.showSnackBar(SnackBar(content: Text(s.downloaded(file.name))));
     } else if (format == ExportFormat.pdf) {
       await deliverExport(file, origin);
     } else {
-      await saveImage(file.bytes,
-          file.name.substring(0, file.name.length - format.extension.length - 1));
+      await saveImage(
+        file.bytes,
+        file.name.substring(0, file.name.length - format.extension.length - 1),
+      );
       messenger.showSnackBar(SnackBar(content: Text(s.savedToGallery)));
     }
   } catch (e) {
@@ -109,14 +141,20 @@ Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
   final s = S.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final origin = shareOrigin(context);
+  final photos = _photoChoice(doc);
   final format = await pickExportFormat(
     context,
     title: s.sendAs,
     hint: kIsWeb ? s.sendHintWeb : null,
+    photos: photos,
   );
   if (format == null) return;
   try {
-    final file = await exportPainting(doc, format);
+    final file = await exportPainting(
+      doc,
+      format,
+      photos: photos?.value ?? true,
+    );
     if (kIsWeb) {
       final result = await sendFromBrowser(
         file.bytes,
@@ -126,19 +164,25 @@ Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
         body: s.mailBody(file.name),
       );
       if (result == WebSendResult.downloadedForEmail) {
-        messenger.showSnackBar(SnackBar(
-          content: Text(s.mailFallback(file.name)),
-          duration: const Duration(seconds: 10),
-        ));
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(s.mailFallback(file.name)),
+            duration: const Duration(seconds: 10),
+          ),
+        );
       }
       return;
     }
-    await SharePlus.instance.share(ShareParams(
-      files: [XFile.fromData(file.bytes, mimeType: file.mimeType, name: file.name)],
-      fileNameOverrides: [file.name],
-      title: s.appName,
-      sharePositionOrigin: origin,
-    ));
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [
+          XFile.fromData(file.bytes, mimeType: file.mimeType, name: file.name),
+        ],
+        fileNameOverrides: [file.name],
+        title: s.appName,
+        sharePositionOrigin: origin,
+      ),
+    );
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(s.sendFailed(e))));
   }
@@ -147,20 +191,30 @@ Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
 /// Exports paintings to keep or move to another device: one painting as
 /// its `.jypaint` file, several as one `.zip` of them. Import reads both.
 /// True once the file was handed over.
-Future<bool> exportPaintings(BuildContext context, List<PaintingDoc> docs) async {
+Future<bool> exportPaintings(
+  BuildContext context,
+  List<PaintingDoc> docs,
+) async {
   if (docs.isEmpty) return false;
   final s = S.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final origin = shareOrigin(context);
   try {
     final file = docs.length == 1
-        ? ExportedFile(PaintingFile.encode(docs.single),
-            exportName(docs.single, ExportFormat.painting), PaintingFile.mimeType)
-        : ExportedFile(PaintingArchive.encode(docs),
-            s.archiveName(docs.length, DateTime.now()), PaintingArchive.mimeType);
+        ? ExportedFile(
+            PaintingFile.encode(docs.single),
+            exportName(docs.single, ExportFormat.painting),
+            PaintingFile.mimeType,
+          )
+        : ExportedFile(
+            PaintingArchive.encode(docs),
+            s.archiveName(docs.length, DateTime.now()),
+            PaintingArchive.mimeType,
+          );
     await deliverExport(file, origin);
     messenger.showSnackBar(
-        SnackBar(content: Text(s.exportedCount(docs.length))));
+      SnackBar(content: Text(s.exportedCount(docs.length))),
+    );
     return true;
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(s.exportFailed(e))));
@@ -176,19 +230,22 @@ Future<void> shareExportedFile(ExportedFile file, Rect? origin) =>
 /// Hands an exported file over: the share sheet in the apps (save to
 /// Files, send to a chat…), a download in the browser. Replaced in tests.
 @visibleForTesting
-Future<void> Function(ExportedFile file, Rect? origin) deliverExport =
-    _deliver;
+Future<void> Function(ExportedFile file, Rect? origin) deliverExport = _deliver;
 
 Future<void> _deliver(ExportedFile file, Rect? origin) async {
   if (kIsWeb) {
     downloadInBrowser(file.bytes, file.name, file.mimeType);
     return;
   }
-  await SharePlus.instance.share(ShareParams(
-    files: [XFile.fromData(file.bytes, mimeType: file.mimeType, name: file.name)],
-    fileNameOverrides: [file.name],
-    sharePositionOrigin: origin,
-  ));
+  await SharePlus.instance.share(
+    ShareParams(
+      files: [
+        XFile.fromData(file.bytes, mimeType: file.mimeType, name: file.name),
+      ],
+      fileNameOverrides: [file.name],
+      sharePositionOrigin: origin,
+    ),
+  );
 }
 
 /// Where the share sheet points from: the area of the widget at [context],
@@ -209,16 +266,22 @@ Future<void> printPainting(BuildContext context, PaintingDoc doc) async {
   try {
     final size = paintingSize(doc);
     final png = await renderPng(
-        doc.strokes, size, exportRatioFor(size),
-            paper: doc.paper, layers: doc.layers);
-    await navigator.push(MaterialPageRoute<void>(
-      fullscreenDialog: true,
-      builder: (_) => PrintPreviewPage(
-        png: png,
-        size: size,
-        name: exportName(doc, ExportFormat.pdf),
+      doc.strokes,
+      size,
+      exportRatioFor(size),
+      paper: doc.paper,
+      layers: doc.layers,
+    );
+    await navigator.push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => PrintPreviewPage(
+          png: png,
+          size: size,
+          name: exportName(doc, ExportFormat.pdf),
+        ),
       ),
-    ));
+    );
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(s.printFailed(e))));
   }

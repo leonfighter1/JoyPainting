@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_theme.dart';
 import 'family.dart';
+import 'gallery/storage_status_tile.dart';
 import 'l10n.dart';
 import 'music/music_library.dart';
 import 'settings.dart';
@@ -15,7 +17,7 @@ import 'theme/theme_spec.dart';
 import 'widgets/name_dialog.dart';
 import 'widgets/parent_gate.dart';
 
-const appVersion = '5.3.0';
+const appVersion = '5.3.1';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -182,13 +184,20 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Card(
-            child: SwitchListTile(
-              secondary: Icon(Icons.cloud_upload_rounded,
-                  color: cute.spec.primary),
-              title: Text(s.backupReminders),
-              subtitle: Text(s.backupRemindersHint),
-              value: settings.backupReminders,
-              onChanged: (on) => settings.backupReminders = on,
+            child: Column(
+              children: [
+                SwitchListTile(
+                  secondary: Icon(Icons.cloud_upload_rounded,
+                      color: cute.spec.primary),
+                  title: Text(s.backupReminders),
+                  subtitle: Text(s.backupRemindersHint),
+                  value: settings.backupReminders,
+                  onChanged: (on) => settings.backupReminders = on,
+                ),
+                // The apps keep paintings in their own folder; only a
+                // browser may clear them.
+                if (kIsWeb) const StorageStatusTile(),
+              ],
             ),
           ),
           const SizedBox(height: 12),

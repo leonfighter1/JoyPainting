@@ -1,12 +1,21 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v5.3.1 (the plan's leftovers)
+- Asked: check for unfinished items, then do them. Found five planned details left out (TECH_PLAN section 5, "剩余"); did the first three.
+- Done: a 照片也放进去 switch in the download and send format sheets (pictures without the photo; `.jypaint` keeps it); in a browser, Settings says whether the browser promised to keep the paintings, with a button that asks it to (`navigator.storage.persist()`); `docs/appdev/DEVICE_CHECKLIST.md` for real-device checks after each release.
+- APK: release APKs built for 5.3.1 (arm64 32.4 MB, armv7 30.4 MB, x86_64 34.0 MB); the x86_64 one installed over the earlier install on the Pixel Tablet emulator (Android 15) and passed `tool/android_smoke.ps1` (started, drew, no errors in the log; earlier paintings still there). First APK check since 4.1.0.
+- Mistakes: none new.
+- Harness: PASS (analyze 0 issues, 391 tests, build web ok).
+- Not tested: the storage button in a real browser that says no (Chrome decides by itself; Firefox asks).
+- Next: 5.4.0, as asked meanwhile: collapsible sections in the brushes & colors drawer (basic ones open), size and opacity right under the colors, layers as their own draggable floating button; a 3-second pause after each music track; a wider keyboard shortcut list (500 px, narrower only on small screens). Still open from the plan: background cache rebuilds and replay keyframes (measure first).
+
 ## 2026-10-28: v5.3.0 (coloring book)
 - 5.2.0 after pushing: Web and iOS passed (live version.json 5.2.0+18). 5.1.0's iOS run was cancelled by the 5.2.0 push (same workflow group); 5.2.0 holds all of 5.1.0 and passed.
 - Done: F7's coloring book (8 line drawings on a locked top layer, the 涂色本 sheet in My Paintings, opening a page as a new painting with the layer under the lines active). The overview was shown to the user (local_art/out/coloring/all.png) before pushing; they said to go on.
 - Mistakes: none new.
 - Harness: PASS (analyze 0 issues, 386 tests, build web ok).
 - Not tested: coloring on a real phone or tablet.
-- Next: every TECH_PLAN item (R, F1–F9) is done.
+- Next: the TECH_PLAN items are in, but some planned details were left out (TECH_PLAN section 5, "剩余"): leaving the photo layer out of exports, the browser storage status in Settings, APK builds and the emulator smoke test since 4.1.0, background cache rebuilds, replay keyframes.
 
 ## 2026-10-28: v5.2.0 (turning the paper)
 - Done: F8 (two-finger rotation with quarter-turn snapping, R / Shift+R, the angle on the zoom chip, grips hidden while turned, off for beginners).

@@ -12,3 +12,12 @@ Future<bool> storageAtRisk() async {
     return true;
   }
 }
+
+/// Asks the browser to keep this site's storage; whether it will.
+Future<bool> askToKeepStorage() async {
+  try {
+    return (await web.window.navigator.storage.persist().toDart).toDart;
+  } catch (_) {
+    return false;
+  }
+}
