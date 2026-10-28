@@ -121,6 +121,37 @@ class Stroke {
     );
   }
 
+  /// The first [fraction] (0–1) of a freehand stroke, as it looked while
+  /// it was being drawn, for replays. Shapes, text and filled areas appear
+  /// whole, so they come back as they are.
+  Stroke partial(double fraction) {
+    if (fraction >= 1 ||
+        shape != null ||
+        text != null ||
+        area != null ||
+        points.length < 2) {
+      return this;
+    }
+    final n = math.max(1, (points.length * fraction).ceil());
+    return Stroke(
+      brush: brush,
+      color: color,
+      size: size,
+      opacity: opacity,
+      usesRealPressure: usesRealPressure,
+      seed: seed,
+      stamp: stamp,
+      mirrorX: mirrorX,
+      fill: fill,
+      transform: transform,
+      gradient: gradient,
+      blur: blur,
+      blend: blend,
+      texture: texture,
+      points: points.sublist(0, n),
+    );
+  }
+
   /// A finished copy of a shape or freehand stroke, shifted by [delta],
   /// with the given changes.
   Stroke _copy({

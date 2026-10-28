@@ -128,6 +128,9 @@ class AppSettings extends ChangeNotifier {
   static const _kFill = 'fill';
   static const _kFreeShape = 'freeShape';
   static const _kFillGap = 'fillGap';
+  static const _kBackupReminders = 'backupReminders';
+  static String _kBackup(String kid) => 'backup.$kid';
+  static String _kBackupSnooze(String kid) => 'backupSnooze.$kid';
   static const _kGradient = 'gradient';
   static const _kBlend = 'blend';
   static const _kTexture = 'texture';
@@ -310,6 +313,38 @@ class AppSettings extends ChangeNotifier {
   /// closes, so a shape that isn't quite closed fills without leaking.
   /// Beginners always get the default.
   int get fillGap => _level.freeShape ? _fillGap : defaultFillGap;
+
+  /// Whether My Paintings reminds to back the paintings up (on by default).
+  bool get backupReminders => _prefs.getBool(_kBackupReminders) ?? true;
+  set backupReminders(bool value) {
+    _prefs.setBool(_kBackupReminders, value);
+    notifyListeners();
+  }
+
+  /// When the current kid's paintings were last all exported, or null.
+  DateTime? get lastBackup => _time(_kBackup(currentKid.id));
+
+  /// Until when the backup reminder is put off for the current kid.
+  DateTime? get backupSnoozedUntil => _time(_kBackupSnooze(currentKid.id));
+
+  DateTime? _time(String key) => switch (_prefs.getInt(key)) {
+        final int ms => DateTime.fromMillisecondsSinceEpoch(ms),
+        _ => null,
+      };
+
+  /// All the current kid's paintings were exported at [when].
+  void markBackedUp(DateTime when) {
+    _prefs
+      ..setInt(_kBackup(currentKid.id), when.millisecondsSinceEpoch)
+      ..remove(_kBackupSnooze(currentKid.id));
+    notifyListeners();
+  }
+
+  /// "Later": no reminder for the current kid until [until].
+  void snoozeBackup(DateTime until) {
+    _prefs.setInt(_kBackupSnooze(currentKid.id), until.millisecondsSinceEpoch);
+    notifyListeners();
+  }
   static const defaultFillGap = 2;
   static const maxFillGap = 6;
 

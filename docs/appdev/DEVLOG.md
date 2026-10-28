@@ -1,5 +1,12 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v4.2.0 (replay and GIF, backup reminders)
+- Done: F4 replay (timeline, partial strokes, frames from the kept picture, page with play/pause, speeds and a slider; GIF export encoded in the background, cancellable; entries in the ☰ menu and the gallery card menu) and F5 backup reminders (when to remind, the banner with one-tap backup and "later", per kid, a Settings switch, sooner in a browser without persistent storage). Tests turn the reminder off by default (`testDefaults`), as with the samples; backup_test turns it on.
+- 4.1.0 after pushing: the Web workflow deployed it (live version.json 4.1.0+14); the iOS workflow failed at "Start on the iPhone and iPad simulators": the iPhone was "not running" 30 s after launch, the iPad was fine. Every earlier iOS run passed. Logs and artifacts need a GitHub sign-in, so the cause is unknown (a crash from the new code, or the busy macOS runners); `ios_sim_smoke.sh` now puts the log's telling lines and the crash report into annotations, which this 4.2.0 push will show.
+- Mistakes: none new.
+- Harness: PASS (analyze 0 issues, 363 tests, build web ok).
+- Next: read the iOS run for 4.2.0; then F6 layers (5.0.0).
+
 ## 2026-10-28: v4.1.0 (code split, smooth big paintings, color picker, paint bucket)
 - Asked: turn the suggested improvements into a technical plan with code reuse and splitting first (docs/appdev/TECH_PLAN.md), check the Android SDK (it was installed on 2026-10-24; my "no SDK" claim came from a stale FEATURES note), keep records current, then build the items one by one, picking version numbers and pushing each version without asking; use Chrome when the emulator fails.
 - Done:

@@ -34,6 +34,8 @@ What it does:
   - Export: check paintings (the year filter helps) and export one as its `.jypaint` or several as one `.zip`. Import reads both.
   - Every painting gets a name ("My painting 1" / "我的画作 1"); rename or copy it from the title or its gallery card.
   - A sample painting for each kid, matching their level: 快乐的一天 / A Happy Day (beginner: pens, shapes and stamps), 海边的晚霞 / Sunset by the Sea (intermediate: soft brush, gradients, free shapes) or 湖畔晨光 / Dawn on the Lake (advanced: a realistic painting with textures, the blender and light & shadow). Picking another level later brings that one too, once.
+  - **Replay** (回放作画过程): watch a painting draw itself again, stroke by stroke, at ½× to 4×, and save the replay as a looping GIF.
+  - **Backup reminders** (备份提醒): My Paintings reminds you to keep a copy when the paintings haven't been backed up for a while; one tap exports them all.
   - Download as PNG, JPG or PDF (in the apps, pictures go to the photo gallery and a PDF to the share menu).
   - Send as PNG, JPG, PDF or an editable `.jypaint` file, named after the painting. In a browser it goes to an email as an attachment.
   - Print from an in-app preview with a big close button (Android's own print screen has none).
@@ -48,13 +50,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **4.1.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **4.2.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **4.1.0** | 2026-10-28 | The paint bucket, the color picker, big paintings that stay smooth (drawing, erasing and undoing), and a tidier code base behind the drawing screen |
+| **4.2.0** | 2026-10-28 | Replay a painting stroke by stroke (with speeds and a slider) and save it as a GIF; backup reminders in My Paintings with a one-tap backup |
+| 4.1.0 | 2026-10-28 | The paint bucket, the color picker, big paintings that stay smooth (drawing, erasing and undoing), and a tidier code base behind the drawing screen |
 | 4.0.0 | 2026-10-27 | Drawing levels (beginner, intermediate, advanced) chosen on first start, realistic painting tools (the blender, four textures, overlay and soft light), a sample painting for each level, a text size slider, a clearer ☰ menu button |
 | 3.0.0 | 2026-10-27 | Painted looks (soft brush, gradients, light & shadow, free shapes, soft edges), a paper resized by dragging its edges (undoable, drawings keep their size), download as PNG, JPG or PDF, a simpler View menu (no zoom buttons), and a faster canvas for big paintings |
 | 2.2.0 | 2026-10-25 | Keyboard shortcuts (Ctrl+Z, Ctrl+C/V, Delete, zoom, tool keys; ? lists them), a bigger paper shows at real size, music that copes with old settings and browsers, five calm built-in tracks with shuffle by default, the sample painting 快乐的一天, copying paintings, default kid name 靖瑶 / Athena |
@@ -74,6 +77,24 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets).
+
+### 4.2.0 (2026-10-28): replay a painting, save it as a GIF, backup reminders
+
+**New**
+- **Replay (回放作画过程)**: watch a painting draw itself again, stroke by stroke, in the order it was made. Open it from the ☰ menu on the canvas (分享 → 回放作画过程) or from a painting's card menu in My Paintings. It starts by itself; ▶ / ⏸ plays and pauses, the slider jumps anywhere, and ½× 1× 2× 4× set the speed. Freehand lines appear as they were drawn, shapes, text and fills appear at once, and the eraser and the blender work as they did. A long painting is sped up so a replay never takes more than 40 seconds.
+- **Save the replay as a GIF (存成 GIF 动图)**: on the replay page, one button makes a looping animation of the whole replay (about 10 seconds, the finished painting stays for 2 seconds at the end) and offers it like any export: the share menu in the apps, a download in a browser. A progress bar shows while it's made, and ✕ stops it.
+- **Backup reminders (备份提醒)**: paintings live only on this device (or in this browser), so My Paintings now reminds you to keep a copy: when there are three paintings and the first is two weeks old and nothing has been backed up yet, or when something changed and the last backup is two weeks old (one week in a browser that may clear its storage). **一键备份 Back up now** exports every painting as one file; **以后再说 Later** asks again in a week. Exporting every painting yourself counts as a backup too. Each kid has their own reminder; Settings → 备份提醒 turns it off.
+
+**Changed**
+- My Paintings' card menu has 回放作画过程 Replay.
+
+**Fixed**
+- Nothing new; see 4.1.0.
+
+**Good to know**
+- A GIF is made on the device; in a browser it uses fewer, smaller frames so it stays quick.
+- The 4.1.0 iOS check on GitHub failed on the iPhone simulator (the app wasn't running 30 s after launch; the iPad was fine). The cause isn't known yet; the check now reports the app's log lines on the run page, so this release's run will tell more. The web version is not affected.
+- Not yet tried on real devices: replaying very long paintings and making GIFs on an older phone.
 
 ### 4.1.0 (2026-10-28): paint bucket, color picker, smooth big paintings
 
@@ -330,6 +351,8 @@ What the tests cover:
 - **`test/layer_cache_test.dart`**: the kept picture of a painting looks the same as painting every stroke (paint, shadows, see-through paint, the eraser, the blender), and is painted again only when it must (not for new strokes, erasing, undo or redo).
 - **`test/picker_test.dart`**: the color seen at a point (paint, paper, shadows, see-through paint), the picker's loupe and its return to the last brush, and picking a color off the canvas.
 - **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
+- **`test/replay_test.dart`**: the replay's timeline (order, point by point, the 40-second limit), its last frame matching the painting, the eraser while replayed, the GIF (header, frames, cancelling) and the replay page (play, pause, playing to the end).
+- **`test/backup_test.dart`**: when the backup reminder shows (never backed up, changed since, a browser that may clear its storage, "later"), per kid, the one-tap backup exporting every painting, and the Settings switch.
 - **`test/web_store_test.dart`**: saving paintings in the browser (IndexedDB), moving old localStorage data over. Browser only: `flutter test --platform chrome test/web_store_test.dart` (the Web workflow runs it).
 - **`test/model_test.dart`**: the painting store, autosave and import.
 - **`test/export_test.dart`**: real PNG, JPEG and PDF output, and `.jypaint` round trips.
@@ -424,6 +447,7 @@ lib/
   drawing/             the drawing screen, strokes, drawing controller, text editor
     canvas/            its parts: tools (draw, text, move, pan, picker, fill), selection, view, menu, paper, drawer
     render/            strokes into pictures: the kept picture, reading pixels, filling areas
+    replay/            playing a painting back, and making the GIF
   gallery/             My Paintings page and storage (file / browser / memory)
   music/               background music: track library, saved uploads, looping player
   share/               send, print preview, import, .jypaint format

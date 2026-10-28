@@ -146,8 +146,9 @@ Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
 
 /// Exports paintings to keep or move to another device: one painting as
 /// its `.jypaint` file, several as one `.zip` of them. Import reads both.
-Future<void> exportPaintings(BuildContext context, List<PaintingDoc> docs) async {
-  if (docs.isEmpty) return;
+/// True once the file was handed over.
+Future<bool> exportPaintings(BuildContext context, List<PaintingDoc> docs) async {
+  if (docs.isEmpty) return false;
   final s = S.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final origin = shareOrigin(context);
@@ -160,10 +161,17 @@ Future<void> exportPaintings(BuildContext context, List<PaintingDoc> docs) async
     await deliverExport(file, origin);
     messenger.showSnackBar(
         SnackBar(content: Text(s.exportedCount(docs.length))));
+    return true;
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(s.exportFailed(e))));
+    return false;
   }
 }
+
+/// Hands [file] over, as exports do: the share sheet in the apps, a
+/// download in the browser. [origin] anchors the iPad share popover.
+Future<void> shareExportedFile(ExportedFile file, Rect? origin) =>
+    deliverExport(file, origin);
 
 /// Hands an exported file over: the share sheet in the apps (save to
 /// Files, send to a chat…), a download in the browser. Replaced in tests.

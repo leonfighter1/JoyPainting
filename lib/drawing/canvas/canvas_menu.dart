@@ -18,6 +18,7 @@ Future<void> showCanvasMenu(
   required AppSettings settings,
   required ValueNotifier<bool> panMode,
   required bool hasPainting,
+  required VoidCallback onReplay,
   required VoidCallback onShortcuts,
   required VoidCallback onPaperColor,
   required VoidCallback onDefaultPaperSize,
@@ -44,6 +45,13 @@ Future<void> showCanvasMenu(
           icon: Icons.save_alt_rounded,
           label: s.downloadImage,
           onSelected: () => downloadPainting(context, session.currentDoc()),
+        ),
+        // The painting drawing itself again, stroke by stroke.
+        DropMenuItem(
+          icon: Icons.slow_motion_video_rounded,
+          label: s.replay,
+          enabled: session.drawing.strokes.isNotEmpty,
+          onSelected: onReplay,
         ),
       ],
     ),

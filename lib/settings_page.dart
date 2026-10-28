@@ -15,7 +15,7 @@ import 'theme/theme_spec.dart';
 import 'widgets/name_dialog.dart';
 import 'widgets/parent_gate.dart';
 
-const appVersion = '4.1.0';
+const appVersion = '4.2.0';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -181,6 +181,17 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
+          Card(
+            child: SwitchListTile(
+              secondary: Icon(Icons.cloud_upload_rounded,
+                  color: cute.spec.primary),
+              title: Text(s.backupReminders),
+              subtitle: Text(s.backupRemindersHint),
+              value: settings.backupReminders,
+              onChanged: (on) => settings.backupReminders = on,
+            ),
+          ),
+          const SizedBox(height: 12),
           Card(
             child: ListTile(
               leading: Icon(Icons.restart_alt_rounded,

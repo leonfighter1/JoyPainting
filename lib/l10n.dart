@@ -126,6 +126,30 @@ class S {
   String get newPainting => _t('新建画作', 'New painting');
   String get more => _t('更多', 'More');
   String get clear => _t('清空画布', 'Clear canvas');
+  String get replay => _t('回放作画过程', 'Replay the painting');
+  String replayLabel(String name) =>
+      _t('「$name」的作画过程', 'How "$name" was painted');
+  String get play => _t('播放', 'Play');
+  String get pause => _t('暂停', 'Pause');
+  String get saveGif => _t('存成 GIF 动图', 'Save as GIF');
+  String get makingGif => _t('正在制作 GIF…', 'Making the GIF…');
+  String replayFileName(String name) => '${name}_${_t('回放', 'replay')}.gif';
+  String get neverBackedUp => _t('这些画还没有备份过', "These paintings haven't been backed up");
+  String lastBackedUp(int days) => days <= 0
+      ? _t('今天备份过', 'Backed up today')
+      : _t('上次备份是 $days 天前', 'Last backed up $days ${days == 1 ? 'day' : 'days'} ago');
+  String get backupWhyBrowser => _t(
+      '画存在这个浏览器里：清理浏览器数据或换设备时会一起消失。导出一份存到电脑或网盘更安心。',
+      'The paintings live in this browser: clearing its data or changing devices loses them. Export a copy to keep somewhere safe.');
+  String get backupWhyDevice => _t(
+      '画只存在这台设备上：换手机或设备坏了就找不回来了。导出一份存起来更安心。',
+      'The paintings live only on this device: a new or broken device loses them. Export a copy to keep somewhere safe.');
+  String get backupNow => _t('一键备份', 'Back up now');
+  String get later => _t('以后再说', 'Later');
+  String get backupReminders => _t('备份提醒', 'Backup reminders');
+  String get backupRemindersHint => _t(
+      '画有一阵子没备份时，在「我的画作」上方提醒，一键把全部画作导出成一个文件。',
+      'When the paintings have not been backed up for a while, My Paintings reminds you and exports them all as one file in one tap.');
   String get downloadImage => _t('下载图片', 'Download image');
   String get downloadAs => _t('选择下载格式', 'Download as');
   String get downloadHintApps => _t('PNG 和 JPG 存进相册；PDF 在分享菜单里存到文件。',

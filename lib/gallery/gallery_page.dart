@@ -3,15 +3,19 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../app_theme.dart';
+import '../drawing/replay/replay_page.dart';
 import '../l10n.dart';
 import '../painting_session.dart';
+import '../settings.dart';
 import '../share/import_actions.dart';
 import '../share/share_actions.dart';
 import '../widgets/drop_menu.dart';
 import '../widgets/menu_button.dart';
 import '../widgets/name_dialog.dart';
 import '../theme/cute_theme.dart';
+import 'backup_reminder.dart';
 import 'painting_store.dart';
+import 'storage_risk.dart';
 
 /// Every saved painting, newest first, filterable by the year it was started.
 class GalleryPage extends StatefulWidget {
@@ -69,21 +73,40 @@ class _GalleryPageState extends State<GalleryPage> {
     }
   });
 
-  /// Exports the checked paintings, in gallery order. The open one is taken
-  /// live from the canvas, so unsaved strokes are included.
+  /// [metas] loaded, in gallery order. The open one is taken live from the
+  /// canvas, so unsaved strokes are included.
+  Future<List<PaintingDoc>> _docsOf(Iterable<PaintingMeta> metas) async => [
+        for (final meta in metas)
+          if (meta.id == widget.session.id)
+            widget.session.currentDoc()
+          else
+            ?await _store.load(meta.id),
+      ];
+
+  /// Exports the checked paintings. Exporting every one counts as a backup.
   Future<void> _exportPicked() async {
-    final docs = <PaintingDoc>[];
-    for (final meta in _paintings ?? const <PaintingMeta>[]) {
-      if (!_picked.contains(meta.id)) continue;
-      final doc = meta.id == widget.session.id
-          ? widget.session.currentDoc()
-          : await _store.load(meta.id);
-      if (doc != null) docs.add(doc);
-    }
+    final all = _paintings ?? const <PaintingMeta>[];
+    final docs = await _docsOf(all.where((m) => _picked.contains(m.id)));
     if (!mounted) return;
-    await exportPaintings(context, docs);
+    if (await exportPaintings(context, docs) && docs.length == all.length) {
+      _settings.markBackedUp(DateTime.now());
+    }
     if (mounted) _stopSelecting();
   }
+
+  /// The backup reminder's one tap: every painting, as one file.
+  Future<void> _backUpAll() async {
+    final docs = await _docsOf(_paintings ?? const []);
+    if (!mounted) return;
+    if (await exportPaintings(context, docs)) {
+      _settings.markBackedUp(DateTime.now());
+    }
+  }
+
+  AppSettings get _settings => widget.session.settings;
+
+  /// A browser that may clear its storage gets reminded sooner.
+  bool _atRisk = false;
 
   PaintingStore get _store => widget.session.store;
 
@@ -96,6 +119,9 @@ class _GalleryPageState extends State<GalleryPage> {
     _listening = _store..addListener(_reload);
     widget.session.addListener(_onSessionChanged);
     _reload();
+    storageAtRisk().then((risk) {
+      if (mounted) setState(() => _atRisk = risk);
+    });
   }
 
   @override
@@ -274,6 +300,31 @@ class _GalleryPageState extends State<GalleryPage> {
                     onToggleAll: () => _toggleAll(shown),
                     onExport: _exportPicked,
                   ),
+                  // Paintings live only here: a reminder to keep a copy.
+                  ListenableBuilder(
+                    listenable: _settings,
+                    builder: (context, _) {
+                      final now = DateTime.now();
+                      final due = !_selecting &&
+                          _settings.backupReminders &&
+                          BackupReminder.due(
+                            paintings: all,
+                            now: now,
+                            lastBackup: _settings.lastBackup,
+                            snoozedUntil: _settings.backupSnoozedUntil,
+                            atRisk: _atRisk,
+                          );
+                      if (!due) return const SizedBox.shrink();
+                      return BackupBanner(
+                        lastBackup: _settings.lastBackup,
+                        now: now,
+                        atRisk: _atRisk,
+                        onBackup: _backUpAll,
+                        onLater: () => _settings.snoozeBackup(
+                            now.add(BackupReminder.later)),
+                      );
+                    },
+                  ),
                   if (all.isNotEmpty)
                     SizedBox(
                       // Chips need 48px of height for an accessible tap area.
@@ -326,6 +377,7 @@ class _GalleryPageState extends State<GalleryPage> {
                               onDuplicate: () => _duplicate(shown[i]),
                               onSend: () => _withDoc(shown[i], showSendSheet),
                               onPrint: () => _withDoc(shown[i], printPainting),
+                              onReplay: () => _withDoc(shown[i], showReplay),
                               selecting: _selecting,
                               picked: _picked.contains(shown[i].id),
                               onToggle: () => _toggle(shown[i].id),
@@ -495,6 +547,7 @@ class _PaintingCard extends StatefulWidget {
     required this.onDuplicate,
     required this.onSend,
     required this.onPrint,
+    required this.onReplay,
     required this.selecting,
     required this.picked,
     required this.onToggle,
@@ -510,6 +563,9 @@ class _PaintingCard extends StatefulWidget {
   final VoidCallback onDuplicate;
   final VoidCallback onSend;
   final VoidCallback onPrint;
+
+  /// Plays back how the painting was made.
+  final VoidCallback onReplay;
 
   /// Choosing paintings to export: a tap checks or unchecks this one.
   final bool selecting;
@@ -678,6 +734,14 @@ class _PaintingCardState extends State<_PaintingCard> {
                           child: ListTile(
                             leading: const Icon(Icons.brush_rounded),
                             title: Text(s.continuePainting),
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: widget.onReplay,
+                          child: ListTile(
+                            leading:
+                                const Icon(Icons.slow_motion_video_rounded),
+                            title: Text(s.replay),
                           ),
                         ),
                         PopupMenuItem(

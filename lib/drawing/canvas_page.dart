@@ -37,6 +37,7 @@ import 'canvas/tools/picker_tool.dart';
 import 'canvas/tools/text_tool.dart';
 import 'drawing_controller.dart';
 import 'render/layer_cache.dart';
+import 'replay/replay_page.dart';
 import 'render/pixel_sampler.dart';
 import 'stroke.dart';
 
@@ -512,6 +513,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
         settings: _settings,
         panMode: panMode,
         hasPainting: _hasPainting,
+        onReplay: () => showReplay(context, widget.session.currentDoc()),
         onShortcuts: () => showShortcutsDialog(context),
         onPaperColor: _pickPaper,
         onDefaultPaperSize: () {

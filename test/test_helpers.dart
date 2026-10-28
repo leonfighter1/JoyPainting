@@ -53,6 +53,9 @@ const testDefaults = <String, Object>{
   'flutter.samplesAdded': <String>['beginner', 'intermediate', 'advanced'],
   // Most tests use every tool; v4_test covers the levels.
   'flutter.level': 'advanced',
+  // Most tests count what My Paintings shows; backup_test covers the
+  // backup reminder.
+  'flutter.backupReminders': false,
 };
 
 Future<TestApp> createTestApp({

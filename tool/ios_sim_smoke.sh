@@ -43,6 +43,20 @@ for kind in phone tablet; do
     echo "$kind: running"
   else
     echo "::error::$kind: the app is not running (crashed on launch?). See $kind.log."
+    # The telling lines as annotations too: they show on the run page
+    # without signing in or downloading the artifacts.
+    grep -iE "error|exception|fault|crash|terminat|signal|assert" "$OUT/$kind.log" \
+      | tail -n 12 | while IFS= read -r line; do
+        echo "::error::$kind log: ${line:0:400}"
+      done || true
+    report=$(ls -t "$HOME"/Library/Logs/DiagnosticReports/Runner* 2>/dev/null | head -n 1 || true)
+    if [ -n "$report" ]; then
+      cp "$report" "$OUT/$kind-crash.ips"
+      grep -E '"(type|signal|codes|indicator)"|"symbol"' "$report" | head -n 12 \
+        | while IFS= read -r line; do
+          echo "::error::$kind crash: ${line:0:400}"
+        done || true
+    fi
     failed=1
   fi
   xcrun simctl shutdown "$udid" || true
