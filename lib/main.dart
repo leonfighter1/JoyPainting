@@ -200,7 +200,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     widget.session
       ..onSaveError = _showSaveError
       ..onSampleAdded = _showSampleAdded
-      ..makingSample.addListener(_onMakingSample);
+      ..makingSample.addListener(_onMakingSample)
+      ..opening.addListener(_onOpening);
     widget.player?.onError = _showMusicError;
     _level = widget.settings.level;
     widget.settings.addListener(_onSettings);
@@ -230,6 +231,29 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       builder: (_) => SampleProgressCard(name: name),
     );
     Overlay.of(context, rootOverlay: true).insert(_sampleProgress!);
+  }
+
+  /// Shows how far opening a big painting has got, from reading it to
+  /// putting it on the paper.
+  OverlayEntry? _openingCard;
+
+  void _onOpening() {
+    final busy = widget.session.opening.value != null;
+    if (!mounted || busy == (_openingCard != null)) return;
+    if (!busy) {
+      _openingCard!.remove();
+      _openingCard = null;
+      return;
+    }
+    _openingCard = OverlayEntry(
+      builder: (_) => ValueListenableBuilder(
+        valueListenable: widget.session.opening,
+        builder: (_, progress, _) => progress == null
+            ? const SizedBox.shrink()
+            : OpeningProgressCard(progress: progress),
+      ),
+    );
+    Overlay.of(context, rootOverlay: true).insert(_openingCard!);
   }
 
   void _showSampleAdded(String name) {
@@ -264,8 +288,10 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     widget.session
       ..onSaveError = null
       ..onSampleAdded = null
-      ..makingSample.removeListener(_onMakingSample);
+      ..makingSample.removeListener(_onMakingSample)
+      ..opening.removeListener(_onOpening);
     _sampleProgress?.remove();
+    _openingCard?.remove();
     widget.player?.onError = null;
     super.dispose();
   }

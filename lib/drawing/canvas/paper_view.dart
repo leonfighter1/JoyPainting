@@ -20,8 +20,12 @@ class FinishedStrokesPainter extends CustomPainter {
   FinishedStrokesPainter(this.controller,
       {required this.cache, required this.ratio})
       : super(
-            repaint: Listenable.merge(
-                [controller.finishedRevision, ratio, Photos.decoded]));
+            repaint: Listenable.merge([
+              controller.finishedRevision,
+              ratio,
+              Photos.decoded,
+              cache.repaint,
+            ]));
 
   final DrawingController controller;
   final LayeredCache cache;

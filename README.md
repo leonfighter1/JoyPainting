@@ -58,13 +58,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.1.1**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.2.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **6.1.1** | 2026-10-28 | The stamps are always in the drawer (picking one picks the stamp brush); the title bar reads ✋, 选择移动, 清空 (now a broom) |
+| **6.2.0** | 2026-10-28 | Opening a big painting shows a card with its name, a progress bar and the percentage; the painting is read and put on the paper a piece at a time, so the screen no longer freezes |
+| 6.1.1 | 2026-10-28 | The stamps are always in the drawer (picking one picks the stamp brush); the title bar reads ✋, 选择移动, 清空 (now a broom) |
 | 6.1.0 | 2026-10-28 | My own brushes (我的画笔); brushes and helpers (小帮手) apart, each starting with the basic ones; the move tool in the title bar; no save or new buttons there (paintings save themselves; new is in the ☰ menu) |
 | 6.0.0 | 2026-10-28 | Add tools as you need them (添加工具): the drawer keeps the basic choices, and a popup adds more, several at once; 14 new shapes (arc and wave too), 4 stamps, 4 gradients, 4 kinds of light & shadow and 6 textures |
 | 5.4.3 | 2026-10-28 | Shapes (line, rectangle, circle…) with light & shadow show while you drag them |
@@ -97,6 +98,13 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 6.2.0 (2026-10-28): a progress bar while a painting opens
+
+**New**
+- **Opening a big painting shows how far it has got.** When you open a painting with thousands of strokes from 我的画作 (or the app reopens one at start), a card at the top says 正在打开「…」 with a bar and the percentage. It fills up as the painting is read, then as it's put on the paper, and goes away when every stroke is there.
+- **The screen no longer freezes while it opens.** The painting is read a piece at a time and painted onto the paper a slice per frame, so the bar keeps moving. A 16,869-stroke painting that froze for about a second and a half now goes on in 14 short frames.
+- Small paintings open at once, as before, with no card.
 
 ### 6.1.1 (2026-10-28): stamps within reach, a tidier title bar
 

@@ -36,6 +36,16 @@ Future<Uint8List> renderThumbnail(
   return renderPng(strokes, size, scale, paper: paper, layers: layers);
 }
 
+/// A painting being opened: its name (empty if not known yet) and how
+/// much of the opening is done, 0 to 1.
+@immutable
+class OpeningProgress {
+  const OpeningProgress(this.name, this.done);
+
+  final String name;
+  final double done;
+}
+
 /// The painting currently open on the canvas, and keeping it saved.
 ///
 /// Every finished edit schedules an autosave; switching or creating a
@@ -103,7 +113,7 @@ class PaintingSession extends ChangeNotifier {
     final lastId = settings.lastPaintingId;
     if (lastId != null) {
       try {
-        final doc = await store.load(lastId);
+        final doc = await _load(lastId, '');
         if (doc != null) {
           _show(doc);
           return;
@@ -415,15 +425,64 @@ class PaintingSession extends ChangeNotifier {
     }
   }
 
-  /// Saves the current painting and opens [paintingId] from the store.
+  /// Saves the current painting and opens [paintingId] (called [name])
+  /// from the store, showing [opening] while a big one takes a while.
   /// Returns false if saving the current one or loading the new one failed.
-  Future<bool> open(String paintingId) async {
+  Future<bool> open(String paintingId, {String name = ''}) async {
     if (paintingId == id) return true;
     if (!await save()) return false;
-    final doc = await store.load(paintingId);
+    final doc = await _load(paintingId, name);
     if (doc == null) return false;
     _show(doc);
     return true;
+  }
+
+  /// The painting being opened, which takes a moment when it's big: its
+  /// name and how much is done, or null. Reading it is the first part;
+  /// the canvas putting it on the paper (see [paperProgress]) the rest.
+  final opening = ValueNotifier<OpeningProgress?>(null);
+
+  /// The part of [opening] that reading the painting takes, when it's read
+  /// in steps.
+  static const _readShare = 0.4;
+
+  /// Whether the painting being opened was read in steps.
+  bool _readInSteps = false;
+
+  /// Whether a painting is being read now.
+  bool _reading = false;
+
+  Future<PaintingDoc?> _load(String paintingId, String name) async {
+    _readInSteps = false;
+    _reading = true;
+    try {
+      final doc = await store.load(paintingId, onProgress: (done) {
+        _readInSteps = true;
+        opening.value = OpeningProgress(name, done * _readShare);
+      });
+      if (doc == null) opening.value = null;
+      return doc;
+    } catch (_) {
+      opening.value = null;
+      rethrow;
+    } finally {
+      _reading = false;
+    }
+  }
+
+  /// Told by the canvas how much of the open painting it has put on the
+  /// paper ([done], 0 to 1) while a big one is painted a slice per frame,
+  /// and null once it's all there.
+  void paperProgress(double? done) {
+    // About the painting before the one being read.
+    if (_reading) return;
+    if (done == null) {
+      opening.value = null;
+      _readInSteps = false;
+      return;
+    }
+    final start = _readInSteps ? _readShare : 0.0;
+    opening.value = OpeningProgress(name, start + (1 - start) * done);
   }
 
   Future<void> delete(String paintingId) async {
@@ -455,6 +514,8 @@ class PaintingSession extends ChangeNotifier {
     name = doc.meta.name;
     _persisted = true;
     settings.lastPaintingId = id;
+    // Read in steps: the canvas takes it from here.
+    if (_readInSteps) opening.value = OpeningProgress(name, _readShare);
     notifyListeners();
   }
 
@@ -496,6 +557,7 @@ class PaintingSession extends ChangeNotifier {
     _autosave?.cancel();
     drawing.dispose();
     makingSample.dispose();
+    opening.dispose();
     super.dispose();
   }
 }

@@ -1,5 +1,17 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v6.2.0 (a progress bar while a painting opens)
+- 6.1.1 after pushing: Web and iOS both passed (live version.json 6.1.1+27). The iOS run passed on both simulators, so 6.1.0's two "not running" failures look like the runners after all.
+- Meanwhile (local art, not in git): a 古风 painting made with the app's own strokes, 古风揽月 (1900×1600, 10 layers, 16,869 strokes). The method and detail checks the user approved are in `local_art/guofeng/CRAFT.md`.
+- Asked: a progress bar while a painting board loads, especially a big one.
+- Measured first (desktop test VM, the 16,869-stroke painting, 7 MB): parsing the JSON 294 ms, building the strokes 294 ms, recording them 776 ms, rasterizing 762 ms. All four were synchronous: the first two in `PaintingStore.load`, the last two in the canvas's first frame. A bar alone would have frozen with the screen.
+- Done: reading in steps with a frame between pieces, then the canvas cache painting the new painting a 24 ms slice per frame, each step reporting to `PaintingSession.opening`. A card at the top shows the name and percentage. Small paintings are unchanged. Frames while putting the big painting on the paper: 38–75 ms.
+- This covers the plan's "background cache rebuilds" for opening a painting only; rebuilds after zooming or moving strokes still happen in one frame.
+- Mistakes: MISTAKES rules 68 (fake time in widget tests and zero-length waits) and 69 (a scripted edit ate a backslash).
+- Harness: PASS (analyze 0 issues, 424 tests, build web ok).
+- Not tested: on a real phone or in Chrome by hand (where each step takes longer, so the bar matters more).
+- Next: replay keyframes (measure first), and slicing other big rebuilds if they're noticed.
+
 ## 2026-10-28: v6.1.1 (stamps within reach, a tidier title bar)
 - Reported: the stamps (and adding stamps) only appeared while the stamp brush was in use. With 6.1.0 making that brush addable, they were out of reach for a new kid. Asked meanwhile: the title bar in the order 拖拽, 选择移动, 清空, and a different icon for clear.
 - Done: the 印章 section always shows; a stamp option picks the stamp brush; the bar reordered with a broom for clear.

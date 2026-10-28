@@ -100,6 +100,50 @@ class PaintingDoc {
   factory PaintingDoc.decode(String source) =>
       PaintingDoc.fromJson(jsonDecode(source) as Map<String, Object?>);
 
+  /// Saved text at least this long (a painting of some 1,500 strokes or
+  /// more) is worth reading in steps; see [decodeInSteps].
+  static int stepsFrom = 300000;
+
+  /// [decode], a piece at a time, letting the app draw a frame between
+  /// pieces and telling [onProgress] how much is done (0 to 1): a big
+  /// painting takes a while, and the screen shouldn't freeze meanwhile.
+  static Future<PaintingDoc> decodeInSteps(
+      String source, void Function(double done) onProgress) async {
+    Object? json;
+    final input = const JsonDecoder().startChunkedConversion(
+        ChunkedConversionSink<Object?>.withCallback((all) => json = all.single));
+    const piece = 200000;
+    for (var at = 0; at < source.length; at += piece) {
+      final end = at + piece < source.length ? at + piece : source.length;
+      input.add(source.substring(at, end));
+      onProgress(0.5 * end / source.length);
+      await _breathe();
+    }
+    input.close();
+    final map = json as Map<String, Object?>;
+    final saved = map['strokes'] as List;
+    final strokes = <Stroke>[];
+    const batch = 500;
+    for (var at = 0; at < saved.length; at += batch) {
+      for (final s in saved.skip(at).take(batch)) {
+        strokes.add(Stroke.fromJson(s as Map<String, Object?>));
+      }
+      onProgress(0.5 + 0.5 * strokes.length / saved.length);
+      await _breathe();
+    }
+    final rest = PaintingDoc.fromJson({...map, 'strokes': const []});
+    return PaintingDoc(
+      meta: rest.meta,
+      strokes: strokes,
+      paper: rest.paper,
+      paperSize: rest.paperSize,
+      layers: rest.layers,
+    );
+  }
+
+  /// Lets a frame be drawn.
+  static Future<void> _breathe() => Future<void>.delayed(Duration.zero);
+
   factory PaintingDoc.fromJson(Map<String, Object?> json) {
     return PaintingDoc(
       meta: PaintingMeta.fromJson(json),
@@ -224,10 +268,16 @@ class PaintingStore extends ChangeNotifier {
     return [...index]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 
-  Future<PaintingDoc?> load(String id) async {
+  /// The painting [id], or null if there's none. Given [onProgress], a big
+  /// one is read in steps, telling it how much is done (see
+  /// [PaintingDoc.decodeInSteps]).
+  Future<PaintingDoc?> load(String id,
+      {void Function(double done)? onProgress}) async {
     final raw = await _backend.readText('$id.json');
     if (raw == null) return null;
-    final doc = PaintingDoc.decode(raw);
+    final doc = onProgress != null && raw.length >= PaintingDoc.stepsFrom
+        ? await PaintingDoc.decodeInSteps(raw, onProgress)
+        : PaintingDoc.decode(raw);
     if (doc.meta.name.isNotEmpty) return doc;
     // Saved before v2.1: its name (from [nameUnnamed]) is only in the index.
     final named = (await _loadIndex()).where((m) => m.id == id).firstOrNull;

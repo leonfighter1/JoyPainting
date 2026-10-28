@@ -57,6 +57,9 @@ class S {
   String sampleTitle(String name) => _t('$name（示例）', '$name (sample)');
   String makingSample(String name) =>
       _t('正在把「$name」放进我的画作…', 'Putting "$name" into My Paintings…');
+  String openingPainting(String name) => name.isEmpty
+      ? _t('正在打开画作…', 'Opening the painting…')
+      : _t('正在打开「$name」…', 'Opening "$name"…');
   String sampleReady(String name) =>
       _t('「$name」已经放进我的画作了', '"$name" is in My Paintings');
   String get renameTitle => _t('给画作起个名字', 'Name this painting');

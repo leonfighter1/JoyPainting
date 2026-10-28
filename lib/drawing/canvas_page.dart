@@ -75,8 +75,9 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   static const longPressDelay = DrawTool.longPressDelay;
 
   /// The finished drawing kept as a picture, so a big painting isn't
-  /// painted again for every new stroke or eraser move.
-  final layerCache = LayeredCache();
+  /// painted again for every new stroke or eraser move. A painting just
+  /// opened is put on the paper a slice per frame.
+  final layerCache = LayeredCache(sliced: true);
 
   /// Pixels per paper point [layerCache] is kept at: what the screen shows
   /// at the current zoom step.
@@ -121,6 +122,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     super.initState();
     _viewFor = widget.session.id;
     widget.session.addListener(_onSessionChanged);
+    layerCache.paintInSlices(widget.session.paperProgress);
     _settings.addListener(_onSettingsChanged);
     panMode.addListener(_updatePanning);
     HardwareKeyboard.instance.addHandler(_onKey);
@@ -136,12 +138,15 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     }
   }
 
-  /// A different painting starts at the whole-paper view. Done here, not
-  /// while building, because changing the view rebuilds other widgets.
+  /// A different painting starts at the whole-paper view, and is put on
+  /// the paper a slice per frame if it's big, its progress shown. Done
+  /// here, not while building, because changing the view rebuilds other
+  /// widgets.
   void _onSessionChanged() {
     if (_viewFor == widget.session.id) return;
     _viewFor = widget.session.id;
     _view.jumpToStart();
+    layerCache.paintInSlices(widget.session.paperProgress);
   }
 
   @override

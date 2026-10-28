@@ -68,8 +68,22 @@
 65. When strokes start going through a different paint or repaint path, list every way a stroke being drawn changes (`begin`, `extend`, `moveShapeEnd`, `cancel`, `end`) and check each one; then run `test/live_stroke_test.dart`, which draws every brush, light & shadow and shape while watching the screen's repaint signals.
 66. Every option in the tools drawer needs a name of its own in both languages: tests and screen readers find chips by their text, and two "Glow"s (a gradient and a light mode) broke both.
 67. When picking telling lines out of a log by keyword, match log levels as whole words (" Fault ", " Error "): "fault" also matches every "Default" line, and the real reason gets buried. And look where the reason is written: why iOS stopped an app is in the system's log, not the app's.
+68. Code that waits on a zero-length timer (`Future.delayed(Duration.zero)`, to let a frame through) needs `pump(Duration)` in widget tests: a bare `pump()` never moves fake time, so the wait never ends. Every such wait that falls due runs within that one pump, so record progress with a listener instead of sampling after each pump.
+69. After a scripted edit (`perl -e`, `sed`), grep the changed lines for the backslashes and `$` they should hold: the shell or perl can eat them silently (`\d` became `d`). Put patterns and regexes in with the Edit tool.
 
 ## Log
+
+### 2026-10-28: A widget test waited on progress that fake time never moved
+- **Symptom:** the new test for opening a big painting saw the progress stop at 20 % for 400 frames. Later, with frames that moved time on, it saw no reading progress at all (below 40 %).
+- **Root cause:** reading in steps waits on `Future.delayed(Duration.zero)` between pieces so the app can draw a frame. In a widget test a bare `pump()` doesn't move fake time, so that wait never ends. `pump(Duration)` does move it, but it runs every wait that falls due within that one pump, so the whole read happened between two samples.
+- **Fix:** the test pumps 16 ms frames and records every value with a listener on `session.opening` instead of sampling after each pump. In the app the waits are real, and frames run between the pieces.
+- **Rule:** 68.
+
+### 2026-10-28: A shell edit ate a backslash in a test's pattern
+- **Symptom:** after a `perl -0pi -e` edit, a test never found the card's percentage text.
+- **Root cause:** the replacement held `RegExp(r'^\d+%$')`, and perl turned `\d` into `d`, so the pattern looked for "d" followed by "%".
+- **Fix:** the line was fixed with the Edit tool.
+- **Rule:** 69.
 
 ### 2026-10-28: The iOS check's annotations were all noise
 - **Symptom:** 6.1.0's iOS check failed twice ("not running" after 30 s, the iPad once and the iPhone once) and the annotations showed only ordinary log lines.

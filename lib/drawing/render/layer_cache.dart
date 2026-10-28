@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../stroke.dart';
 import 'paint_strokes.dart';
@@ -59,16 +60,37 @@ class StrokeLayerCache {
   /// Paints [strokes] (and [intoLayer], a stroke being drawn into this
   /// layer: the eraser, light and shadow) on [canvas] at [size], from the
   /// picture kept at [ratio] pixels per paper point.
-  void paint(Canvas canvas, Size size, List<Stroke> strokes, Color paper,
-      double ratio, {Stroke? intoLayer}) {
+  ///
+  /// With a [clock], strokes still missing from the picture are painted
+  /// only until it passes [budget] (at least one if [atLeastOne]), and the
+  /// rest on later calls: a slice at a time. Returns how many of [strokes]
+  /// are painted.
+  int paint(Canvas canvas, Size size, List<Stroke> strokes, Color paper,
+      double ratio,
+      {Stroke? intoLayer,
+      Stopwatch? clock,
+      Duration budget = Duration.zero,
+      bool atLeastOne = true}) {
     final width = (size.width * ratio).ceil();
     final height = (size.height * ratio).ceil();
     if (!enabled || width <= 0 || height <= 0 || width * height > maxPixels) {
       dispose();
       paintStrokes(canvas, size, [...strokes, ?intoLayer], paper: paper);
-      return;
+      return strokes.length;
     }
-    _update(size, strokes, paper.toARGB32(), ratio, width, height);
+    final painted = _update(size, strokes, paper.toARGB32(), ratio, width,
+        height, clock: clock, budget: budget, atLeastOne: atLeastOne);
+    if (painted == 0) {
+      // Nothing of these strokes painted yet (the picture kept may be
+      // another painting's); a stroke being drawn still goes on its own
+      // layer, so an eraser doesn't cut into the paper.
+      if (intoLayer != null) {
+        canvas.saveLayer(Offset.zero & size, Paint());
+        intoLayer.paint(canvas);
+        canvas.restore();
+      }
+      return 0;
+    }
     final image = _current!.image;
     final src = Rect.fromLTWH(
         0, 0, image.width.toDouble(), image.height.toDouble());
@@ -76,7 +98,7 @@ class StrokeLayerCache {
     final look = Paint()..filterQuality = FilterQuality.medium;
     if (intoLayer == null) {
       canvas.drawImageRect(image, src, dst, look);
-      return;
+      return painted;
     }
     // Into the strokes' layer, not the paper under it: the eraser cuts
     // into it, light and shadow mix with it.
@@ -85,10 +107,16 @@ class StrokeLayerCache {
       ..drawImageRect(image, src, dst, look);
     intoLayer.paint(canvas);
     canvas.restore();
+    return painted;
   }
 
-  void _update(Size size, List<Stroke> strokes, int paper, double ratio,
-      int width, int height) {
+  /// Brings the picture up to [strokes] (or, with a [clock], as far as
+  /// [budget] allows) and returns how many of them it shows.
+  int _update(Size size, List<Stroke> strokes, int paper, double ratio,
+      int width, int height,
+      {Stopwatch? clock,
+      Duration budget = Duration.zero,
+      bool atLeastOne = true}) {
     // Pictures at another size can't be used now.
     _earlier.removeWhere((k) {
       final stale = k.size != size || k.ratio != ratio;
@@ -115,7 +143,10 @@ class StrokeLayerCache {
         _current = base;
       }
     }
-    if (base != null && base.drawn.length == strokes.length) return;
+    final from = base?.drawn.length ?? 0;
+    if (from == strokes.length) return from;
+    // Painting in slices, and this frame's time is up.
+    if (clock != null && !atLeastOne && clock.elapsed >= budget) return from;
 
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..scale(ratio);
@@ -125,17 +156,32 @@ class StrokeLayerCache {
           Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
           Rect.fromLTWH(0, 0, width / ratio, height / ratio),
           Paint());
-      paintStrokeRange(canvas, size, strokes, base.drawn.length,
-          strokes.length,
-          paper: Color(paper));
     } else {
       rebuilds++;
+    }
+    var to = strokes.length;
+    if (clock != null) {
+      // A slice: one stroke after another while there's time.
+      to = from;
+      do {
+        paintStrokeRange(canvas, size, strokes, to, to + 1, paper: Color(paper));
+        to++;
+      } while (to < strokes.length && clock.elapsed < budget);
+    } else if (base != null) {
+      paintStrokeRange(canvas, size, strokes, from, to, paper: Color(paper));
+    } else {
       paintStrokes(canvas, size, strokes, paper: Color(paper));
     }
     final next = _Kept(recorder.endRecording().toImageSync(width, height),
-        List.of(strokes), size, ratio, paper);
-    _keep(_current);
+        strokes.sublist(0, to), size, ratio, paper);
+    if (clock != null && base != null && identical(base, _current)) {
+      // The slice before this one: no state to undo back to.
+      base.image.dispose();
+    } else {
+      _keep(_current);
+    }
     _current = next;
+    return to;
   }
 
   /// Keeps [k] for undo, forgetting the oldest pictures past the limits.
@@ -197,11 +243,44 @@ class _Kept {
 /// first at each layer's opacity. Adding to one layer, or erasing on it,
 /// leaves the pictures of the others as they are.
 class LayeredCache {
+  /// [sliced]: a painting just opened may be painted a slice at a time
+  /// (see [paintInSlices]); only the canvas asks for it. The replay paints
+  /// every frame whole.
+  LayeredCache({this.sliced = false});
+
+  final bool sliced;
+
+  /// How long one frame spends painting strokes while a painting is
+  /// painted in slices: the screen stays alive and the progress shows.
+  static Duration sliceBudget = const Duration(milliseconds: 24);
+
   final _caches = <String, StrokeLayerCache>{};
 
   /// How many times any layer's picture was painted from the start; for
   /// tests.
   int get rebuilds => _caches.values.fold(0, (n, c) => n + c.rebuilds);
+
+  /// Told after each frame of a painting painted in slices how much of it
+  /// is painted, and null once all of it is.
+  void Function(double? done)? _onSlice;
+
+  /// Ticks for one more frame while slices are left to paint.
+  final _more = ValueNotifier<int>(0);
+
+  /// What a painter of this cache repaints on, as well as its strokes.
+  Listenable get repaint => _more;
+
+  /// Paints the next picture of every layer a slice at a time: as many
+  /// strokes as fit in [sliceBudget] each frame, the lowest layers first,
+  /// so a big painting doesn't freeze the screen while it's put on the
+  /// paper. [onProgress] is told after each frame how much is painted (0
+  /// to 1), and null once it's all on the paper, after one frame if the
+  /// painting is small. Does nothing unless the cache is [sliced].
+  void paintInSlices(void Function(double? done) onProgress) {
+    if (!sliced) return;
+    _onSlice = onProgress;
+    _more.value++;
+  }
 
   /// Paints [strokes] on [layers] (and [intoLayer] being drawn on its
   /// layer, if any) at [ratio] pixels per paper point. No paper.
@@ -213,6 +292,9 @@ class LayeredCache {
       if (gone) cache.dispose();
       return gone;
     });
+    final report = _onSlice;
+    final clock = report == null ? null : (Stopwatch()..start());
+    var total = 0, painted = 0;
     final page = Offset.zero & size;
     for (final layer in layers) {
       if (!layer.visible || layer.opacity <= 0) continue;
@@ -228,9 +310,24 @@ class LayeredCache {
         canvas.saveLayer(
             page, Paint()..color = Color.fromRGBO(0, 0, 0, layer.opacity));
       }
-      cache.paint(canvas, size, own, paper, ratio, intoLayer: drawn);
+      // The lowest unfinished layer always gets a slice, so every frame
+      // gets further.
+      painted += cache.paint(canvas, size, own, paper, ratio,
+          intoLayer: drawn,
+          clock: clock,
+          budget: sliceBudget,
+          atLeastOne: painted == total);
+      total += own.length;
       if (seeThrough) canvas.restore();
     }
+    if (report == null) return;
+    final finished = painted >= total;
+    if (finished) _onSlice = null;
+    // Not while painting: listeners may rebuild widgets.
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      report(finished ? null : painted / total);
+      if (!finished) _more.value++;
+    });
   }
 
   /// The picture of layer [id] if it shows exactly [strokes] (that

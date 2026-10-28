@@ -178,9 +178,11 @@ class _GalleryPageState extends State<GalleryPage> {
   }
 
   Future<void> _open(PaintingMeta meta) async {
+    // Another one is being opened.
+    if (widget.session.opening.value != null) return;
     final messenger = ScaffoldMessenger.of(context);
     final s = S.of(context);
-    if (await widget.session.open(meta.id)) {
+    if (await widget.session.open(meta.id, name: meta.name)) {
       widget.onOpened();
     } else {
       messenger.showSnackBar(SnackBar(content: Text(s.openFailed)));

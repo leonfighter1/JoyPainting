@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n.dart';
+import '../painting_session.dart';
 import '../theme/cute_theme.dart';
 
 /// A card at the top of the screen, over every page, while the sample
@@ -12,8 +13,38 @@ class SampleProgressCard extends StatelessWidget {
   final String name;
 
   @override
+  Widget build(BuildContext context) =>
+      ProgressCard(text: S.of(context).makingSample(name));
+}
+
+/// The same card while a painting is being opened: its name and how much
+/// is done, with the percentage.
+class OpeningProgressCard extends StatelessWidget {
+  const OpeningProgressCard({super.key, required this.progress});
+
+  final OpeningProgress progress;
+
+  @override
+  Widget build(BuildContext context) => ProgressCard(
+        text: S.of(context).openingPainting(progress.name),
+        value: progress.done,
+      );
+}
+
+/// A card at the top of the screen saying what's going on, with a bar
+/// that fills up to [value] (0 to 1), or moves to and fro without one.
+/// Taps go through it; screen readers read it out.
+class ProgressCard extends StatelessWidget {
+  const ProgressCard({super.key, required this.text, this.value});
+
+  final String text;
+  final double? value;
+
+  @override
   Widget build(BuildContext context) {
     final cute = CuteTheme.of(context);
+    final percent = value == null ? null : '${(value! * 100).clamp(0, 100).round()}%';
+    final style = TextStyle(color: cute.ink, fontWeight: FontWeight.w700);
     return SafeArea(
       child: Align(
         alignment: Alignment.topCenter,
@@ -35,15 +66,19 @@ class SampleProgressCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          S.of(context).makingSample(name),
-                          style: TextStyle(
-                            color: cute.ink,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(child: Text(text, style: style)),
+                            if (percent != null) ...[
+                              const SizedBox(width: 12),
+                              Text(percent, style: style),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 10),
                         LinearProgressIndicator(
+                          value: value,
+                          semanticsValue: percent,
                           color: cute.spec.primary,
                           borderRadius: BorderRadius.circular(4),
                         ),
