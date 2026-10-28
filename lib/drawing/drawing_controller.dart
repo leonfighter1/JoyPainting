@@ -400,7 +400,8 @@ class DrawingController extends ChangeNotifier {
           ids.contains(s.layerId) ? s : s.onLayer(PaintingLayer.baseId),
       ]);
     _sortStrokes();
-    _active = _layers.last.id;
+    // Draw on the top layer that isn't locked (a coloring page's lines are).
+    _active = _layers.lastWhere((l) => !l.locked, orElse: () => _layers.last).id;
     _undo.clear();
     _redo.clear();
     current = null;

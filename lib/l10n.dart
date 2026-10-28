@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'device.dart';
 import 'drawing/stroke.dart';
+import 'gallery/coloring_pages.dart' show ColoringPage;
 import 'skill_level.dart';
 import 'settings.dart' show MusicMode;
 
@@ -134,6 +135,21 @@ class S {
   String get saveGif => _t('存成 GIF 动图', 'Save as GIF');
   String get makingGif => _t('正在制作 GIF…', 'Making the GIF…');
   String replayFileName(String name) => '${name}_${_t('回放', 'replay')}.gif';
+  String get coloringBook => _t('涂色本', 'Coloring book');
+  String get coloringBookHint => _t(
+      '选一张线稿开始涂色。线稿锁在最上面，涂色、填色都在线下面，橡皮擦不会擦掉线。',
+      'Pick a page to color. Its lines stay on top: coloring and filling go under them, and the eraser leaves them alone.');
+  String coloringPainting(String name) => _t('涂色：$name', 'Coloring: $name');
+  String coloringName(ColoringPage page) => switch (page) {
+        ColoringPage.cat => _t('小猫', 'Cat'),
+        ColoringPage.house => _t('小房子', 'House'),
+        ColoringPage.flower => _t('花朵', 'Flower'),
+        ColoringPage.fish => _t('小鱼', 'Fish'),
+        ColoringPage.rocket => _t('火箭', 'Rocket'),
+        ColoringPage.butterfly => _t('蝴蝶', 'Butterfly'),
+        ColoringPage.car => _t('小汽车', 'Car'),
+        ColoringPage.tree => _t('大树', 'Tree'),
+      };
   String get importPhoto => _t('导入照片（描着画）', 'Add a photo (to trace)');
   String get photoLayer => _t('照片', 'Photo');
   String get photoAddedOnLayer => _t(

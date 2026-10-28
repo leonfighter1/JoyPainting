@@ -267,8 +267,14 @@ class PaintingSession extends ChangeNotifier {
       debugPrint('Import rejected: $e');
       return false;
     }
+    return openCopyOf(incoming);
+  }
+
+  /// Saves the open painting, then adds a copy of [doc] as a new painting
+  /// (a fresh id) and opens it: an imported file, a coloring page.
+  Future<bool> openCopyOf(PaintingDoc doc) async {
     if (!await save()) return false;
-    final copy = await _addCopy(incoming);
+    final copy = await _addCopy(doc);
     if (copy == null) return false;
     _show(copy);
     return true;

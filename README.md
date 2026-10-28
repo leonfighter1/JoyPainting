@@ -36,6 +36,7 @@ What it does:
   - Every painting gets a name ("My painting 1" / "我的画作 1"); rename or copy it from the title or its gallery card.
   - A sample painting for each kid, matching their level: 快乐的一天 / A Happy Day (beginner: pens, shapes and stamps), 海边的晚霞 / Sunset by the Sea (intermediate: soft brush, gradients, free shapes) or 湖畔晨光 / Dawn on the Lake (advanced: a realistic painting with textures, the blender and light & shadow). Picking another level later brings that one too, once.
   - **A photo to trace** (导入照片): put a picture under your drawing, half see-through (Intermediate and up).
+  - **Coloring book** (涂色本): 8 line drawings to color in; the lines stay locked on top, so brushes, the paint bucket and the eraser work under them.
   - **Replay** (回放作画过程): watch a painting draw itself again, stroke by stroke, at ½× to 4×, and save the replay as a looping GIF.
   - **Backup reminders** (备份提醒): My Paintings reminds you to keep a copy when the paintings haven't been backed up for a while; one tap exports them all.
   - Download as PNG, JPG or PDF (in the apps, pictures go to the photo gallery and a PDF to the share menu).
@@ -52,13 +53,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.2.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.3.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **5.2.0** | 2026-10-28 | Turn the paper with two fingers (snaps straight; R on a computer), from the Intermediate level |
+| **5.3.0** | 2026-10-28 | A coloring book in My Paintings: 8 line drawings to color in, the lines locked on top so coloring, filling and erasing go under them |
+| 5.2.0 | 2026-10-28 | Turn the paper with two fingers (snaps straight; R on a computer), from the Intermediate level |
 | 5.1.0 | 2026-10-28 | Add a photo to trace (Intermediate and up): under the drawing, half see-through; on its own locked layer at the Advanced level |
 | 5.0.0 | 2026-10-28 | Layers at the Advanced level: add, reorder, hide, lock, rename, merge and fade layers; the eraser and blender work on one layer; exports, replays and GIFs show the layers |
 | 4.2.0 | 2026-10-28 | Replay a painting stroke by stroke (with speeds and a slider) and save it as a GIF; backup reminders in My Paintings with a one-tap backup |
@@ -82,6 +84,21 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets).
+
+### 5.3.0 (2026-10-28): a coloring book
+
+**New**
+- **Coloring book (涂色本)**, at every level: in My Paintings, tap 涂色本 and pick one of 8 pictures to color in: a cat, a house, a flower, a fish, a rocket, a butterfly, a car and a tree. It opens as a new painting named after it ("涂色：小猫"). The lines stay on top and can't be changed: color under them with any brush, or tap inside with the paint bucket, and the eraser only takes away your colors.
+
+**Changed**
+- My Paintings has a 涂色本 button next to import and export.
+- A painting whose top layer is locked opens on the layer under it.
+
+**Fixed**
+- Nothing new; see 5.2.0.
+
+**Good to know**
+- In versions before 5.3.0 a coloring painting opens with its lines on top, but they aren't locked there, so the eraser can rub them out.
 
 ### 5.2.0 (2026-10-28): turn the paper
 
@@ -418,6 +435,7 @@ What the tests cover:
 - **`test/picker_test.dart`**: the color seen at a point (paint, paper, shadows, see-through paint), the picker's loupe and its return to the last brush, and picking a color off the canvas.
 - **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
 - **`test/rotation_test.dart`**: turning the paper with two fingers, snapping to a quarter turn, beginners only zooming, the R key, and a turned paper (angle on the chip, grips hidden, strokes under the finger).
+- **`test/coloring_test.dart`**: every coloring page (lines on a locked top layer, the layer under them active, the lines never picked up, closed areas the paint bucket fills without leaking) and opening one from My Paintings.
 - **`test/photo_test.dart`**: a photo on the paper (saved with its picture, moved, hit inside its box), painted at its opacity, made smaller and fitted, refused when unreadable, put under the drawing or on a locked layer at the bottom, and the menu item by level.
 - **`test/layers_test.dart`**: layers in the drawing (adding above the active one, keeping strokes in layer order, moving, merging, deleting, undo), picking only from the active shown and unlocked layer, saving layers, painting them (the eraser on its own layer, hidden and see-through layers, one kept picture per layer), the layers panel, and refusing to draw on a hidden layer.
 - **`test/replay_test.dart`**: the replay's timeline (order, point by point, the 40-second limit), its last frame matching the painting, the eraser while replayed, the GIF (header, frames, cancelling) and the replay page (play, pause, playing to the end).
@@ -517,7 +535,7 @@ lib/
     canvas/            its parts: tools (draw, text, move, pan, picker, fill), selection, view, menu, paper, drawer
     render/            strokes into pictures: the kept picture, reading pixels, filling areas
     replay/            playing a painting back, and making the GIF
-  gallery/             My Paintings page and storage (file / browser / memory)
+  gallery/             My Paintings page and storage (file / browser / memory), backup reminders, the coloring book
   music/               background music: track library, saved uploads, looping player
   share/               send, print preview, import, .jypaint format
   theme/               portable JSON themes, contrast math, fonts (see theme/README.md)
@@ -525,11 +543,11 @@ lib/
   l10n.dart            all UI text, zh and en
   settings.dart        remembered choices (brush, colors, corners, theme, level, text size…)
   skill_level.dart     what each drawing level shows
-assets/                logo, theme JSON files, fonts and their OFL licenses, built-in music, the level sample paintings
+assets/                logo, theme JSON files, fonts and their OFL licenses, built-in music, the level sample paintings, the coloring pages
 android/               Android host app (MainActivity handles "open with")
 ios/                   iOS host app (AppDelegate handles "Open in", Info.plist)
 .github/workflows/     ios.yml (iOS build on GitHub's Macs), web.yml (publishes the web version)
-tool/                  build_apk.ps1, watch_build.ps1, make_icons.ps1, make_music.dart, ios_sim_smoke.sh, android_smoke.ps1; samples/ (makes the level sample paintings in assets/samples/); bench/ (how smooth big paintings are, in Chrome)
+tool/                  build_apk.ps1, watch_build.ps1, make_icons.ps1, make_music.dart, ios_sim_smoke.sh, android_smoke.ps1; samples/ (makes the level sample paintings in assets/samples/); coloring/ (makes the coloring pages in assets/coloring/); bench/ (how smooth big paintings are, in Chrome)
 integration_test/      the same measurement on a device (driven by test_driver/)
 local_art/             not in git: pictures made locally with the app's brushes
 docs/appdev/           FEATURES.md, MISTAKES.md, DEVLOG.md, TECH_PLAN.md (the improvement plan)

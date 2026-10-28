@@ -146,6 +146,13 @@ class Artist {
       ShapeKind.ellipse, Rect.fromCircle(center: c, radius: r), Fill(color),
       filled: false, width: width);
 
+  /// An empty ellipse, turned by [angle] (radians, clockwise).
+  void ovalLine(Offset c, double rx, double ry, Color color,
+          {double width = 2, double angle = 0}) =>
+      _shape(ShapeKind.ellipse,
+          Rect.fromCenter(center: c, width: rx * 2, height: ry * 2), Fill(color),
+          filled: false, width: width, angle: angle);
+
   void star(Offset c, double r, Color color) =>
       _shape(ShapeKind.star, Rect.fromCircle(center: c, radius: r), Fill(color));
 

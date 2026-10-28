@@ -1,5 +1,13 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v5.3.0 (coloring book)
+- 5.2.0 after pushing: Web and iOS passed (live version.json 5.2.0+18). 5.1.0's iOS run was cancelled by the 5.2.0 push (same workflow group); 5.2.0 holds all of 5.1.0 and passed.
+- Done: F7's coloring book (8 line drawings on a locked top layer, the 涂色本 sheet in My Paintings, opening a page as a new painting with the layer under the lines active). The overview was shown to the user (local_art/out/coloring/all.png) before pushing; they said to go on.
+- Mistakes: none new.
+- Harness: PASS (analyze 0 issues, 386 tests, build web ok).
+- Not tested: coloring on a real phone or tablet.
+- Next: every TECH_PLAN item (R, F1–F9) is done.
+
 ## 2026-10-28: v5.2.0 (turning the paper)
 - Done: F8 (two-finger rotation with quarter-turn snapping, R / Shift+R, the angle on the zoom chip, grips hidden while turned, off for beginners).
 - Mistakes: a bash-quoted perl edit with `${...}` failed with "bad substitution" (nothing changed; redone with the Edit tool, as rule 48 says for such edits).

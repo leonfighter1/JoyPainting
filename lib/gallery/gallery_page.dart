@@ -14,6 +14,7 @@ import '../widgets/menu_button.dart';
 import '../widgets/name_dialog.dart';
 import '../theme/cute_theme.dart';
 import 'backup_reminder.dart';
+import 'coloring_book_sheet.dart';
 import 'painting_store.dart';
 import 'storage_risk.dart';
 
@@ -92,6 +93,15 @@ class _GalleryPageState extends State<GalleryPage> {
       _settings.markBackedUp(DateTime.now());
     }
     if (mounted) _stopSelecting();
+  }
+
+  /// A new painting from a coloring page, opened on the canvas.
+  Future<void> _startColoring() async {
+    final s = S.of(context);
+    final page = await pickColoringPage(context);
+    if (page == null) return;
+    final doc = await page.load(s);
+    if (await widget.session.openCopyOf(doc)) widget.onOpened();
   }
 
   /// The backup reminder's one tap: every painting, as one file.
@@ -296,6 +306,7 @@ class _GalleryPageState extends State<GalleryPage> {
                     onImport: () =>
                         pickAndImport(context, widget.session, widget.onOpened),
                     onStartExport: () => _startSelecting(),
+                    onColoring: _startColoring,
                     onCancel: _stopSelecting,
                     onToggleAll: () => _toggleAll(shown),
                     onExport: _exportPicked,
@@ -404,6 +415,7 @@ class _GalleryActions extends StatelessWidget {
     required this.canExport,
     required this.onImport,
     required this.onStartExport,
+    required this.onColoring,
     required this.onCancel,
     required this.onToggleAll,
     required this.onExport,
@@ -415,6 +427,9 @@ class _GalleryActions extends StatelessWidget {
   final bool canExport;
   final VoidCallback onImport;
   final VoidCallback onStartExport;
+
+  /// Opens the coloring book.
+  final VoidCallback onColoring;
   final VoidCallback onCancel;
   final VoidCallback onToggleAll;
   final VoidCallback onExport;
@@ -450,6 +465,11 @@ class _GalleryActions extends StatelessWidget {
                 icon: const Icon(Icons.ios_share_rounded),
                 label: Text(s.exportButton),
                 onPressed: canExport ? onStartExport : null,
+              ),
+              FilledButton.tonalIcon(
+                icon: const Icon(Icons.auto_stories_rounded),
+                label: Text(s.coloringBook),
+                onPressed: onColoring,
               ),
             ],
           ),
