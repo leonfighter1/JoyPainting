@@ -248,6 +248,28 @@ void main() {
       }
     });
 
+    test('a shape with light and shadow repaints its layer as it is dragged',
+        () {
+      for (final blend in StrokeBlend.values) {
+        final d = DrawingController()
+          ..begin(Stroke.shape(
+              shape: ShapeKind.rectangle,
+              from: const Offset(10, 10),
+              to: const Offset(10, 10),
+              brush: BrushType.pen,
+              color: Colors.black,
+              size: 4,
+              blend: blend));
+        final before = d.finishedRevision.value;
+        d.moveShapeEnd(const Offset(80, 60));
+        // The layer is what shows a blended stroke being drawn: without
+        // a repaint, the shape stayed a dot until the finger lifted.
+        final intoLayer = blend != StrokeBlend.normal;
+        expect(d.finishedRevision.value > before, intoLayer, reason: blend.name);
+        expect(d.intoLayer, intoLayer ? same(d.current) : isNull);
+      }
+    });
+
     test('textures are saved and look the same when reopened', () async {
       for (final t in StrokeTexture.values) {
         final s = line(

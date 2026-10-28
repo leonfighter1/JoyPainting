@@ -237,6 +237,7 @@ class DrawingController extends ChangeNotifier {
     final c = current;
     if (c == null || c.shape == null) return;
     c.setShapeEnds(c.shapeFrom!, end);
+    if (_intoLayer) finishedRevision.value++;
     notifyListeners();
   }
 
@@ -244,6 +245,7 @@ class DrawingController extends ChangeNotifier {
     if (current == null) return;
     if (current!.isDegenerateShape) {
       // A tap with a shape tool draws nothing.
+      if (_intoLayer) finishedRevision.value++;
       current = null;
       notifyListeners();
       return;

@@ -54,13 +54,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.4.2**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.4.3**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **5.4.2** | 2026-10-28 | Light & shadow (soft light, overlay, highlight) show while you draw, as they look once the finger lifts |
+| **5.4.3** | 2026-10-28 | Shapes (line, rectangle, circle…) with light & shadow show while you drag them |
+| 5.4.2 | 2026-10-28 | Light & shadow (soft light, overlay, highlight) show while you draw, as they look once the finger lifts |
 | 5.4.1 | 2026-10-28 | Thin lines with a texture show again; picking a level no longer stalls while its sample painting is added (a card says it's being made); sample paintings are named "（示例）" |
 | 5.4.0 | 2026-10-28 | A tidier brushes & colors drawer (groups that open and close, size and opacity under the colors), the layers button floating next to it, 3 quiet seconds between music tracks, a wider keyboard shortcut list |
 | 5.3.1 | 2026-10-28 | Download or send a picture without its photo; in a browser, Settings says whether the paintings are kept and can ask the browser to keep them |
@@ -89,6 +90,11 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 5.4.3 (2026-10-28): shapes with light & shadow
+
+**Fixed**
+- **A shape with light & shadow (光影) stayed invisible while it was dragged**: with 阴影, 提亮, 叠加 or 柔光 on, a line, arrow, rectangle, circle, triangle, star or heart (filled or not) showed nothing until the finger lifted. This came with 5.4.2; freehand lines and free shapes were fine. Every brush, light & shadow and shape is now checked while drawing (560 combinations), also with mirror drawing, a texture, low opacity and a see-through layer.
 
 ### 5.4.2 (2026-10-28): light & shadow while drawing
 
@@ -497,6 +503,7 @@ What the tests cover:
 - **`test/picker_test.dart`**: the color seen at a point (paint, paper, shadows, see-through paint), the picker's loupe and its return to the last brush, and picking a color off the canvas.
 - **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
 - **`test/rotation_test.dart`**: turning the paper with two fingers, snapping to a quarter turn, beginners only zooming, the R key, and a turned paper (angle on the chip, grips hidden, strokes under the finger).
+- **`test/live_stroke_test.dart`**: every brush, light & shadow and shape (560 combinations, then mirror drawing, a texture, low opacity and a see-through layer) shows while it is drawn as it will once finished, with the layers repainted only on their signal, as the screen does.
 - **`test/drawer_test.dart`**: the tools drawer's groups (which start open, opening and closing them, what a closed one shows, its screen reader state), size and opacity under the colors, and the layers button (next to the tools button, following it until dragged, never onto undo's corner, opening the layers).
 - **`test/coloring_test.dart`**: every coloring page (lines on a locked top layer, the layer under them active, the lines never picked up, closed areas the paint bucket fills without leaking) and opening one from My Paintings.
 - **`test/photo_test.dart`**: a photo on the paper (saved with its picture, moved, hit inside its box), painted at its opacity, made smaller and fitted, refused when unreadable, put under the drawing or on a locked layer at the bottom, the menu item by level, and leaving the photo out of pictures (the switch in the format sheet).

@@ -65,8 +65,15 @@
 62. Don't run `dart format` on a whole existing file: the repo isn't laid out by the current formatter, so it rewrites hundreds of untouched lines and buries the real change. Format only new files, and match the layout around an edit by hand.
 63. Before changing how existing strokes paint, count how many strokes in the samples (and the local tarot cards) the change touches. If it would change approved art, put the new look behind a flag that only new strokes get.
 64. The stroke being drawn and the finished strokes are painted by different paths (`paintCurrent` over the paper; finished ones on their layer's own sheet). When a stroke looks wrong while drawing, check every per-stroke option (light & shadow, texture, opacity, layer) in both paths on white paper, and ask for the user's exact settings before settling on a cause.
+65. When strokes start going through a different paint or repaint path, list every way a stroke being drawn changes (`begin`, `extend`, `moveShapeEnd`, `cancel`, `end`) and check each one; then run `test/live_stroke_test.dart`, which draws every brush, light & shadow and shape while watching the screen's repaint signals.
 
 ## Log
+
+### 2026-10-28: 5.4.2 left shapes with light & shadow invisible while dragged
+- **Symptom:** with 阴影, 柔光 and the rest, a shape other than freehand or a free shape showed nothing until lifting; refreshing didn't help.
+- **Root cause:** 5.4.2 moved blended strokes into their layer's picture while drawn, which is repainted only on `finishedRevision`. `begin`, `extend` and `cancel` bumped it (copied from the eraser, which never draws shapes); `moveShapeEnd`, the way shapes grow, didn't. The 5.4.2 test painted the layer directly, so it never saw the missing repaint. 336 of 560 brush × blend × shape combinations were affected.
+- **Fix:** `moveShapeEnd` (and a tapped-away shape) bump it too; `test/live_stroke_test.dart` repaints like the screen does and covers every combination.
+- **Rule:** 65.
 
 ### 2026-10-28: The wrong cause for "no trail while drawing"
 - **Symptom:** the user saw no trail while drawing with a texture. My probes (normal blend only) showed textured strokes drawing fine; asked, the user said "a thin pen, a straight line", and 5.4.1 fixed thin textured lines (a real but different problem). The user then found the trigger: freehand + charcoal + soft light.

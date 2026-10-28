@@ -1,5 +1,13 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v5.4.3 (shapes with light & shadow)
+- 5.4.2 after pushing: Web passed (live version.json 5.4.2+23); iOS never ran ("The job was not acquired by Runner of type hosted even after multiple attempts", macOS runner capacity). No `gh` here to re-run it; this push runs it again.
+- Reported: with light & shadow on, shapes other than freehand and free shapes showed no trail; asked to look for other combinations too. Cause: my 5.4.2 change; `moveShapeEnd` didn't signal the layer to repaint. A new sweep test (`test/live_stroke_test.dart`) checks every brush × blend × shape the draw tool makes (560) as the screen repaints them: 336 failed on 5.4.2, none now; mirror, texture, low opacity and a see-through layer also pass.
+- Also this session: painted 泼墨山水 for the user from the app's strokes (`local_art/ink/`, not in git; 6,959 strokes, opens in the app as a .jypaint).
+- Mistakes: MISTAKES rule 65.
+- Harness: PASS (analyze 0 issues, 404 tests, build web ok).
+- Next: from the plan, background cache rebuilds and replay keyframes (measure first).
+
 ## 2026-10-28: v5.4.2 (light & shadow while drawing)
 - 5.4.1 after pushing: Web and iOS passed (live version.json 5.4.1+22).
 - Reported: with freehand + charcoal + soft light, no trail while drawing. Cause: the stroke being drawn blended with the white paper (soft light, overlay and screen leave white unchanged); finished strokes blend only with their own layer. Strokes with a blend now go into their layer while drawn, like the eraser; the replay too.
