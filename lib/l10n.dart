@@ -134,6 +134,16 @@ class S {
   String get saveGif => _t('存成 GIF 动图', 'Save as GIF');
   String get makingGif => _t('正在制作 GIF…', 'Making the GIF…');
   String replayFileName(String name) => '${name}_${_t('回放', 'replay')}.gif';
+  String get importPhoto => _t('导入照片（描着画）', 'Add a photo (to trace)');
+  String get photoLayer => _t('照片', 'Photo');
+  String get photoAddedOnLayer => _t(
+      '照片放在最底下单独的「照片」图层里，半透明并锁住了，可以放心描着画。在图层里可以调它的透明度。',
+      'The photo is on its own "Photo" layer at the bottom, see-through and locked, so you can trace it. Change its opacity in Layers.');
+  String get photoAdded => _t(
+      '照片放在最底下，半透明，可以描着画。用「选择移动」可以挪动、放大缩小或调透明度。',
+      'The photo is at the bottom, see-through, ready to trace. The move tool moves, resizes or fades it.');
+  String get photoUnreadable =>
+      _t('这张图片读不出来，换一张试试（JPG、PNG 都可以）。', "This picture can't be read: try another (JPG or PNG).");
   String get layers => _t('图层', 'Layers');
   String layerName(int n) => _t('图层 $n', 'Layer $n');
   String layersButton(String name, int count) =>

@@ -22,6 +22,25 @@ extension StrokePainting on Stroke {
     if (transform != null) canvas.restore();
   }
 
+  /// The picture at its place and opacity; a faint box while it is still
+  /// being decoded (painters are told to paint again when it's ready).
+  void _paintPhoto(Canvas canvas) {
+    final rect = _localBounds;
+    final image = Photos.imageFor(photo!);
+    if (image == null) {
+      canvas.drawRect(rect, Paint()..color = const Color(0x14000000));
+      return;
+    }
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      rect,
+      Paint()
+        ..color = Color.fromRGBO(0, 0, 0, opacity.clamp(0, 1))
+        ..filterQuality = FilterQuality.medium,
+    );
+  }
+
   void _paintText(Canvas canvas) {
     final alpha = (color.a * opacity).clamp(0.0, 1.0);
     final bounds = textBounds;
@@ -41,6 +60,7 @@ extension StrokePainting on Stroke {
   }
 
   void _paintOnce(Canvas canvas) {
+    if (photo != null) return _paintPhoto(canvas);
     // The blender needs what's under it; see [paintSmudge].
     if (brush == BrushType.smudge) return;
     // A blend mode mixes the whole stroke with what's under it at once,

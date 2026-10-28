@@ -8,6 +8,7 @@ import '../../l10n.dart';
 import '../../theme/cute_theme.dart';
 import '../../widgets/corner_float.dart';
 import '../drawing_controller.dart';
+import '../stroke.dart';
 import '../render/layer_cache.dart';
 import 'canvas_keys.dart';
 import 'canvas_view.dart';
@@ -18,7 +19,9 @@ import 'canvas_view.dart';
 class FinishedStrokesPainter extends CustomPainter {
   FinishedStrokesPainter(this.controller,
       {required this.cache, required this.ratio})
-      : super(repaint: Listenable.merge([controller.finishedRevision, ratio]));
+      : super(
+            repaint: Listenable.merge(
+                [controller.finishedRevision, ratio, Photos.decoded]));
 
   final DrawingController controller;
   final LayeredCache cache;

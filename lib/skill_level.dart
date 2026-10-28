@@ -46,6 +46,9 @@ enum SkillLevel {
 
   bool get opacity => _intermediate;
   bool get freeShape => _intermediate;
+
+  /// Adding a photo to trace.
+  bool get photos => _intermediate;
   bool get gradients => _intermediate;
   bool get lightAndShadow => this == advanced;
   bool get textures => this == advanced;

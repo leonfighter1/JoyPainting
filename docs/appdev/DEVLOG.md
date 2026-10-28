@@ -1,5 +1,13 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v5.1.0 (a photo to trace)
+- 5.0.0 after pushing: Web and iOS passed (live version.json 5.0.0+16).
+- Done: F7's photo part (photo strokes saved inside paintings, decoding once with repaints, import with upright turn, shrinking and fitting in the background, a locked see-through photo layer at the advanced level). The coloring pages are new artwork, so by the user's rule they wait for review before any push and were left out of 5.1.0.
+- Mistakes: none new.
+- Harness: PASS (analyze 0 issues, 378 tests, build web ok).
+- Not tested: HEIC photos from an iPhone's library (the image package can't read HEIC; the app says the picture can't be read), very large photos on an older phone.
+- Next: draw the coloring pages and show them; F8 canvas rotation for 5.2.0.
+
 ## 2026-10-28: v5.0.0 (layers)
 - Done: F6 layers (model, undoable layer edits, strokes kept in layer order, per-layer rendering and kept pictures, layered exports/thumbnails/replay/GIF, active-layer-only picking, the layers panel at the advanced level, refusing to draw on hidden or locked layers). Released on its own as 5.0.0 (it changes how paintings are made and saved); the plan now puts F7 in 5.1.0 and F8 in 5.2.0.
 - Found while testing: a touch refused on a hidden layer was still seen by the zoom/pan listener as a drag outside the paper and moved the paper; the refused touch now stays taken. Two shape tests had to scroll to their chips, now below the layers row (MISTAKES rule 55).

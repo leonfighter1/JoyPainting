@@ -22,6 +22,7 @@ Future<void> showCanvasMenu(
   required VoidCallback onShortcuts,
   required VoidCallback onPaperColor,
   required VoidCallback onDefaultPaperSize,
+  VoidCallback? onImportPhoto,
   required VoidCallback onRename,
   required VoidCallback onDelete,
   required VoidCallback onSettings,
@@ -87,6 +88,13 @@ Future<void> showCanvasMenu(
           label: s.paperColor,
           onSelected: onPaperColor,
         ),
+        // A photo to trace (from the intermediate level).
+        if (onImportPhoto != null)
+          DropMenuItem(
+            icon: Icons.add_photo_alternate_rounded,
+            label: s.importPhoto,
+            onSelected: onImportPhoto,
+          ),
         // The paper is resized by its edge grips; this undoes all that.
         DropMenuItem(
           icon: Icons.aspect_ratio_rounded,

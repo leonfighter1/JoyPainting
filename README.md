@@ -34,6 +34,7 @@ What it does:
   - Export: check paintings (the year filter helps) and export one as its `.jypaint` or several as one `.zip`. Import reads both.
   - Every painting gets a name ("My painting 1" / "我的画作 1"); rename or copy it from the title or its gallery card.
   - A sample painting for each kid, matching their level: 快乐的一天 / A Happy Day (beginner: pens, shapes and stamps), 海边的晚霞 / Sunset by the Sea (intermediate: soft brush, gradients, free shapes) or 湖畔晨光 / Dawn on the Lake (advanced: a realistic painting with textures, the blender and light & shadow). Picking another level later brings that one too, once.
+  - **A photo to trace** (导入照片): put a picture under your drawing, half see-through (Intermediate and up).
   - **Replay** (回放作画过程): watch a painting draw itself again, stroke by stroke, at ½× to 4×, and save the replay as a looping GIF.
   - **Backup reminders** (备份提醒): My Paintings reminds you to keep a copy when the paintings haven't been backed up for a while; one tap exports them all.
   - Download as PNG, JPG or PDF (in the apps, pictures go to the photo gallery and a PDF to the share menu).
@@ -50,13 +51,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.0.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.1.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **5.0.0** | 2026-10-28 | Layers at the Advanced level: add, reorder, hide, lock, rename, merge and fade layers; the eraser and blender work on one layer; exports, replays and GIFs show the layers |
+| **5.1.0** | 2026-10-28 | Add a photo to trace (Intermediate and up): under the drawing, half see-through; on its own locked layer at the Advanced level |
+| 5.0.0 | 2026-10-28 | Layers at the Advanced level: add, reorder, hide, lock, rename, merge and fade layers; the eraser and blender work on one layer; exports, replays and GIFs show the layers |
 | 4.2.0 | 2026-10-28 | Replay a painting stroke by stroke (with speeds and a slider) and save it as a GIF; backup reminders in My Paintings with a one-tap backup |
 | 4.1.0 | 2026-10-28 | The paint bucket, the color picker, big paintings that stay smooth (drawing, erasing and undoing), and a tidier code base behind the drawing screen |
 | 4.0.0 | 2026-10-27 | Drawing levels (beginner, intermediate, advanced) chosen on first start, realistic painting tools (the blender, four textures, overlay and soft light), a sample painting for each level, a text size slider, a clearer ☰ menu button |
@@ -78,6 +80,24 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets).
+
+### 5.1.0 (2026-10-28): a photo to trace
+
+**New**
+- **Add a photo (导入照片（描着画）)**, from the Intermediate level: ☰ → 画纸 → 导入照片 picks a picture (JPG, PNG, GIF, WebP or BMP) and puts it under your drawing, half see-through, ready to trace. A phone photo is turned the right way up and made smaller so the painting stays light; it's fitted inside the paper.
+  - Advanced: it goes on its own 照片 Photo layer at the very bottom, locked so you can't move it by accident. In Layers you can make it more or less see-through, hide it to see only your drawing, or unlock it to move it.
+  - Intermediate: it sits at the bottom of the drawing; the move tool (选择移动) moves it, makes it bigger or smaller, turns it, and its color & opacity sheet fades it.
+
+**Changed**
+- The ☰ menu's 画纸 Paper section has 导入照片 from the Intermediate level.
+
+**Fixed**
+- Nothing new; see 5.0.0.
+
+**Good to know**
+- The photo is saved inside the painting, so it travels with exports and `.jypaint` files; older versions open the painting without the photo.
+- Hide the photo layer before downloading or sending if you want only your drawing (hidden layers are left out).
+- iPhone photos in HEIC format can't be read yet; the app says so. Pick a JPG or PNG instead.
 
 ### 5.0.0 (2026-10-28): layers
 
@@ -379,6 +399,7 @@ What the tests cover:
 - **`test/layer_cache_test.dart`**: the kept picture of a painting looks the same as painting every stroke (paint, shadows, see-through paint, the eraser, the blender), and is painted again only when it must (not for new strokes, erasing, undo or redo).
 - **`test/picker_test.dart`**: the color seen at a point (paint, paper, shadows, see-through paint), the picker's loupe and its return to the last brush, and picking a color off the canvas.
 - **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
+- **`test/photo_test.dart`**: a photo on the paper (saved with its picture, moved, hit inside its box), painted at its opacity, made smaller and fitted, refused when unreadable, put under the drawing or on a locked layer at the bottom, and the menu item by level.
 - **`test/layers_test.dart`**: layers in the drawing (adding above the active one, keeping strokes in layer order, moving, merging, deleting, undo), picking only from the active shown and unlocked layer, saving layers, painting them (the eraser on its own layer, hidden and see-through layers, one kept picture per layer), the layers panel, and refusing to draw on a hidden layer.
 - **`test/replay_test.dart`**: the replay's timeline (order, point by point, the 40-second limit), its last frame matching the painting, the eraser while replayed, the GIF (header, frames, cancelling) and the replay page (play, pause, playing to the end).
 - **`test/backup_test.dart`**: when the backup reminder shows (never backed up, changed since, a browser that may clear its storage, "later"), per kid, the one-tap backup exporting every painting, and the Settings switch.

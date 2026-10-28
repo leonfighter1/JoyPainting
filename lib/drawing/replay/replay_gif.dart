@@ -23,6 +23,7 @@ Future<Uint8List?> replayGif(List<Stroke> strokes, Size size, Color paper,
     double maxSeconds = 10,
     void Function(double done)? onProgress,
     bool Function()? cancelled}) async {
+  await Photos.ready([for (final s in strokes) ?s.photo]);
   final timeline = ReplayTimeline(strokes);
   final frames =
       math.max(2, (math.min(timeline.total, maxSeconds) * fps).round());

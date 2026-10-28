@@ -259,6 +259,16 @@ class DrawingController extends ChangeNotifier {
     _changed();
   }
 
+  /// Adds [stroke] under everything else on its layer (a photo to trace),
+  /// on [newLayer] put at the very bottom if given, as one edit.
+  void addUnder(Stroke stroke, {PaintingLayer? newLayer}) {
+    _record();
+    if (newLayer != null) _layers = [newLayer, ..._layers];
+    final first = strokes.indexWhere((s) => s.layerId == stroke.layerId);
+    strokes.insert(first >= 0 ? first : _insertAt(stroke.layerId), stroke);
+    _changed();
+  }
+
   /// Swaps [old] for [replacement] in place, keeping its layer order.
   /// Pass `recordUndo: false` for the later steps of one continuous edit
   /// (like dragging text), so the whole drag undoes in one step.

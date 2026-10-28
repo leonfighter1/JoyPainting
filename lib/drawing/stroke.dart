@@ -6,6 +6,7 @@ import 'package:perfect_freehand/perfect_freehand.dart';
 
 import 'brush_type.dart';
 import 'layers.dart';
+import 'photos.dart';
 import 'shape_kind.dart';
 import 'stroke_style.dart';
 import 'stroke_texture.dart';
@@ -14,6 +15,7 @@ import 'text_content.dart';
 
 export 'brush_type.dart';
 export 'layers.dart';
+export 'photos.dart';
 export 'shape_kind.dart';
 export 'stroke_style.dart';
 export 'stroke_texture.dart';
@@ -44,6 +46,7 @@ class Stroke {
     List<PointVector>? points,
     this.area,
     this.layer,
+    this.photo,
     this.isComplete = false,
   })  : seed = seed ?? math.Random().nextInt(1 << 30),
         points = points ?? [];
@@ -70,6 +73,28 @@ class Stroke {
         layer: layer,
         isComplete: true,
         points: [PointVector(anchor.dx, anchor.dy, 0.5)],
+      );
+
+  /// A picture placed with its top-left corner at [topLeft]: a photo to
+  /// trace, say. It moves, turns, resizes and fades like any stroke. Older
+  /// versions read it as an invisible dot.
+  factory Stroke.photo({
+    required Offset topLeft,
+    required StrokePhoto photo,
+    double opacity = 1,
+    String? layer,
+  }) =>
+      Stroke(
+        brush: BrushType.pen,
+        color: const Color(0xFF000000),
+        size: 0.01,
+        opacity: opacity,
+        usesRealPressure: false,
+        seed: 0,
+        photo: photo,
+        layer: layer,
+        isComplete: true,
+        points: [PointVector(topLeft.dx, topLeft.dy, 0.5)],
       );
 
   /// A copy of any stroke shifted by [delta]. Strokes are never changed in
@@ -146,6 +171,7 @@ class Stroke {
     if (fraction >= 1 ||
         shape != null ||
         text != null ||
+        photo != null ||
         area != null ||
         points.length < 2) {
       return this;
@@ -230,6 +256,7 @@ class Stroke {
               for (final loop in area!) [for (final p in loop) p + delta],
             ],
       layer: layer,
+      photo: photo,
     );
   }
 
@@ -242,6 +269,7 @@ class Stroke {
       reach /= t.scale;
     }
     if (text != null) return textBounds.contains(p);
+    if (photo != null) return _localBounds.contains(p);
     if (!_localBounds.inflate(reach).contains(p)) return false;
     final candidates = [p, if (mirrorX case final m?) Offset(2 * m - p.dx, p.dy)];
     final tolerance = width / 2 + reach;
@@ -271,7 +299,7 @@ class Stroke {
   /// overlaps its text.
   bool touches(Rect box) {
     if (!bounds.overlaps(box)) return false;
-    if (text != null) return true;
+    if (text != null || photo != null) return true;
     final t = transform;
     Offset place(Offset q) => t == null ? q : t.apply(q);
     for (var i = 0; i < points.length; i++) {
@@ -367,6 +395,9 @@ class Stroke {
   /// these; [points] hold the first outline too, so older versions still
   /// fill around it (smoothed, without the holes).
   final List<List<Offset>>? area;
+
+  /// A picture placed on the paper (see [Stroke.photo]); null otherwise.
+  final StrokePhoto? photo;
 
   /// The id of the layer it is on (see [PaintingLayer]); null for the base
   /// layer, as in every painting from before layers.
@@ -513,6 +544,7 @@ class Stroke {
   /// [bounds] before the transform.
   Rect get _localBounds {
     if (text != null) return textBounds;
+    if (photo case final p?) return anchor & p.size;
     final r = _bounds;
     if (mirrorX case final m?) {
       return r.expandToInclude(
@@ -577,6 +609,7 @@ class Stroke {
         if (texture != StrokeTexture.none) 'texture': texture.name,
         if (text != null) 'text': text!.toJson(),
         if (layer != null) 'layer': layer,
+        if (photo != null) 'photo': photo!.toJson(),
         // Shapes are stored by their two corners and rebuilt on load.
         if (shape != null) ...{
           'shape': shape!.name,
@@ -671,6 +704,8 @@ class Stroke {
       blend: blend,
       texture: texture,
       isComplete: true,
+      // Pictures since v5.1.
+      photo: StrokePhoto.fromJson(json['photo']),
       layer: layer,
       // Paint bucket areas since v4.1.
       area: switch (json['area']) {

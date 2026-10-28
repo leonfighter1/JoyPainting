@@ -9,7 +9,9 @@ import 'paint_strokes.dart';
 /// Renders [strokes] on [paper] into an image of [size] times [pixelRatio]
 /// (each side at most 16384 pixels). The caller disposes it.
 Future<ui.Image> renderImage(List<Stroke> strokes, Size size, double pixelRatio,
-    {Color paper = Colors.white, List<PaintingLayer>? layers}) {
+    {Color paper = Colors.white, List<PaintingLayer>? layers}) async {
+  // Pictures must be decoded before they can be painted.
+  await Photos.ready([for (final s in strokes) ?s.photo]);
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder)..scale(pixelRatio);
   canvas.drawRect(Offset.zero & size, Paint()..color = paper);

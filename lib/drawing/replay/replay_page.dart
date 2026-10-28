@@ -10,6 +10,7 @@ import '../../l10n.dart';
 import '../../share/painting_export.dart';
 import '../../share/share_actions.dart';
 import '../render/layer_cache.dart';
+import '../stroke.dart';
 import 'replay_gif.dart';
 import 'replay_timeline.dart';
 
@@ -56,6 +57,12 @@ class ReplayPageState extends State<ReplayPage>
   @override
   void initState() {
     super.initState();
+    // Pictures are decoded first time round; then paint them for real.
+    Photos.ready([for (final s in widget.doc.strokes) ?s.photo]).then((_) {
+      if (!mounted) return;
+      _cache.dispose();
+      setState(() {});
+    });
     _play();
   }
 

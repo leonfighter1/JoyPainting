@@ -11,6 +11,7 @@ import '../app_theme.dart';
 import '../l10n.dart';
 import '../painting_session.dart';
 import '../settings.dart';
+import '../share/photo_import.dart';
 import '../share/share_actions.dart';
 import '../theme/cute_theme.dart';
 import '../widgets/corner_float.dart';
@@ -81,6 +82,10 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   /// at the current zoom step.
   final _cacheRatio = ValueNotifier<double>(1);
 
+  /// A picture was still being decoded when the kept pictures were made:
+  /// make them again.
+  void _onPhotoDecoded() => layerCache.dispose();
+
   /// Measured from the view and layout, never while building.
   void _updateCacheRatio() {
     if (!mounted) return;
@@ -121,6 +126,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     _selection.moving.addListener(_onMovingChanged);
     view.addListener(_scheduleBarAnchor);
     view.addListener(_updateCacheRatio);
+    Photos.decoded.addListener(_onPhotoDecoded);
     _selection.syncWithBrush();
     if (_settings.brush != BrushType.picker) {
       _brushBeforePicker = _settings.brush;
@@ -149,6 +155,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     _eraserCursor.dispose();
     _loupe.dispose();
     _fillTool.dispose();
+    Photos.decoded.removeListener(_onPhotoDecoded);
     _cacheRatio.dispose();
     layerCache.dispose();
     _tools.dispose();
@@ -535,6 +542,41 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     }
   }
 
+  /// A photo to trace, at the bottom: on its own locked, see-through
+  /// layer where there are layers; otherwise see-through at the bottom of
+  /// the drawing, where the move tool can move, resize or fade it.
+  Future<void> _importPhoto() async {
+    final s = S.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final bytes = await pickPhotoBytes();
+    if (bytes == null) return;
+    final paper = widget.session.canvasSize;
+    final photo = await photoFromBytes(bytes, paper * 0.9);
+    if (photo == null) {
+      messenger.showSnackBar(SnackBar(content: Text(s.photoUnreadable)));
+      return;
+    }
+    final topLeft =
+        paper.center(Offset.zero) - photo.size.center(Offset.zero);
+    if (_settings.level.layers &&
+        _drawing.layers.length < PaintingLayer.maxLayers) {
+      final id = 'photo${DateTime.now().millisecondsSinceEpoch}';
+      _drawing.addUnder(
+        Stroke.photo(topLeft: topLeft, photo: photo, layer: id),
+        newLayer: PaintingLayer(
+            id: id, name: s.photoLayer, opacity: 0.5, locked: true),
+      );
+      messenger.showSnackBar(SnackBar(content: Text(s.photoAddedOnLayer)));
+    } else {
+      _drawing.addUnder(Stroke.photo(
+          topLeft: topLeft,
+          photo: photo,
+          opacity: 0.5,
+          layer: _drawing.newStrokeLayer));
+      messenger.showSnackBar(SnackBar(content: Text(s.photoAdded)));
+    }
+  }
+
   Future<void> _confirmClear() async {
     if (await confirmClear(context)) _drawing.clear();
   }
@@ -554,6 +596,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
         onReplay: () => showReplay(context, widget.session.currentDoc()),
         onShortcuts: () => showShortcutsDialog(context),
         onPaperColor: _pickPaper,
+        onImportPhoto: _settings.level.photos ? _importPhoto : null,
         onDefaultPaperSize: () {
           _drawing.setPaperSize(null);
           resetView();
