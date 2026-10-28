@@ -6,6 +6,7 @@ import 'package:jingyao_paint/widgets/menu_button.dart';
 import 'package:jingyao_paint/app_theme.dart' show kThemeIds;
 import 'package:jingyao_paint/drawing/canvas_page.dart';
 import 'package:jingyao_paint/drawing/drawing_controller.dart';
+import 'package:jingyao_paint/drawing/render/render_image.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/gallery/painting_file.dart';
 import 'package:jingyao_paint/gallery/painting_store.dart';
@@ -69,7 +70,7 @@ Stroke box(Rect r, Color color,
 /// The color at (x, y) once [strokes] are drawn on white paper.
 Future<Color> pixel(List<Stroke> strokes, int x, int y,
     {Size size = const Size(40, 40)}) async {
-  final raw = await DrawingController.renderRgba(strokes, size, 1);
+  final raw = await renderRgba(strokes, size, 1);
   final i = (y * raw.width + x) * 4;
   return Color.fromARGB(
       raw.rgba[i + 3], raw.rgba[i], raw.rgba[i + 1], raw.rgba[i + 2]);

@@ -1,5 +1,20 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v4.1.0 (code split, smooth big paintings, color picker, paint bucket)
+- Asked: turn the suggested improvements into a technical plan with code reuse and splitting first (docs/appdev/TECH_PLAN.md), check the Android SDK (it was installed on 2026-10-24; my "no SDK" claim came from a stale FEATURES note), keep records current, then build the items one by one, picking version numbers and pushing each version without asking; use Chrome when the emulator fails.
+- Done:
+  - R, the split: `canvas_page.dart` 3,556 → 764 lines; `lib/drawing/canvas/` (tools, selection, view, resizer, shortcuts, menu, paper, drawer, palette strip) and `lib/drawing/render/`; `stroke.dart` 1,551 → 586 lines plus five type files and a painting part. The 313 old tests passed unchanged (four render calls renamed); the 5,131-stroke 愚人 re-rendered byte for byte the same.
+  - F9: `tool/android_smoke.ps1` (install, launch like the launcher, draw, screenshot, log check); passed on the Pixel Tablet emulator.
+  - F1: `StrokeLayerCache` keeps the finished strokes as a picture (new strokes added onto it, the eraser painted over it, recent states kept for undo/redo). Chrome, 3,058 strokes, ms per frame (build + raster): drawing 15 + 178 → 5.5 + 1.4, erasing 291 + 353 → 5.4 + 1.1, undo 197 + 294 → 4 + 1. Measured with `tool/bench/` (Chrome) and `integration_test/` (devices).
+  - F2: the color picker with a loupe (intermediate+), Alt + click and I.
+  - F3: the paint bucket (every level): flood fill with gap closing, holes, one pixel under the edges, saved as an exact `area`; 96 ms per fill on 3,058 strokes in Chrome.
+  - Also fixed: a pinch during ✋ left the next touch moving the paper.
+- Emulator: the Pixel Tablet emulator smoke-tested the split build. The emulator crashed in 4 of 5 runs on the 3,058-stroke sample (host GPU and software rendering alike), so big-painting measurements moved to Chrome; the Windows desktop build fails here (VS 2019 too old for the audioplayers/gal plugins).
+- Mistakes: MISTAKES rules 56–60 (stale notes, a background harness during edits, awk with Windows paths, split-APK version codes, a non-positioned child collapsing the canvas stack).
+- Harness: PASS (analyze 0 issues, 350 tests, build web ok). APK: the split x86_64 release build passed the emulator smoke test after the refactor; not rebuilt after F2/F3 (Dart-only changes).
+- Not tested: a real phone or iPad (smoothness, fills by finger, the loupe under a real finger); the bucket on the Android emulator by hand.
+- Next: 4.2.0 (F4 replay and GIF, F5 backup reminder).
+
 ## 2026-10-27: v4.0.0 (drawing levels, realistic painting tools, level samples, text size, menu button)
 - Asked, in steps: the 愚人 card still too cartoonish, wanted a mature, realistic style with more realistic painting tools, and the traveler holding only his luggage; then a simpler tools drawer with levels (beginner / intermediate / advanced) chosen on first start and in Settings; a clearer top-right menu icon; a text size slider for accessibility; tarot code kept off git in a local folder (and removed from main); a detailed README per release, also as a rule in the appdev skill; three sample paintings (one per level, the top one to the 愚人 standard, in the repo); then push as one big update.
 - Done: see FEATURES v4.0.0 and the README release notes. The 愚人 card was repainted (dawn backlight, fractal mountains with erosion streaks and snow, a grassy headland, a man of seven and a half heads with a leather bag, the dog; face cleaned up after feedback, stubble kept) and lives in `local_art/` with its tooling. The appdev skill now requires README release notes for every version.

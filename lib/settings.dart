@@ -67,6 +67,8 @@ class AppSettings extends ChangeNotifier {
             _prefs.getString(_kToolsCorner), Corner.bottomRight),
         _fill = _prefs.getBool(_kFill) ?? false,
         _freeShape = _prefs.getBool(_kFreeShape) ?? false,
+        _fillGap = (_prefs.getInt(_kFillGap) ?? defaultFillGap)
+            .clamp(0, maxFillGap),
         _gradient = GradientStyle.fromName(_prefs.getString(_kGradient)),
         _blend = StrokeBlend.fromName(_prefs.getString(_kBlend)),
         _texture = StrokeTexture.fromName(_prefs.getString(_kTexture)),
@@ -125,6 +127,7 @@ class AppSettings extends ChangeNotifier {
   static const _kShape = 'shape';
   static const _kFill = 'fill';
   static const _kFreeShape = 'freeShape';
+  static const _kFillGap = 'fillGap';
   static const _kGradient = 'gradient';
   static const _kBlend = 'blend';
   static const _kTexture = 'texture';
@@ -231,6 +234,7 @@ class AppSettings extends ChangeNotifier {
     _fill = false;
     _freeShape = false;
     _gradient = GradientStyle.none;
+    _fillGap = defaultFillGap;
     _blend = StrokeBlend.normal;
     _texture = StrokeTexture.none;
     _level = SkillLevel.beginner;
@@ -259,6 +263,7 @@ class AppSettings extends ChangeNotifier {
   ShapeKind? _shape;
   bool _fill;
   bool _freeShape;
+  int _fillGap;
   GradientStyle _gradient;
   StrokeBlend _blend;
   StrokeTexture _texture;
@@ -300,6 +305,13 @@ class AppSettings extends ChangeNotifier {
   /// Whether drawing makes free shapes: the area a line goes around is
   /// filled (see [Stroke.fill]). [shape] is null meanwhile.
   bool get freeShape => _level.freeShape && _freeShape;
+
+  /// How big a gap (in paper points, about twice this) the paint bucket
+  /// closes, so a shape that isn't quite closed fills without leaking.
+  /// Beginners always get the default.
+  int get fillGap => _level.freeShape ? _fillGap : defaultFillGap;
+  static const defaultFillGap = 2;
+  static const maxFillGap = 6;
 
   /// The gradient new lines and shapes get from the chosen color.
   GradientStyle get gradient =>
@@ -396,6 +408,12 @@ class AppSettings extends ChangeNotifier {
     if (value) shape = null;
     _freeShape = value;
     _prefs.setBool(_kFreeShape, value);
+    notifyListeners();
+  }
+
+  set fillGap(int value) {
+    _fillGap = value.clamp(0, maxFillGap);
+    _prefs.setInt(_kFillGap, _fillGap);
     notifyListeners();
   }
 

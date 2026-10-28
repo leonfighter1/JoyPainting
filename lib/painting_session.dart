@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import 'drawing/drawing_controller.dart';
+import 'drawing/render/render_image.dart';
 import 'drawing/stroke.dart';
 import 'gallery/level_samples.dart';
 import 'gallery/painting_archive.dart';
@@ -23,7 +24,7 @@ const thumbnailMaxSide = 360.0;
 
 Future<Uint8List> renderThumbnail(List<Stroke> strokes, Size size, Color paper) {
   final scale = thumbnailMaxSide / math.max(size.width, size.height);
-  return DrawingController.renderPng(strokes, size, scale, paper: paper);
+  return renderPng(strokes, size, scale, paper: paper);
 }
 
 /// The painting currently open on the canvas, and keeping it saved.

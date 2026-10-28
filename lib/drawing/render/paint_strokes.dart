@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import 'stroke.dart';
+import '../stroke.dart';
 
 /// Paints [strokes] in order over a paper of [size] and [paper] color.
 ///
@@ -19,11 +19,23 @@ void paintStrokes(Canvas canvas, Size size, List<Stroke> strokes,
   canvas.restore();
 }
 
+/// Paints strokes [from] up to [to] of [strokes] onto a canvas that already
+/// shows the ones before them (see [StrokeLayerCache]).
+void paintStrokeRange(
+    Canvas canvas, Size size, List<Stroke> strokes, int from, int to,
+    {required Color paper}) {
+  for (var i = from; i < to; i++) {
+    _paintAt(canvas, size, strokes, i, paper);
+  }
+}
+
 /// Paints [smudge], a blender stroke still being drawn on top of every
-/// finished one in [strokes].
+/// finished one in [strokes]. [finished], a picture of exactly those
+/// strokes (see [StrokeLayerCache.imageOf]), saves painting them again.
 void paintSmudgeOver(Canvas canvas, Size size, List<Stroke> strokes,
-    Stroke smudge, {required Color paper}) {
-  final under = _under(smudge, strokes, strokes.length, size, paper);
+    Stroke smudge, {required Color paper, ui.Image? finished}) {
+  final under =
+      _under(smudge, strokes, strokes.length, size, paper, finished: finished);
   if (under != null) smudge.paintSmudge(canvas, under.image, under.rect);
 }
 
@@ -61,7 +73,7 @@ final _cache = Expando<_Under>('blender');
 /// While the stroke is being drawn the whole paper is taken, once, so it
 /// can go anywhere; when it's finished, only the part around it.
 _Under? _under(Stroke smudge, List<Stroke> strokes, int count, Size size,
-    Color paper) {
+    Color paper, {ui.Image? finished}) {
   final page = Offset.zero & size;
   final radius = smudge.smudgeRadius;
   final region = (smudge.isComplete ? smudge.bounds.inflate(radius * 3) : page)
@@ -101,8 +113,18 @@ _Under? _under(Stroke smudge, List<Stroke> strokes, int count, Size size,
               tileMode: TileMode.clamp))
     ..drawRect(region, Paint()..color = paper)
     ..saveLayer(region, Paint());
-  for (final j in below) {
-    _paintAt(canvas, size, strokes, j, paper);
+  if (finished != null) {
+    // The whole page as it is, already painted.
+    canvas.drawImageRect(
+        finished,
+        Rect.fromLTWH(
+            0, 0, finished.width.toDouble(), finished.height.toDouble()),
+        Offset.zero & size,
+        Paint()..filterQuality = FilterQuality.medium);
+  } else {
+    for (final j in below) {
+      _paintAt(canvas, size, strokes, j, paper);
+    }
   }
   canvas
     ..restore()

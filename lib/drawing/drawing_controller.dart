@@ -1,10 +1,10 @@
-import 'dart:typed_data';
+
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 
-import 'paint_strokes.dart';
+import 'render/paint_strokes.dart';
 import 'stroke.dart';
 
 /// What the drawing looked like before an edit, for undo and redo.
@@ -48,6 +48,9 @@ class DrawingController extends ChangeNotifier {
   final finishedRevision = ValueNotifier<int>(0);
 
   bool get _erasing => current?.brush == BrushType.eraser;
+
+  /// The eraser stroke being drawn, if the eraser is in use.
+  Stroke? get eraser => _erasing ? current : null;
 
   /// Bumped whenever the finished drawing changes, so listeners can tell an
   /// edit worth saving apart from a repaint of the stroke being drawn.
@@ -269,12 +272,14 @@ class DrawingController extends ChangeNotifier {
       paper: paper);
 
   /// Paints the stroke being drawn, unless it's the eraser. A blender
-  /// stroke shows the finished drawing under it, blurred.
-  void paintCurrent(Canvas canvas, Size size) {
+  /// stroke shows the finished drawing under it, blurred; [finished], a
+  /// picture of the finished strokes, saves painting them again.
+  void paintCurrent(Canvas canvas, Size size, {ui.Image? finished}) {
     final c = current;
     if (c == null || _erasing) return;
     if (c.brush == BrushType.smudge) {
-      paintSmudgeOver(canvas, size, strokes, c, paper: paper);
+      paintSmudgeOver(canvas, size, strokes, c,
+          paper: paper, finished: finished);
     } else {
       c.paint(canvas);
     }
@@ -285,46 +290,5 @@ class DrawingController extends ChangeNotifier {
     finishedRevision.dispose();
     paperSizeListenable.dispose();
     super.dispose();
-  }
-
-  /// Renders the drawing on its paper as PNG bytes.
-  Future<Uint8List> exportPng(Size size, double pixelRatio) =>
-      renderPng(strokes, size, pixelRatio, paper: paper);
-
-  static Future<ui.Image> _renderImage(
-      List<Stroke> strokes, Size size, double pixelRatio, Color paper) {
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder)..scale(pixelRatio);
-    canvas.drawRect(Offset.zero & size, Paint()..color = paper);
-    paintStrokes(canvas, size, strokes, paper: paper);
-    return recorder.endRecording().toImage(
-        (size.width * pixelRatio).round().clamp(1, 1 << 14),
-        (size.height * pixelRatio).round().clamp(1, 1 << 14));
-  }
-
-  /// Renders [strokes] on [paper] as PNG bytes.
-  static Future<Uint8List> renderPng(
-      List<Stroke> strokes, Size size, double pixelRatio,
-      {Color paper = Colors.white}) async {
-    final image = await _renderImage(strokes, size, pixelRatio, paper);
-    final data = await image.toByteData(format: ui.ImageByteFormat.png);
-    image.dispose();
-    return data!.buffer.asUint8List();
-  }
-
-  /// Renders [strokes] on [paper] as raw RGBA pixels, for encoders that
-  /// Flutter doesn't have built in (like JPEG).
-  static Future<({Uint8List rgba, int width, int height})> renderRgba(
-      List<Stroke> strokes, Size size, double pixelRatio,
-      {Color paper = Colors.white}) async {
-    final image = await _renderImage(strokes, size, pixelRatio, paper);
-    final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-    final result = (
-      rgba: data!.buffer.asUint8List(),
-      width: image.width,
-      height: image.height,
-    );
-    image.dispose();
-    return result;
   }
 }

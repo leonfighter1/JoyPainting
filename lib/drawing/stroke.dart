@@ -1,539 +1,24 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 
+import 'brush_type.dart';
+import 'shape_kind.dart';
+import 'stroke_style.dart';
 import 'stroke_texture.dart';
+import 'stroke_transform.dart';
+import 'text_content.dart';
 
+export 'brush_type.dart';
+export 'shape_kind.dart';
+export 'stroke_style.dart';
 export 'stroke_texture.dart';
+export 'stroke_transform.dart';
+export 'text_content.dart';
 
-/// How a brush turns pointer points into paint.
-enum BrushKind {
-  /// A smooth filled outline (perfect_freehand).
-  outline,
-
-  /// A cloud of random dots, like an airbrush.
-  spray,
-
-  /// A line whose color cycles through the rainbow.
-  rainbow,
-
-  /// Little shapes stamped along the path.
-  stamp,
-
-  /// A block of formatted text placed on the paper.
-  text,
-}
-
-/// The drawing tools, in toolbar order.
-enum BrushType {
-  pen(BrushKind.outline, thinning: 0.6, smoothing: 0.5, streamline: 0.5, sizeFactor: 1),
-  pencil(BrushKind.outline, thinning: 0.3, smoothing: 0.3, streamline: 0.3, sizeFactor: 0.5, opacity: 0.85),
-  marker(BrushKind.outline, smoothing: 0.6, streamline: 0.5, sizeFactor: 1.2),
-  highlighter(BrushKind.outline, smoothing: 0.6, streamline: 0.6, sizeFactor: 2, opacity: 0.35),
-
-  /// A see-through line with blurred edges, for shading, glows and soft
-  /// light: layers of it build up like paint.
-  soft(BrushKind.outline, thinning: 0.2, smoothing: 0.6, streamline: 0.5, sizeFactor: 2, opacity: 0.6, blur: 0.35),
-
-  /// A blender: paints nothing itself, but softens and mixes the colors
-  /// already on the paper under it, like a finger or a dry brush smudging
-  /// wet paint. See [Stroke.paintSmudge].
-  smudge(BrushKind.outline, thinning: 0.2, smoothing: 0.6, streamline: 0.5, sizeFactor: 2.5, blur: 0.2),
-  spray(BrushKind.spray, sizeFactor: 2.5),
-  rainbow(BrushKind.rainbow, sizeFactor: 1),
-  stamp(BrushKind.stamp, sizeFactor: 2.2),
-
-  /// Not a brush but a tool: tap to add text. Its "size" is half the font
-  /// size, so the shared size slider still makes sense.
-  text(BrushKind.text, sizeFactor: 2),
-
-  /// Not a brush but a tool: select one stroke and drag it somewhere else.
-  /// It never creates strokes.
-  move(BrushKind.outline, sizeFactor: 1),
-  eraser(BrushKind.outline, sizeFactor: 2);
-
-  const BrushType(
-    this.kind, {
-    this.thinning = 0,
-    this.smoothing = 0.5,
-    this.streamline = 0.5,
-    required this.sizeFactor,
-    this.opacity = 1,
-    this.blur = 0,
-  });
-
-  final BrushKind kind;
-
-  /// How much pressure changes the width (0 = constant width). Outline only.
-  final double thinning;
-  final double smoothing;
-  final double streamline;
-
-  /// Multiplies the slider size so every brush feels right at the same setting.
-  final double sizeFactor;
-
-  /// Built-in see-through-ness (a highlighter is always a bit transparent),
-  /// multiplied with the user's opacity slider.
-  final double opacity;
-
-  /// How soft new strokes' edges are: the blur radius as a share of the
-  /// line width (see [Stroke.blur]).
-  final double blur;
-
-  /// Brushes that ignore the chosen color.
-  bool get usesColor =>
-      this != eraser && this != rainbow && this != move && this != smudge;
-
-  /// Tools that can draw shapes. The eraser is always a round tip; text and
-  /// move don't draw at all.
-  bool get usesShapes => this != eraser && this != text && this != move;
-
-  /// Brushes whose paint can have a [StrokeTexture]. The eraser and the
-  /// blender paint nothing of their own.
-  bool get usesTexture => usesShapes && this != smudge;
-
-  /// Tools whose strokes paint nothing of their own (they remove or mix
-  /// what's there), so they can't be picked up or selected.
-  bool get isEffect => this == eraser || this == smudge;
-
-  static BrushType fromName(String? name) =>
-      values.firstWhere((b) => b.name == name, orElse: () => pen);
-}
-
-enum StampShape {
-  heart,
-  star,
-  flower;
-
-  static StampShape fromName(String? name) =>
-      values.firstWhere((s) => s.name == name, orElse: () => heart);
-}
-
-/// How a stroke mixes with what's under it.
-enum StrokeBlend {
-  normal(BlendMode.srcOver),
-
-  /// Darkens what's underneath, like a shadow or a glaze.
-  multiply(BlendMode.multiply),
-
-  /// Lightens what's underneath, like light falling on it.
-  screen(BlendMode.screen),
-  overlay(BlendMode.overlay),
-  softLight(BlendMode.softLight);
-
-  const StrokeBlend(this.mode);
-
-  final BlendMode mode;
-
-  static StrokeBlend fromName(String? name) =>
-      values.firstWhere((b) => b.name == name, orElse: () => normal);
-}
-
-/// Colors blending into each other across a stroke, instead of one color.
-///
-/// [from] and [to] are fractions of the stroke's outline box ((0, 0) its
-/// top left, (1, 1) its bottom right), so the gradient grows, moves and
-/// turns with the stroke. Radial gradients are centered on [from] and
-/// reach [to].
-@immutable
-class StrokeGradient {
-  const StrokeGradient({
-    required this.colors,
-    this.stops,
-    this.radial = false,
-    this.from = const Offset(0.5, 0),
-    this.to = const Offset(0.5, 1),
-  });
-
-  final List<Color> colors;
-
-  /// Where each color sits, 0 to 1; null spreads them evenly.
-  final List<double>? stops;
-  final bool radial;
-  final Offset from;
-  final Offset to;
-
-  /// The shader for a stroke whose outline box is [box], with every color
-  /// faded by [alpha].
-  Shader shader(Rect box, double alpha) {
-    // A flat line has a box with no height; give it some.
-    final b = Rect.fromCenter(
-      center: box.center,
-      width: math.max(box.width, 1),
-      height: math.max(box.height, 1),
-    );
-    Offset at(Offset f) => b.topLeft + Offset(f.dx * b.width, f.dy * b.height);
-    final faded = [
-      for (final c in colors.length == 1 ? [colors[0], colors[0]] : colors)
-        c.withValues(alpha: c.a * alpha),
-    ];
-    // dart:ui wants stops for anything but two colors.
-    final positions = stops != null && stops!.length == faded.length
-        ? stops
-        : [for (var i = 0; i < faded.length; i++) i / (faded.length - 1)];
-    final a = at(from), z = at(to);
-    if (radial) {
-      return ui.Gradient.radial(a, math.max(0.5, (z - a).distance), faded, positions);
-    }
-    return ui.Gradient.linear(a, z == a ? a + const Offset(0, 1) : z, faded, positions);
-  }
-
-  Map<String, Object?> toJson() => {
-        'colors': [for (final c in colors) c.toARGB32()],
-        if (stops != null) 'stops': [for (final s in stops!) (s * 1000).round() / 1000],
-        if (radial) 'radial': true,
-        'from': [(from.dx * 1000).round() / 1000, (from.dy * 1000).round() / 1000],
-        'to': [(to.dx * 1000).round() / 1000, (to.dy * 1000).round() / 1000],
-      };
-
-  /// Null for anything that isn't a usable gradient.
-  static StrokeGradient? fromJson(Object? json) {
-    if (json is! Map) return null;
-    final colors = json['colors'];
-    if (colors is! List || colors.length < 2) return null;
-    final stops = json['stops'];
-    Offset offset(Object? v, Offset fallback) => v is List && v.length == 2
-        ? Offset((v[0] as num).toDouble(), (v[1] as num).toDouble())
-        : fallback;
-    return StrokeGradient(
-      colors: [for (final c in colors) Color(c as int)],
-      stops: stops is List && stops.length == colors.length
-          ? [for (final s in stops) (s as num).toDouble()]
-          : null,
-      radial: json['radial'] == true,
-      from: offset(json['from'], const Offset(0.5, 0)),
-      to: offset(json['to'], const Offset(0.5, 1)),
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      other is StrokeGradient &&
-      other.radial == radial &&
-      other.from == from &&
-      other.to == to &&
-      listEquals(other.colors, colors) &&
-      listEquals(other.stops, stops);
-
-  @override
-  int get hashCode => Object.hash(radial, from, to, Object.hashAll(colors),
-      stops == null ? null : Object.hashAll(stops!));
-}
-
-/// The ready-made gradients offered in the tools drawer, each made from
-/// the chosen color. Linear ones run from the top of a stroke to its
-/// bottom, as if lit from above; turn a stroke to turn its gradient.
-enum GradientStyle {
-  none,
-
-  /// Lighter at the top.
-  lighter,
-
-  /// Darker at the bottom.
-  darker,
-
-  /// Fading away toward the bottom.
-  fade,
-
-  /// Strong in the middle, fading out all around.
-  glow,
-
-  /// Lit from the top left, darker around the edge, like a ball.
-  rounded;
-
-  StrokeGradient? forColor(Color c) {
-    // Whole 8-bit colors, as they will be saved.
-    final light = Color(Color.lerp(c, Colors.white, 0.6)!.toARGB32());
-    final dark = Color(Color.lerp(c, Colors.black, 0.55)!.toARGB32());
-    final clear = c.withValues(alpha: 0);
-    return switch (this) {
-      none => null,
-      lighter => StrokeGradient(colors: [light, c]),
-      darker => StrokeGradient(colors: [c, dark]),
-      fade => StrokeGradient(colors: [c, clear]),
-      glow => StrokeGradient(
-          colors: [c, clear], radial: true, from: const Offset(0.5, 0.5),
-          to: const Offset(1, 0.5)),
-      rounded => StrokeGradient(
-          colors: [light, c, dark], stops: const [0, 0.45, 1], radial: true,
-          from: const Offset(0.38, 0.32), to: const Offset(1, 1)),
-    };
-  }
-
-  static GradientStyle fromName(String? name) =>
-      values.firstWhere((g) => g.name == name, orElse: () => none);
-}
-
-/// Geometric shapes drawn by dragging from one corner to the opposite one
-/// (or from start to end, for lines and arrows).
-enum ShapeKind {
-  line,
-  arrow,
-  rectangle,
-  ellipse,
-  triangle,
-  star,
-  heart;
-
-  /// Closed shapes can be filled.
-  bool get closed => this != line && this != arrow;
-
-  /// null means freehand drawing.
-  static ShapeKind? fromName(String? name) {
-    for (final s in values) {
-      if (s.name == name) return s;
-    }
-    return null;
-  }
-
-  /// The exact outline from [a] to [b]. [arrowHead] is the arrow head's
-  /// length (scaled to the brush width by the caller).
-  Path path(Offset a, Offset b, {double arrowHead = 16}) {
-    final r = Rect.fromPoints(a, b);
-    final path = Path();
-    switch (this) {
-      case ShapeKind.line:
-        path
-          ..moveTo(a.dx, a.dy)
-          ..lineTo(b.dx, b.dy);
-      case ShapeKind.arrow:
-        // One continuous outline (shaft, then each side of the head), so
-        // spray, rainbow and stamps can follow it without jumps.
-        final back = (a - b).direction;
-        final head = math.min(arrowHead, (b - a).distance * 0.45);
-        final h1 = b + Offset.fromDirection(back + 0.45, head);
-        final h2 = b + Offset.fromDirection(back - 0.45, head);
-        path
-          ..moveTo(a.dx, a.dy)
-          ..lineTo(b.dx, b.dy)
-          ..lineTo(h1.dx, h1.dy)
-          ..moveTo(b.dx, b.dy)
-          ..lineTo(h2.dx, h2.dy);
-      case ShapeKind.rectangle:
-        path.addRect(r);
-      case ShapeKind.ellipse:
-        path.addOval(r);
-      case ShapeKind.triangle:
-        path
-          ..moveTo(r.topCenter.dx, r.topCenter.dy)
-          ..lineTo(r.right, r.bottom)
-          ..lineTo(r.left, r.bottom)
-          ..close();
-      case ShapeKind.star:
-        for (var i = 0; i < 10; i++) {
-          final k = i.isEven ? 1.0 : 0.45;
-          final angle = i * math.pi / 5 - math.pi / 2;
-          final p = r.center +
-              Offset(math.cos(angle) * r.width / 2 * k,
-                  math.sin(angle) * r.height / 2 * k);
-          i == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
-        }
-        path.close();
-      case ShapeKind.heart:
-        final x = r.left, y = r.top, w = r.width, h = r.height;
-        path
-          ..moveTo(x + w / 2, y + h * 0.25)
-          ..cubicTo(x + w / 2, y, x, y, x, y + h * 0.3)
-          ..cubicTo(x, y + h * 0.6, x + w / 2, y + h * 0.8, x + w / 2, y + h)
-          ..cubicTo(x + w / 2, y + h * 0.8, x + w, y + h * 0.6, x + w, y + h * 0.3)
-          ..cubicTo(x + w, y, x + w / 2, y, x + w / 2, y + h * 0.25)
-          ..close();
-    }
-    return path;
-  }
-}
-
-/// The words and formatting of a text item.
-class TextContent {
-  const TextContent({
-    this.text = '',
-    this.fontFamily,
-    this.fontSize = 32,
-    this.bold = false,
-    this.italic = false,
-    this.underline = false,
-    this.strikethrough = false,
-    this.align = TextAlign.left,
-    this.bubble = false,
-  });
-
-  final String text;
-
-  /// A pubspec font family, or null for the app's current font.
-  final String? fontFamily;
-  final double fontSize;
-  final bool bold;
-  final bool italic;
-  final bool underline;
-  final bool strikethrough;
-
-  /// left, center or right: the anchor point is that edge of the text.
-  final TextAlign align;
-
-  /// Draws a soft rounded bubble behind the text.
-  final bool bubble;
-
-  /// Padding between the text and its bubble.
-  static const bubblePadding = 10.0;
-
-  TextStyle style(Color color) => TextStyle(
-        color: color,
-        fontFamily: fontFamily,
-        fontSize: fontSize,
-        height: 1.25,
-        fontWeight: bold ? FontWeight.w800 : FontWeight.w400,
-        fontStyle: italic ? FontStyle.italic : FontStyle.normal,
-        decoration: TextDecoration.combine([
-          if (underline) TextDecoration.underline,
-          if (strikethrough) TextDecoration.lineThrough,
-        ]),
-        decorationColor: color,
-        decorationThickness: 2,
-      );
-
-  TextContent copyWith({
-    String? text,
-    String? Function()? fontFamily,
-    double? fontSize,
-    bool? bold,
-    bool? italic,
-    bool? underline,
-    bool? strikethrough,
-    TextAlign? align,
-    bool? bubble,
-  }) =>
-      TextContent(
-        text: text ?? this.text,
-        fontFamily: fontFamily == null ? this.fontFamily : fontFamily(),
-        fontSize: fontSize ?? this.fontSize,
-        bold: bold ?? this.bold,
-        italic: italic ?? this.italic,
-        underline: underline ?? this.underline,
-        strikethrough: strikethrough ?? this.strikethrough,
-        align: align ?? this.align,
-        bubble: bubble ?? this.bubble,
-      );
-
-  Map<String, Object?> toJson() => {
-        'text': text,
-        if (fontFamily != null) 'fontFamily': fontFamily,
-        'fontSize': fontSize,
-        'bold': bold,
-        'italic': italic,
-        'underline': underline,
-        'strikethrough': strikethrough,
-        'align': align.name,
-        'bubble': bubble,
-      };
-
-  factory TextContent.fromJson(Map<String, Object?> json) => TextContent(
-        text: json['text'] as String? ?? '',
-        fontFamily: json['fontFamily'] as String?,
-        fontSize: (json['fontSize'] as num? ?? 32).toDouble(),
-        bold: json['bold'] as bool? ?? false,
-        italic: json['italic'] as bool? ?? false,
-        underline: json['underline'] as bool? ?? false,
-        strikethrough: json['strikethrough'] as bool? ?? false,
-        align: TextAlign.values.firstWhere((a) => a.name == json['align'],
-            orElse: () => TextAlign.left),
-        bubble: json['bubble'] as bool? ?? false,
-      );
-}
-
-/// A 2D move, turn and resize applied to a finished stroke when it's
-/// painted: `x' = a·x + c·y + tx`, `y' = b·x + d·y + ty`.
-///
-/// Transforming the canvas (instead of the stroke's points) keeps every
-/// brush exact: filled shapes stay crisp, spray and stamps keep their look,
-/// and a mirrored pair turns as one piece.
-@immutable
-class StrokeTransform {
-  const StrokeTransform(this.a, this.b, this.c, this.d, this.tx, this.ty);
-
-  /// Scales by [scale] and turns by [angle] (radians, clockwise on screen)
-  /// around [center].
-  factory StrokeTransform.around(Offset center,
-      {double scale = 1, double angle = 0}) {
-    final a = scale * math.cos(angle), b = scale * math.sin(angle);
-    return StrokeTransform(a, b, -b, a, center.dx - a * center.dx + b * center.dy,
-        center.dy - b * center.dx - a * center.dy);
-  }
-
-  factory StrokeTransform.translation(Offset delta) =>
-      StrokeTransform(1, 0, 0, 1, delta.dx, delta.dy);
-
-  final double a, b, c, d, tx, ty;
-
-  /// How much bigger than the original it is drawn.
-  double get scale => math.sqrt(a * a + b * b);
-
-  /// How far it is turned, in radians.
-  double get angle => math.atan2(b, a);
-
-  Offset apply(Offset p) =>
-      Offset(a * p.dx + c * p.dy + tx, b * p.dx + d * p.dy + ty);
-
-  /// This transform followed by [next].
-  StrokeTransform then(StrokeTransform next) => StrokeTransform(
-        next.a * a + next.c * b,
-        next.b * a + next.d * b,
-        next.a * c + next.c * d,
-        next.b * c + next.d * d,
-        next.a * tx + next.c * ty + next.tx,
-        next.b * tx + next.d * ty + next.ty,
-      );
-
-  StrokeTransform get inverse {
-    final det = a * d - b * c;
-    final ia = d / det, ib = -b / det, ic = -c / det, id = a / det;
-    return StrokeTransform(
-        ia, ib, ic, id, -(ia * tx + ic * ty), -(ib * tx + id * ty));
-  }
-
-  /// The upright box around [r] once transformed.
-  Rect applyRect(Rect r) {
-    final corners = [r.topLeft, r.topRight, r.bottomLeft, r.bottomRight]
-        .map(apply)
-        .toList();
-    var out = Rect.fromPoints(corners[0], corners[0]);
-    for (final p in corners.skip(1)) {
-      out = out.expandToInclude(Rect.fromPoints(p, p));
-    }
-    return out;
-  }
-
-  /// Column-major 4x4 matrix for [Canvas.transform].
-  Float64List get matrix4 => Float64List.fromList(
-      [a, b, 0, 0, c, d, 0, 0, 0, 0, 1, 0, tx, ty, 0, 1]);
-
-  List<double> toJson() => [
-        for (final v in [a, b, c, d]) (v * 10000).round() / 10000,
-        for (final v in [tx, ty]) (v * 10).round() / 10,
-      ];
-
-  static StrokeTransform? fromJson(Object? json) {
-    if (json is! List || json.length != 6) return null;
-    final v = [for (final n in json.cast<num>()) n.toDouble()];
-    return StrokeTransform(v[0], v[1], v[2], v[3], v[4], v[5]);
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      other is StrokeTransform &&
-      other.a == a &&
-      other.b == b &&
-      other.c == c &&
-      other.d == d &&
-      other.tx == tx &&
-      other.ty == ty;
-
-  @override
-  int get hashCode => Object.hash(a, b, c, d, tx, ty);
-}
+part 'stroke_paint.dart';
 
 /// One continuous stroke made with a single brush.
 class Stroke {
@@ -555,6 +40,7 @@ class Stroke {
     this.blend = StrokeBlend.normal,
     this.texture = StrokeTexture.none,
     List<PointVector>? points,
+    this.area,
     this.isComplete = false,
   })  : seed = seed ?? math.Random().nextInt(1 << 30),
         points = points ?? [];
@@ -686,6 +172,11 @@ class Stroke {
         for (final p in points)
           PointVector(p.x + delta.dx, p.y + delta.dy, p.pressure),
       ],
+      area: area == null
+          ? null
+          : [
+              for (final loop in area!) [for (final p in loop) p + delta],
+            ],
     );
   }
 
@@ -816,6 +307,12 @@ class Stroke {
   /// filled, and the line itself isn't drawn.
   final bool fill;
 
+  /// An exact area to fill, as closed outlines: the first goes around it,
+  /// any others are its holes (filled even-odd). The paint bucket makes
+  /// these; [points] hold the first outline too, so older versions still
+  /// fill around it (smoothed, without the holes).
+  final List<List<Offset>>? area;
+
   /// Set for text items; null otherwise.
   final TextContent? text;
 
@@ -885,25 +382,6 @@ class Stroke {
     return out;
   }
 
-  /// Paints the stroke (and its mirror image) onto [canvas].
-  void paint(Canvas canvas) {
-    if (transform case final t?) {
-      canvas
-        ..save()
-        ..transform(t.matrix4);
-    }
-    _paintOnce(canvas);
-    if (mirrorX case final m?) {
-      canvas
-        ..save()
-        ..translate(2 * m, 0)
-        ..scale(-1, 1);
-      _paintOnce(canvas);
-      canvas.restore();
-    }
-    if (transform != null) canvas.restore();
-  }
-
   Offset get anchor => points.first;
 
   TextPainter get _laidOutText => _textPainter ??= TextPainter(
@@ -929,312 +407,21 @@ class Stroke {
     return rect.inflate(text!.bubble ? TextContent.bubblePadding : 4);
   }
 
-  void _paintText(Canvas canvas) {
-    final alpha = (color.a * opacity).clamp(0.0, 1.0);
-    final bounds = textBounds;
-    // Bubble and text fade together, so the bubble doesn't show through.
-    final translucent = alpha < 1;
-    if (translucent) {
-      canvas.saveLayer(bounds.inflate(2), Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
-    }
-    if (text!.bubble) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(bounds, const Radius.circular(16)),
-        Paint()..color = color.withValues(alpha: 0.16),
-      );
-    }
-    _laidOutText.paint(canvas, _textTopLeft);
-    if (translucent) canvas.restore();
-  }
-
-  void _paintOnce(Canvas canvas) {
-    // The blender needs what's under it; see [paintSmudge].
-    if (brush == BrushType.smudge) return;
-    // A blend mode mixes the whole stroke with what's under it at once,
-    // and a texture takes paint away from the whole stroke, so the stroke
-    // is drawn on its own layer first.
-    final blended = blend != StrokeBlend.normal && brush != BrushType.eraser;
-    final textured =
-        texture != StrokeTexture.none && brush.usesTexture && text == null;
-    if (blended || textured) {
-      canvas.saveLayer(text != null ? textBounds.inflate(2) : _bounds,
-          Paint()..blendMode = blend.mode);
-    }
-    _paintContent(canvas);
-    if (textured) _paintTexture(canvas);
-    if (blended || textured) canvas.restore();
-  }
-
-  /// Masks the stroke just painted with its texture. Bristles follow a
-  /// line along its length; areas get the grain along their longest side.
-  void _paintTexture(Canvas canvas) {
-    if (texture == StrokeTexture.bristle && !fill && points.length > 1) {
-      _paintBristles(canvas);
-    } else {
-      texture.mask(canvas, _bounds, angle: _mainAngle);
-    }
-  }
-
-  /// The direction the points mostly run in (radians).
-  double get _mainAngle {
-    if (points.length < 2) return 0;
-    var mx = 0.0, my = 0.0;
-    for (final p in points) {
-      mx += p.x;
-      my += p.y;
-    }
-    mx /= points.length;
-    my /= points.length;
-    var xx = 0.0, yy = 0.0, xy = 0.0;
-    for (final p in points) {
-      final dx = p.x - mx, dy = p.y - my;
-      xx += dx * dx;
-      yy += dy * dy;
-      xy += dx * dy;
-    }
-    return 0.5 * math.atan2(2 * xy, xx - yy);
-  }
-
-  /// Keeps the paint only where the hairs of a bristle brush drag it along
-  /// the line: streaks of different strength, some running dry early.
-  void _paintBristles(Canvas canvas) {
-    final pts = [for (final p in points) p as Offset];
-    Offset normalAt(int i) {
-      final d = pts[math.min(pts.length - 1, i + 1)] - pts[math.max(0, i - 1)];
-      return d.distance == 0
-          ? const Offset(0, 1)
-          : Offset(-d.dy, d.dx) / d.distance;
-    }
-
-    final normals = [for (var i = 0; i < pts.length; i++) normalAt(i)];
-    final rnd = math.Random(seed);
-    final hairs = (width / 1.5).clamp(5, 48).round();
-    canvas.saveLayer(_bounds, Paint()..blendMode = BlendMode.dstIn);
-    for (var h = 0; h < hairs; h++) {
-      final across = ((h + 0.5) / hairs - 0.5) * width * 1.05 +
-          (rnd.nextDouble() - 0.5) * width / hairs;
-      final strength = 0.4 + 0.6 * rnd.nextDouble();
-      final start = (rnd.nextDouble() * 0.1 * pts.length).floor();
-      final end = pts.length - (rnd.nextDouble() * 0.3 * pts.length).floor();
-      final hairWidth = width / hairs * (1.6 + rnd.nextDouble());
-      if (end - start < 2) continue;
-      // Each hair runs dry toward its end: the last third fades out.
-      final paint = Paint()
-        ..isAntiAlias = true
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = hairWidth
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-      final dry = start + ((end - start) * 0.67).round();
-      for (final (from, to, fade) in [
-        (start, dry, 1.0),
-        (dry - 1, dry + (end - dry) ~/ 2, 0.6),
-        (dry + (end - dry) ~/ 2 - 1, end, 0.3),
-      ]) {
-        if (to - from < 2) continue;
-        final hair = Path();
-        for (var i = from; i < to; i++) {
-          final p = pts[i] + normals[i] * across;
-          i == from ? hair.moveTo(p.dx, p.dy) : hair.lineTo(p.dx, p.dy);
-        }
-        canvas.drawPath(
-            hair, paint..color = Color.fromRGBO(255, 255, 255, strength * fade));
-      }
-    }
-    canvas.restore();
-  }
-
-  /// How far the blender spreads colors (a blur radius in pixels).
-  double get smudgeRadius => math.max(1, width * 0.3);
-
-  /// Paints a blender stroke: [under], what's painted beneath it already
-  /// blurred and covering [region] of the paper, shows through the
-  /// stroke's shape, as strongly as its opacity.
-  void paintSmudge(Canvas canvas, ui.Image under, Rect region) {
-    final area = bounds.intersect(region);
-    if (area.isEmpty) return;
-    canvas
-      ..saveLayer(area, Paint())
-      ..drawImageRect(
-        under,
-        Rect.fromLTWH(0, 0, under.width.toDouble(), under.height.toDouble()),
-        region,
-        Paint()..filterQuality = FilterQuality.medium,
-      )
-      // The stroke's shape (and its mirror image) together, as a mask.
-      ..saveLayer(area, Paint()..blendMode = BlendMode.dstIn);
-    if (transform case final t?) {
-      canvas
-        ..save()
-        ..transform(t.matrix4);
-    }
-    _paintSmudgeMask(canvas);
-    if (mirrorX case final m?) {
-      canvas
-        ..save()
-        ..translate(2 * m, 0)
-        ..scale(-1, 1);
-      _paintSmudgeMask(canvas);
-      canvas.restore();
-    }
-    if (transform != null) canvas.restore();
-    canvas
-      ..restore()
-      ..restore();
-  }
-
-  void _paintSmudgeMask(Canvas canvas) {
-    final paint = Paint()
-      ..isAntiAlias = true
-      ..color = Color.fromRGBO(0, 0, 0, (opacity * brush.opacity).clamp(0, 1));
-    if (blur > 0) paint.maskFilter = MaskFilter.blur(BlurStyle.normal, blur);
-    if (shape != null && !fill) {
-      canvas.drawPath(
-          _shapePath,
-          paint
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = width
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round);
-    } else {
-      canvas.drawPath(fill ? _fillArea : path, paint);
-    }
-  }
-
-  void _paintContent(Canvas canvas) {
-    if (text != null) {
-      _paintText(canvas);
-      return;
-    }
-    if (shape != null) {
-      _paintShape(canvas);
-      return;
-    }
-    if (brush == BrushType.eraser) {
-      // dstOut removes existing ink in proportion to alpha, so a
-      // half-opacity eraser fades ink instead of removing it.
-      canvas.drawPath(fill ? _fillArea : path, Paint()
-        ..isAntiAlias = true
-        ..blendMode = BlendMode.dstOut
-        ..color = Color.fromRGBO(0, 0, 0, opacity));
-      return;
-    }
-    final alpha = _alpha;
-    if (fill) {
-      // A free shape: one filled area, so a translucent paint is enough.
-      canvas.drawPath(_fillArea, _ink(alpha,
-          solid: brush == BrushType.rainbow ? _rainbowAt(0) : null));
-      return;
-    }
-    if (brush.kind == BrushKind.outline) {
-      // A single filled outline never overlaps itself, so a translucent
-      // paint is enough.
-      canvas.drawPath(path, _ink(alpha));
-      return;
-    }
-    // Dots, segments and stamps overlap each other. Draw them solid into a
-    // layer and fade the whole layer, so overlaps don't get darker.
-    final translucent = alpha < 1;
-    if (translucent) {
-      canvas.saveLayer(_bounds, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
-    }
-    final solid = color.withValues(alpha: 1);
-    switch (brush.kind) {
-      case BrushKind.spray:
-        _paintSpray(canvas, solid);
-      case BrushKind.rainbow:
-        _paintRainbow(canvas);
-      case BrushKind.stamp:
-        _paintStamps(canvas, solid);
-      case BrushKind.outline || BrushKind.text:
-        break;
-    }
-    if (translucent) canvas.restore();
-  }
-
-  /// How see-through the whole stroke is. A gradient's colors carry
-  /// their own see-through-ness, so then [color] doesn't count.
-  double get _alpha =>
-      ((gradient == null ? color.a : 1) * opacity * brush.opacity)
-          .clamp(0.0, 1.0);
-
-  /// The paint for lines and filled areas, faded to [alpha]: the stroke's
-  /// gradient, or [solid] (its color by default), with soft edges when it
-  /// has [blur].
-  Paint _ink(double alpha, {Color? solid}) {
-    final paint = Paint()..isAntiAlias = true;
-    if (gradient case final g? when solid == null) {
-      paint
-        ..color = const Color(0xFF000000)
-        ..shader = g.shader(_outlineBox, alpha);
-    } else {
-      paint.color = (solid ?? color).withValues(alpha: alpha);
-    }
-    if (blur > 0) paint.maskFilter = MaskFilter.blur(BlurStyle.normal, blur);
-    return paint;
-  }
-
-  void _paintShape(Canvas canvas) {
-    final outline = _shapePath;
-    final linePaint = Paint()
-      ..isAntiAlias = true
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = width
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    if (brush == BrushType.eraser) {
-      // A filled eraser shape clears its whole area.
-      final erase = Color.fromRGBO(0, 0, 0, opacity);
-      if (fill) {
-        canvas.drawPath(outline, Paint()
-          ..blendMode = BlendMode.dstOut
-          ..color = erase);
-      }
-      canvas.drawPath(outline, linePaint
-        ..blendMode = BlendMode.dstOut
-        ..color = erase);
-      return;
-    }
-    // Fill and outline overlap, so fade them together in one layer.
-    final alpha = _alpha;
-    final translucent = alpha < 1;
-    if (translucent) {
-      canvas.saveLayer(_bounds, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
-    }
-    final solid = color.withValues(alpha: 1);
-    if (fill) {
-      canvas.drawPath(outline,
-          _ink(1, solid: brush == BrushType.rainbow ? _rainbowAt(0) : null));
-    }
-    switch (brush.kind) {
-      // Text never becomes a shape; treat it like a plain outline.
-      case BrushKind.outline || BrushKind.text:
-        // Exact geometry keeps corners crisp.
-        canvas.drawPath(
-            outline,
-            _ink(1)
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = width
-              ..strokeCap = StrokeCap.round
-              ..strokeJoin = StrokeJoin.round);
-      case BrushKind.spray:
-        _paintSpray(canvas, solid);
-      case BrushKind.rainbow:
-        _paintRainbow(canvas);
-      case BrushKind.stamp:
-        _paintStamps(canvas, solid);
-    }
-    if (translucent) canvas.restore();
-  }
-
   /// The area a filled shape or a free shape covers.
   Path get _fillArea {
     if (shape != null) return _shapePath;
-    if (_cachedFillArea case final area?) return area;
+    if (_cachedFillArea case final cached?) return cached;
+    if (area case final loops?) {
+      final exact = Path()..fillType = PathFillType.evenOdd;
+      for (final loop in loops) {
+        exact.addPolygon(loop, true);
+      }
+      return _cachedFillArea = exact;
+    }
     // A smooth closed curve through the points.
-    final area = _outlineToPath([for (final p in points) p]);
-    if (isComplete) _cachedFillArea = area;
-    return area;
+    final smooth = _outlineToPath([for (final p in points) p]);
+    if (isComplete) _cachedFillArea = smooth;
+    return smooth;
   }
 
   Path? _cachedFillArea;
@@ -1252,10 +439,6 @@ class Stroke {
     }
     return r;
   }
-
-  Color _rainbowAt(double distance) => HSVColor.fromAHSV(
-          1, ((seed % 360) + distance * 1.2) % 360, 0.6, 0.97)
-      .toColor();
 
   /// The area this stroke paints on the paper, mirror image and transform
   /// included.
@@ -1310,135 +493,6 @@ class Stroke {
     return path..close();
   }
 
-  void _paintSpray(Canvas canvas, Color solid) {
-    final radius = math.max(2.0, width / 2);
-    // Dots are generated once per new point and kept, so drawing stays fast
-    // as the stroke grows. Each segment has its own seed, so the result never
-    // depends on how many frames were painted.
-    for (var i = _sprayPointsDone; i < points.length; i++) {
-      final a = i == 0 ? points[0] : points[i - 1];
-      final b = points[i];
-      final rnd = math.Random(seed * 7919 + i);
-      final steps =
-          i == 0 ? 1 : math.max(1, ((b - a).distance / (radius * 0.5)).ceil());
-      final perStep = (radius * radius / 10).clamp(6, 50).round();
-      for (var s = 0; s < steps; s++) {
-        final center = Offset.lerp(a, b, s / steps)!;
-        for (var k = 0; k < perStep; k++) {
-          final angle = rnd.nextDouble() * 2 * math.pi;
-          final dist = radius * math.sqrt(rnd.nextDouble());
-          _sprayDots.add(center + Offset(math.cos(angle), math.sin(angle)) * dist);
-        }
-      }
-    }
-    _sprayPointsDone = points.length;
-    canvas.drawPoints(
-      ui.PointMode.points,
-      _sprayDots,
-      Paint()
-        ..color = solid
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = math.max(1.2, radius / 7),
-    );
-  }
-
-  void _paintRainbow(Canvas canvas) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = width;
-    final hueAt = _rainbowAt;
-    if (points.length == 1) {
-      canvas.drawCircle(points.first, width / 2,
-          paint..style = PaintingStyle.fill..color = hueAt(0));
-      return;
-    }
-    var travelled = 0.0;
-    for (var i = 1; i < points.length; i++) {
-      final a = points[i - 1], b = points[i];
-      canvas.drawLine(a, b, paint..color = hueAt(travelled));
-      travelled += (b - a).distance;
-    }
-  }
-
-  void _paintStamps(Canvas canvas, Color solid) {
-    final spacing = width * 1.3;
-    final fill = Paint()
-      ..isAntiAlias = true
-      ..color = solid;
-    final light = Paint()
-      ..isAntiAlias = true
-      ..color = Color.lerp(solid, Colors.white, 0.65)!;
-    var index = 0;
-    void place(Offset at) {
-      final rnd = math.Random(seed + index++);
-      final scale = width / 2 * (0.85 + rnd.nextDouble() * 0.3);
-      canvas
-        ..save()
-        ..translate(at.dx, at.dy)
-        ..rotate((rnd.nextDouble() - 0.5) * 0.8)
-        ..scale(scale);
-      for (final (path, isCenter) in _stampPaths[stamp]!) {
-        canvas.drawPath(path, isCenter ? light : fill);
-      }
-      canvas.restore();
-    }
-
-    if (points.isEmpty) return;
-    place(points.first);
-    var untilNext = spacing;
-    for (var i = 1; i < points.length; i++) {
-      var a = points[i - 1] as Offset;
-      final b = points[i] as Offset;
-      var segment = (b - a).distance;
-      while (segment >= untilNext) {
-        a = Offset.lerp(a, b, untilNext / segment)!;
-        place(a);
-        segment = (b - a).distance;
-        untilNext = spacing;
-      }
-      untilNext -= segment;
-    }
-  }
-
-  /// Stamp shapes in a unit box centered on the origin. The bool marks a
-  /// lighter center (the flower's middle).
-  static final Map<StampShape, List<(Path, bool)>> _stampPaths = {
-    StampShape.heart: [
-      (
-        Path()
-          ..moveTo(0, 0.85)
-          ..cubicTo(-1.3, 0, -0.85, -1.15, 0, -0.45)
-          ..cubicTo(0.85, -1.15, 1.3, 0, 0, 0.85)
-          ..close(),
-        false,
-      ),
-    ],
-    StampShape.star: [(_star(), false)],
-    StampShape.flower: [
-      for (var i = 0; i < 5; i++)
-        (
-          Path()
-            ..addOval(Rect.fromCircle(
-              center: Offset.fromDirection(i * 2 * math.pi / 5 - math.pi / 2, 0.52),
-              radius: 0.42,
-            )),
-          false,
-        ),
-      (Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: 0.3)), true),
-    ],
-  };
-
-  static Path _star() {
-    final path = Path();
-    for (var i = 0; i < 10; i++) {
-      final r = i.isEven ? 1.0 : 0.45;
-      final p = Offset.fromDirection(i * math.pi / 5 - math.pi / 2, r);
-      i == 0 ? path.moveTo(p.dx, p.dy) : path.lineTo(p.dx, p.dy);
-    }
-    return path..close();
-  }
-
   /// Points are stored as a flat [x, y, pressure, x, y, pressure, ...] list,
   /// rounded to keep saved files small.
   Map<String, Object?> toJson() => {
@@ -1465,6 +519,13 @@ class Stroke {
           'points': const <num>[],
         } else ...{
           if (fill) 'fill': true,
+          if (area != null)
+            'area': [
+              for (final loop in area!)
+                [
+                  for (final p in loop) ...[_round(p.dx, 10), _round(p.dy, 10)],
+                ],
+            ],
           'points': [
             for (final p in points) ...[
               _round(p.x, 10),
@@ -1539,6 +600,18 @@ class Stroke {
       blend: blend,
       texture: texture,
       isComplete: true,
+      // Paint bucket areas since v4.1.
+      area: switch (json['area']) {
+        final List<Object?> loops => [
+            for (final loop in loops.cast<List<Object?>>())
+              [
+                for (var i = 0; i + 1 < loop.length; i += 2)
+                  Offset((loop[i]! as num).toDouble(),
+                      (loop[i + 1]! as num).toDouble()),
+              ],
+          ],
+        _ => null,
+      },
       points: [
         for (var i = 0; i + 2 < flat.length; i += 3)
           PointVector(flat[i].toDouble(), flat[i + 1].toDouble(),

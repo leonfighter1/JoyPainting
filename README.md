@@ -7,9 +7,12 @@ The app starts in English and asks for a language, a theme, a drawing level and 
 
 What it does:
 
-- **Drawing levels** (功能等级: 初级 / 中级 / 高级, Beginner / Intermediate / Advanced): the tools drawer shows only what the level includes, so beginners aren't swamped. Beginner: pen, pencil, marker, spray, rainbow, stamps, text, eraser, colors, shapes and size. Intermediate adds the highlighter, soft brush, move tool, opacity, free shapes and gradients. Advanced adds the blender, light & shadow and textures. Picked on first start, changed in Settings; paintings look the same at every level.
+- **Drawing levels** (功能等级: 初级 / 中级 / 高级, Beginner / Intermediate / Advanced): the tools drawer shows only what the level includes, so beginners aren't swamped. Beginner: pen, pencil, marker, spray, rainbow, stamps, the paint bucket, text, eraser, colors, shapes and size. Intermediate adds the highlighter, soft brush, move tool, color picker, opacity, free shapes and gradients. Advanced adds the blender, light & shadow and textures. Picked on first start, changed in Settings; paintings look the same at every level.
 - **Drawing**:
-  - 12 tools: pen, pencil, marker, highlighter, soft brush, blender, spray, rainbow, stamps, text, move and a round eraser.
+  - 14 tools: pen, pencil, marker, highlighter, soft brush, blender, spray, rainbow, stamps, paint bucket, text, move, color picker and a round eraser.
+  - **Paint bucket** (油漆桶): tap an area to fill it; small gaps in the lines around it are closed for you. The fill is a filled shape like any other: move, recolor, erase or undo it.
+  - **Color picker** (吸管): touch the paper and a loupe shows the color under your finger; let go to paint with it (also Alt + click, or I, on a computer).
+  - Big paintings stay smooth: thousands of strokes draw, erase and undo without slowing down.
   - Pressure-sensitive strokes, opacity, shapes with fill, mirror drawing and paper colors.
   - Painted looks: the soft brush (blurred, see-through edges for shading and glows), free shapes (draw around an area and it's filled), gradients made from the chosen color (lit top, dark bottom, fade, glow, rounded) and light & shadow (shadow, light, overlay, soft light).
   - Realistic painting: the **blender** (晕染笔) softens and mixes colors already painted, like a finger in wet paint; **textures** (纹理) lay any brush's paint with the grain of canvas, paper, charcoal or bristles.
@@ -38,20 +41,21 @@ What it does:
 - **Background music**:
   - Plays while you draw and pauses in the background. On/off in the ☰ menu (top right); volume, track and play order (shuffle by default, in order, repeat one) in Settings.
   - Five calm built-in tracks (阳光散步, 小星星摇篮曲, 欢乐颂, 两只老虎, 云朵飘飘), or add your own (MP3, M4A/AAC, WAV, OGG/Opus, FLAC, MIDI…).
-- **Keyboard** (browser, computer, iPad keyboard): Ctrl/⌘+Z undo, Ctrl+Y redo, Ctrl+S save, Ctrl+P print, Ctrl+C/X/V/D copy, cut, paste and duplicate the selection, Ctrl+A select all, Delete, Ctrl +/−/0/1 zoom, Space to move the paper, P/E/T/V tools, [ ] size, Esc. Press ? for the list.
+- **Keyboard** (browser, computer, iPad keyboard): Ctrl/⌘+Z undo, Ctrl+Y redo, Ctrl+S save, Ctrl+P print, Ctrl+C/X/V/D copy, cut, paste and duplicate the selection, Ctrl+A select all, Delete, Ctrl +/−/0/1 zoom, Space to move the paper, P/E/T/V tools, I or Alt + click for the color picker, [ ] size, Esc. Press ? for the list.
 - **Look**:
   - 5 portable JSON themes checked against WCAG contrast.
   - 4 bundled cute fonts, and a text size slider in Settings (文字大小, 80%–150%, with − and + buttons) that makes all text in the app bigger or smaller, on top of the system's own size.
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **4.0.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **4.1.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **4.0.0** | 2026-10-27 | Drawing levels (beginner, intermediate, advanced) chosen on first start, realistic painting tools (the blender, four textures, overlay and soft light), a sample painting for each level, a text size slider, a clearer ☰ menu button |
+| **4.1.0** | 2026-10-28 | The paint bucket, the color picker, big paintings that stay smooth (drawing, erasing and undoing), and a tidier code base behind the drawing screen |
+| 4.0.0 | 2026-10-27 | Drawing levels (beginner, intermediate, advanced) chosen on first start, realistic painting tools (the blender, four textures, overlay and soft light), a sample painting for each level, a text size slider, a clearer ☰ menu button |
 | 3.0.0 | 2026-10-27 | Painted looks (soft brush, gradients, light & shadow, free shapes, soft edges), a paper resized by dragging its edges (undoable, drawings keep their size), download as PNG, JPG or PDF, a simpler View menu (no zoom buttons), and a faster canvas for big paintings |
 | 2.2.0 | 2026-10-25 | Keyboard shortcuts (Ctrl+Z, Ctrl+C/V, Delete, zoom, tool keys; ? lists them), a bigger paper shows at real size, music that copes with old settings and browsers, five calm built-in tracks with shuffle by default, the sample painting 快乐的一天, copying paintings, default kid name 靖瑶 / Athena |
 | 2.1.1 | 2026-10-25 | Import/export buttons, export several paintings as a zip, paper up to 4× the screen, pinned palette (slim strip on phones), ✋ move the paper, web loading text in English until the language is set |
@@ -70,6 +74,26 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets).
+
+### 4.1.0 (2026-10-28): paint bucket, color picker, smooth big paintings
+
+**New**
+- **Paint bucket (油漆桶)**: a new tool at every level, next to the stamps. Tap an area and it fills with the chosen color, right up to (and just under) the lines around it, so no white seam shows. Lines don't have to meet: gaps of a few points are closed for you, and from Intermediate a 补缝隙 Close gaps slider (0–6) sets how big a gap is closed. Whatever is inside the area (a dot, a smaller shape) stays as it is. From Intermediate the fill can use the opacity slider and a gradient, and from Advanced light & shadow. The fill is an ordinary filled shape on top: the move tool picks it up, recolors or deletes it, the eraser cuts into it, and one undo takes it away.
+- **Color picker (吸管)**: a new tool from Intermediate, next to the move tool. Touch the paper and move: a loupe above your finger shows the paper magnified, ringed with the color under the middle. Let go and that color is the brush color (and joins the recent colors); the tools go back to the brush you were using. It picks the color you see, with shadows, light, textures and see-through paint mixed in. On a computer, Alt + click picks with any tool, and the I key chooses the picker.
+- **Smooth big paintings**: what's already painted is kept as one picture, so a new stroke, the eraser and undo no longer paint every stroke again. On a 3,000-stroke painting in Chrome, each frame while drawing took about 190 ms before and about 7 ms now; erasing went from about 640 ms to 7 ms, undo from about 490 ms to 7 ms. The blender also takes the picture under it from there.
+
+**Changed**
+- The tools drawer has two more tools (油漆桶 for everyone, 吸管 from Intermediate). The picker and the bucket have no size slider; the keyboard shortcut list (?) includes the picker.
+- Behind the scenes, the drawing screen's code was split into small parts (tools, the selection, the view, the menu, the paper), so new tools can be added without touching the rest. Nothing should look or work differently because of it.
+
+**Fixed**
+- With ✋ (move the paper) on, putting a second finger down to zoom could leave the paper "stuck" to the next finger: the next stroke moved the paper instead of drawing, and never finished. Now a pinch always ends what the first finger started.
+
+**Good to know**
+- A fill is saved as its exact outline (with holes) in a new `area` field. Older versions of the app ignore it and fill around the outside edge, slightly rounded, without the holes.
+- In a browser, a fill is worked out on the screen's own thread (about 0.1 s on a 3,000-stroke painting); the apps do it in the background.
+- Zoomed far in on a very big paper (past about 16 million pixels), the painting is drawn stroke by stroke as before, so it stays sharp.
+- Measured in Chrome (`tool/bench/web_bench.ps1`) and on the Android emulator; not yet tried on a real phone or iPad.
 
 ### 4.0.0 (2026-10-27): drawing levels, realistic painting, samples for every level
 
@@ -241,6 +265,7 @@ Gradle 9.3.1 is downloaded automatically by the wrapper. The Android build targe
 | Chrome | Installed with Chrome | Quick UI work and hot reload. "Save to album" downloads a file instead, and phone-only features ("open with", the photo album) don't apply. |
 | Phone emulator | AVD `medium_phone` (1080×2400) | Default phone layout |
 | Tablet emulator | AVD `medium_tablet` (2560×1600) | Side rail, landscape/portrait, paper scaling |
+| Chrome benchmark | `tool\bench\web_bench.ps1` | How smooth a 3,000-stroke painting is. The emulators on this PC often crash on paintings that big, so heavy measurements run in Chrome. |
 | Real Android device | USB debugging on, then `adb devices` | Stylus pressure, real pinch, sharing to chat apps, printing |
 | iPhone and iPad simulators | GitHub Actions (`.github/workflows/ios.yml`) or a Mac | The real iOS build: starts on the newest iPhone and iPad and leaves screenshots |
 
@@ -301,6 +326,10 @@ What the tests cover:
 - **`test/v22_test.dart`**: the bigger paper at real size, keyboard shortcuts, copying paintings, the sample painting, the default kid name.
 - **`test/v3_test.dart`**: the soft brush, gradients, light & shadow, free shapes, the paper grips, the menu's download formats, and accessibility of the new options in every theme.
 - **`test/v4_test.dart`**: textures (pixels, saving), the blender (mixing, opacity, following what's under it, while drawing), drawing levels (what each shows, hidden options, first start, Settings), the menu button, text size (buttons, slider, largest text on a small phone), the sample painting for each level, and accessibility in every theme.
+- **`test/canvas_logic_test.dart`**: the drawing screen's parts on their own: the selection (move, box select, copy, cut, paste), the view (zoom limits, pinch, dragging the paper), the keyboard shortcut map, new strokes from the tools drawer, and a pinch during ✋.
+- **`test/layer_cache_test.dart`**: the kept picture of a painting looks the same as painting every stroke (paint, shadows, see-through paint, the eraser, the blender), and is painted again only when it must (not for new strokes, erasing, undo or redo).
+- **`test/picker_test.dart`**: the color seen at a point (paint, paper, shadows, see-through paint), the picker's loupe and its return to the last brush, and picking a color off the canvas.
+- **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
 - **`test/web_store_test.dart`**: saving paintings in the browser (IndexedDB), moving old localStorage data over. Browser only: `flutter test --platform chrome test/web_store_test.dart` (the Web workflow runs it).
 - **`test/model_test.dart`**: the painting store, autosave and import.
 - **`test/export_test.dart`**: real PNG, JPEG and PDF output, and `.jypaint` round trips.
@@ -312,6 +341,17 @@ What the tests cover:
   - Flutter's accessibility guidelines: text contrast, 48 dp tap targets and labels.
 
 Before calling a change done, run analyze and test, then try it on the tablet emulator.
+
+How smooth big paintings are (frame times with and without the kept picture, and how long a fill takes):
+
+```powershell
+# Chrome, on the 3,000-stroke sample; opens a separate Chrome window for a few minutes
+powershell -ExecutionPolicy Bypass -File tool\bench\web_bench.ps1
+# A phone or emulator, in profile mode
+flutter drive --profile --driver=test_driver/integration_test.dart --target=integration_test/draw_perf_test.dart -d <device>
+```
+
+A quick check of a release APK on an emulator (installs, starts, draws, checks the log): `powershell -ExecutionPolicy Bypass -File tool\android_smoke.ps1`.
 
 ## Build a release APK
 
@@ -381,7 +421,9 @@ To install on a real iPhone or iPad, or to share through TestFlight, you need an
 ```
 lib/
   main.dart            app shell: tabs or side rail, theme, incoming files
-  drawing/             canvas page, strokes, drawing controller, text editor
+  drawing/             the drawing screen, strokes, drawing controller, text editor
+    canvas/            its parts: tools (draw, text, move, pan, picker, fill), selection, view, menu, paper, drawer
+    render/            strokes into pictures: the kept picture, reading pixels, filling areas
   gallery/             My Paintings page and storage (file / browser / memory)
   music/               background music: track library, saved uploads, looping player
   share/               send, print preview, import, .jypaint format
@@ -394,9 +436,10 @@ assets/                logo, theme JSON files, fonts and their OFL licenses, bui
 android/               Android host app (MainActivity handles "open with")
 ios/                   iOS host app (AppDelegate handles "Open in", Info.plist)
 .github/workflows/     ios.yml (iOS build on GitHub's Macs), web.yml (publishes the web version)
-tool/                  build_apk.ps1, watch_build.ps1, make_icons.ps1, make_music.dart, ios_sim_smoke.sh; samples/ (makes the level sample paintings in assets/samples/)
+tool/                  build_apk.ps1, watch_build.ps1, make_icons.ps1, make_music.dart, ios_sim_smoke.sh, android_smoke.ps1; samples/ (makes the level sample paintings in assets/samples/); bench/ (how smooth big paintings are, in Chrome)
+integration_test/      the same measurement on a device (driven by test_driver/)
 local_art/             not in git: pictures made locally with the app's brushes
-docs/appdev/           FEATURES.md, MISTAKES.md, DEVLOG.md
+docs/appdev/           FEATURES.md, MISTAKES.md, DEVLOG.md, TECH_PLAN.md (the improvement plan)
 test/                  see Tests above
 ```
 

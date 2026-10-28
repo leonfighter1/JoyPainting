@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jingyao_paint/app_theme.dart' show kThemeIds;
 import 'package:jingyao_paint/drawing/canvas_page.dart';
 import 'package:jingyao_paint/drawing/drawing_controller.dart';
+import 'package:jingyao_paint/drawing/render/render_image.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/gallery/level_samples.dart';
 import 'package:jingyao_paint/l10n.dart';
@@ -72,7 +73,7 @@ void main() {
         final s = line(const Offset(4, 20), const Offset(196, 20),
             size: 20, texture: t);
         final raw =
-            await DrawingController.renderRgba([s], const Size(200, 40), 1);
+            await renderRgba([s], const Size(200, 40), 1);
         // The red channel over the middle of the line: solid paint is
         // 0x8B everywhere; grain makes it lighter in places.
         final reds = [
@@ -95,8 +96,8 @@ void main() {
             size: 20, texture: t);
         final back = Stroke.fromJson(s.toJson());
         expect(back.texture, t);
-        final a = await DrawingController.renderRgba([s], _wide, 1);
-        final b = await DrawingController.renderRgba([back], _wide, 1);
+        final a = await renderRgba([s], _wide, 1);
+        final b = await renderRgba([back], _wide, 1);
         expect(a.rgba, b.rgba, reason: t.name);
       }
       expect(line(Offset.zero, const Offset(9, 9)).toJson(),
@@ -215,7 +216,8 @@ void main() {
     test('each level shows more; beginners get the simple tools', () {
       expect(SkillLevel.beginner.brushes, [
         BrushType.pen, BrushType.pencil, BrushType.marker, BrushType.spray,
-        BrushType.rainbow, BrushType.stamp, BrushType.text, BrushType.eraser,
+        BrushType.rainbow, BrushType.stamp, BrushType.bucket, BrushType.text,
+        BrushType.eraser,
       ]);
       expect(SkillLevel.intermediate.brushes,
           containsAll([BrushType.highlighter, BrushType.soft, BrushType.move]));

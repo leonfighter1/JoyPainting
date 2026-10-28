@@ -56,8 +56,37 @@
 53. In widget tests, don't wrap calls on objects made in the test's fake-time zone in `tester.runAsync`: their futures wait for fake time that never comes. Asset loading works without it.
 54. Test helpers that find widgets by Chinese labels fail in English tests; use the label for the test's language.
 55. Adding a section near the top of a lazy settings or setup page pushes lower items out of the built range: tests must scroll to them (rule 37), and a short page can simply be non-lazy.
+56. Before saying what is or isn't verified, or what this PC can do, read the newest DEVLOG entries first and check the machine itself (`flutter doctor -v`, `emulator -list-avds`); a "not verified" note in an older FEATURES entry may be stale. When something gets verified later, update the older note in the same step.
+57. Never edit the project while a harness run is going in the background: it reads half-changed files and its result means nothing. Wait for it, or start editing only after it has finished.
+58. Never pass a Windows path (`$TEMP`, `C:\...`) to `awk -v`: awk reads backslashes as escapes and the path breaks silently. Use a forward-slash path (`/tmp/...`) and read it with `ENVIRON["NAME"]`, then check the inserted text landed.
+59. Release APKs are split per CPU type, which adds 4000 (x86_64), 2000 (arm64) or 1000 (armv7) to the version code. Build emulator APKs with `--split-per-abi` (or `tool\build_apk.ps1`); an unsplit APK has a lower code and fails to install over them as a downgrade.
+60. Every child of the canvas stacks must stay positioned (`Positioned`, `Positioned.fill`, `CornerFloat`), even when it shows nothing: a `Stack` with loose constraints sizes itself to its non-positioned children, so a builder returning `SizedBox.shrink()` collapses the paper area to 0×0 (NaN layout). Wrap the builder in the `Positioned`, not the other way round.
 
 ## Log
+
+### 2026-10-27: A hidden progress bar collapsed the paper to nothing
+- **Symptom:** every canvas test failed with `'height == null || !height.isNaN'` in `PaperSheet`'s Stack, thousands of times per test (a full widget_test run hit the 10-minute limit).
+- **Root cause:** the paint bucket's progress bar was a `ValueListenableBuilder` placed directly in the canvas stack, returning `Positioned(...)` when busy and `SizedBox.shrink()` otherwise. The non-positioned zero-size child made the stack 0×0, so the paper's fit scale became 0/0.
+- **Fix:** `Positioned` outside, the builder inside it.
+- **Rule:** 60.
+
+### 2026-10-27: Refactor snags (awk paths, APK version codes)
+- **Symptom:** a code block meant for `canvas_page.dart` was silently not inserted (awk warned "escape sequence `\U' treated as plain `U'"); later `adb install` of a fresh x86_64 APK failed with INSTALL_FAILED_VERSION_DOWNGRADE (13 vs 4011).
+- **Root cause:** `awk -v blk="$TEMP/..."` got `C:\Users\...`, whose backslashes awk treats as escapes, so `getline` read nothing. The emulator had a split-per-ABI build (version code 4000 + build), and the new APK was built unsplit (version code = build).
+- **Fix:** inserted the block with the Edit tool, then used `/tmp` paths through `ENVIRON`; rebuilt with `--split-per-abi`. `tool/android_smoke.ps1` now prints adb's real install error.
+- **Rule:** 58, 59.
+
+### 2026-10-27: A baseline harness run read half-edited files
+- **Symptom:** the pre-refactor baseline failed at analyze with ~1000 "Undefined name 'BrushType'" errors.
+- **Root cause:** I started the harness in the background and then split `stroke.dart` while it ran; analyze saw the file mid-move.
+- **Fix:** used the 4.0.0 release result (313 tests passing) as the baseline and re-ran the harness after the split.
+- **Rule:** 57.
+
+### 2026-10-27: Told the user there was no Android SDK, from a stale note
+- **Symptom:** while suggesting improvements, I said the Android "open with" feature was unverified because this PC had no Android SDK. The user pointed out the SDK is installed.
+- **Root cause:** I quoted the v1.4.0 FEATURES entry ("not verified yet, no Android SDK"), written hours before the SDK was installed. The DEVLOG of the same day records the SDK install, the AVDs, and "open with" passing on the emulator (running and cold start), but the FEATURES note was never updated, and I didn't read the newer records or check the machine.
+- **Fix:** checked `flutter doctor -v` (SDK 36, emulator, AVDs `medium_phone` and `medium_tablet`), corrected the v1.4.0 FEATURES note, and told the user.
+- **Rule:** 56.
 
 ### 2026-10-27: v4 snags
 - **Symptom:** a scripted edit put `});` after every `);` in `app_theme.dart`; textured cloth, hair and the dog let the sky show through (they looked checkered or grey); light halos around blended shapes; a straight light band between two mountain ranges and a straight line inside a cloud in the lake painting; tests hung on sample paintings; an English test failed on a Chinese tooltip; settings and setup tests couldn't find lower items.

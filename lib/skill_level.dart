@@ -4,11 +4,11 @@ import 'drawing/stroke.dart';
 /// and each level adds more. Paintings look the same at every level: a
 /// level only hides tools, never what was drawn with them.
 enum SkillLevel {
-  /// The everyday brushes, colors, shapes, stamps and text.
+  /// The everyday brushes, colors, shapes, stamps, the paint bucket and text.
   beginner,
 
-  /// Adds the highlighter, soft brush and move tool, opacity, free shapes
-  /// and gradients.
+  /// Adds the highlighter, soft brush, move tool and color picker, opacity,
+  /// free shapes and gradients.
   intermediate,
 
   /// Everything: adds the blender, light and shadow, and textures, for
@@ -28,10 +28,14 @@ enum SkillLevel {
         BrushType.spray ||
         BrushType.rainbow ||
         BrushType.stamp ||
+        BrushType.bucket ||
         BrushType.text ||
         BrushType.eraser =>
           true,
-        BrushType.highlighter || BrushType.soft || BrushType.move =>
+        BrushType.highlighter ||
+        BrushType.soft ||
+        BrushType.move ||
+        BrushType.picker =>
           _intermediate,
         BrushType.smudge => this == advanced,
       };

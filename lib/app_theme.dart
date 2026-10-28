@@ -52,8 +52,10 @@ abstract final class AppTheme {
         BrushType.spray => const Color(0xFF1C7A96),
         BrushType.rainbow => const Color(0xFFA63A9E),
         BrushType.stamp => const Color(0xFFD1376F),
+        BrushType.bucket => const Color(0xFFA34700),
         BrushType.text => const Color(0xFF3B5BDB),
         BrushType.move => const Color(0xFF00796B),
+        BrushType.picker => const Color(0xFF3D5A98),
         BrushType.eraser => const Color(0xFF5F6C7B),
       };
 
@@ -67,8 +69,10 @@ abstract final class AppTheme {
         BrushType.spray => Icons.blur_on_rounded,
         BrushType.rainbow => Icons.looks_rounded,
         BrushType.stamp => Icons.favorite_rounded,
+        BrushType.bucket => Icons.format_color_fill_rounded,
         BrushType.text => Icons.text_fields_rounded,
         BrushType.move => Icons.open_with_rounded,
+        BrushType.picker => Icons.colorize_rounded,
         BrushType.eraser => Icons.auto_fix_normal_rounded,
       };
 

@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../drawing/drawing_controller.dart';
+import '../drawing/render/render_image.dart';
 import '../gallery/painting_archive.dart';
 import '../gallery/painting_file.dart';
 import '../gallery/painting_store.dart';
@@ -200,7 +200,7 @@ Future<void> printPainting(BuildContext context, PaintingDoc doc) async {
   final navigator = Navigator.of(context);
   try {
     final size = paintingSize(doc);
-    final png = await DrawingController.renderPng(
+    final png = await renderPng(
         doc.strokes, size, exportRatioFor(size), paper: doc.paper);
     await navigator.push(MaterialPageRoute<void>(
       fullscreenDialog: true,

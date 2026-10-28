@@ -168,8 +168,10 @@ class S {
         BrushType.spray => _t('喷枪', 'Spray'),
         BrushType.rainbow => _t('彩虹笔', 'Rainbow'),
         BrushType.stamp => _t('印章', 'Stamps'),
+        BrushType.bucket => _t('油漆桶', 'Paint bucket'),
         BrushType.text => _t('文字', 'Text'),
         BrushType.move => _t('选择移动', 'Move'),
+        BrushType.picker => _t('吸管', 'Color picker'),
         BrushType.eraser => _t('橡皮擦', 'Eraser'),
       };
   String stampName(StampShape s) => switch (s) {
@@ -196,6 +198,15 @@ class S {
   String get deleteSelection => _t('删除选中的', 'Delete selected');
   String get rainbowKeepsColors =>
       _t('彩虹笔画的线会保留彩虹色，只改透明度。', 'Rainbow strokes keep their colors; only their opacity changes.');
+  String get bucketHint => _t(
+      '点一下要填色的地方，就用这个颜色填满。线没连上也没关系，小缝隙会自动补上。',
+      "Tap an area to fill it with the color. Lines don't have to meet: small gaps are closed for you.");
+  String get filling => _t('正在填色…', 'Filling…');
+  String get fillGap => _t('补缝隙', 'Close gaps');
+  String get pickerHint => _t(
+      '按住画纸并移动，放大镜里是手指下的颜色；松开就用这个颜色画画。',
+      'Touch the paper and move: the loupe shows the color under your finger. Let go to paint with it.');
+  String pickedColor(String hex) => _t('吸取的颜色 $hex', 'Picked color $hex');
   String get smudgeHint => _t('在画好的颜色上来回涂，颜色会晕开、柔和地混在一起。不透明度越高，混得越多。',
       'Rub over colors already painted to soften and blend them together. '
           'Higher opacity blends more.');
@@ -408,6 +419,8 @@ class S {
         ('H', _t('✋ 拖动画板 开 / 关', '✋ Move the paper on / off')),
         ('P · E · T · V',
             _t('画笔 · 橡皮 · 文字 · 移动', 'Pen · Eraser · Text · Move')),
+        ('I · Alt + ${_t('点按', 'click')}',
+            _t('吸管：吸取画上的颜色', 'Color picker: pick a color off the paper')),
         ('[  ]', _t('笔变细 / 变粗', 'Thinner / thicker brush')),
         ('Esc', _t('取消选中，关上工具栏', 'Deselect, close the tools')),
         ('?', _t('显示这张表', 'Show this list')),
