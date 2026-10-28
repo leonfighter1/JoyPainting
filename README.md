@@ -27,7 +27,8 @@ What it does:
   - Pin the palette beside the paper (a slim strip under it on an upright phone) to change brushes and colors while drawing.
   - Brushes and colors live in a drawer that opens from the "画笔 · 颜色" button. Its groups open and close with a tap on their heading: the everyday brushes, colors and shapes start open, and the extras of higher levels (more brushes, gradients, light & shadow, textures) start closed. Size and opacity sit right under the colors.
   - The drawer keeps brushes (画笔: pen, pencil, marker, spray to start) apart from helpers (小帮手: eraser, paint bucket, text, and the color picker when added). Save the brush in use, with its size, opacity, color, gradient, light & shadow and texture, as one of 我的画笔; tap it to paint with it again, press it long to delete it.
-  - The title bar has 选择移动 (the move tool; tap again to go back to the brush), clear, ✋ and ☰. Paintings save themselves; 新建画作 is in the ☰ menu.
+  - The title bar has, left to right, ✋ (move the paper), 选择移动 (the move tool; tap again to go back to the brush), 清空画布 (a broom) and ☰. Paintings save themselves; 新建画作 is in the ☰ menu.
+  - The stamps (印章) are always in the drawer: picking one picks the stamp brush.
   - Brushes, helpers, shapes, stamps, gradients, light & shadow and textures show only their basic choices at first; 「＋ 添加」 in each group (or 添加工具 at the bottom) picks more, several at once: 21 shapes (clouds, moons, lightning, speech bubbles, arcs, waves…), 7 stamps, 10 gradients (rainbow too), 9 kinds of light & shadow and 11 textures (watercolor, crayon, dots, hatching, wood…), as the level allows.
   - At the Advanced level a layers button sits right above the "画笔 · 颜色" button.
   - These buttons and the undo bar can be dragged to any corner of the paper.
@@ -57,13 +58,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.1.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.1.1**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **6.1.0** | 2026-10-28 | My own brushes (我的画笔); brushes and helpers (小帮手) apart, each starting with the basic ones; the move tool in the title bar; no save or new buttons there (paintings save themselves; new is in the ☰ menu) |
+| **6.1.1** | 2026-10-28 | The stamps are always in the drawer (picking one picks the stamp brush); the title bar reads ✋, 选择移动, 清空 (now a broom) |
+| 6.1.0 | 2026-10-28 | My own brushes (我的画笔); brushes and helpers (小帮手) apart, each starting with the basic ones; the move tool in the title bar; no save or new buttons there (paintings save themselves; new is in the ☰ menu) |
 | 6.0.0 | 2026-10-28 | Add tools as you need them (添加工具): the drawer keeps the basic choices, and a popup adds more, several at once; 14 new shapes (arc and wave too), 4 stamps, 4 gradients, 4 kinds of light & shadow and 6 textures |
 | 5.4.3 | 2026-10-28 | Shapes (line, rectangle, circle…) with light & shadow show while you drag them |
 | 5.4.2 | 2026-10-28 | Light & shadow (soft light, overlay, highlight) show while you draw, as they look once the finger lifts |
@@ -95,6 +97,15 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 6.1.1 (2026-10-28): stamps within reach, a tidier title bar
+
+**Fixed**
+- **The stamps (印章) only showed while the stamp brush was in use**, and since 6.1.0 that brush had to be added first, so new stamps couldn't be reached at all. The 印章 group is now always in the drawer (with 「＋ 添加」); tapping a stamp picks the stamp brush with it.
+
+**Changed**
+- The title bar reads, left to right: ✋ 拖动画板, 选择移动, 清空画布, ☰.
+- 清空画布 has a broom icon (the crossed-out layers looked like something else).
 
 ### 6.1.0 (2026-10-28): my own brushes, helpers, and a simpler title bar
 

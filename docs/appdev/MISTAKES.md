@@ -67,8 +67,15 @@
 64. The stroke being drawn and the finished strokes are painted by different paths (`paintCurrent` over the paper; finished ones on their layer's own sheet). When a stroke looks wrong while drawing, check every per-stroke option (light & shadow, texture, opacity, layer) in both paths on white paper, and ask for the user's exact settings before settling on a cause.
 65. When strokes start going through a different paint or repaint path, list every way a stroke being drawn changes (`begin`, `extend`, `moveShapeEnd`, `cancel`, `end`) and check each one; then run `test/live_stroke_test.dart`, which draws every brush, light & shadow and shape while watching the screen's repaint signals.
 66. Every option in the tools drawer needs a name of its own in both languages: tests and screen readers find chips by their text, and two "Glow"s (a gradient and a light mode) broke both.
+67. When picking telling lines out of a log by keyword, match log levels as whole words (" Fault ", " Error "): "fault" also matches every "Default" line, and the real reason gets buried. And look where the reason is written: why iOS stopped an app is in the system's log, not the app's.
 
 ## Log
+
+### 2026-10-28: The iOS check's annotations were all noise
+- **Symptom:** 6.1.0's iOS check failed twice ("not running" after 30 s, the iPad once and the iPhone once) and the annotations showed only ordinary log lines.
+- **Root cause:** `ios_sim_smoke.sh` (since 4.2.0) picked lines with `grep -i "...|fault|..."`, which matches the "Default" level of every line; and it read only the app's own log, while the reason a simulator stops an app is logged by launchd, runningboardd or SpringBoard.
+- **Fix:** whole-word log levels, and a second capture of every system line naming the app (terminations, kills, jetsam, watchdog), both as annotations.
+- **Rule:** 67.
 
 ### 2026-10-28: 5.4.2 left shapes with light & shadow invisible while dragged
 - **Symptom:** with 阴影, 柔光 and the rest, a shape other than freehand or a free shape showed nothing until lifting; refreshing didn't help.

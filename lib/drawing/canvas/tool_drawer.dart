@@ -393,10 +393,14 @@ class ToolPanel extends StatelessWidget {
                 ? null
                 : s.shapeName(settings.shape),
           ),
-        if (brush == BrushType.stamp)
+        // Always there (not only with the stamp brush): a stamp picked here
+        // picks the stamp brush.
+        if (settings.level.allows(BrushType.stamp))
           ...section(ToolSection.stamps, s.brushName(BrushType.stamp),
               options(ToolGroup.stamps),
-              chosen: s.stampName(settings.stamp)),
+              chosen: brush == BrushType.stamp
+                  ? s.stampName(settings.stamp)
+                  : null),
         if (settings.level.gradients &&
             brush.usesColor &&
             brush.kind == BrushKind.outline)

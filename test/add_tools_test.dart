@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jingyao_paint/drawing/canvas/brush_tile.dart';
 import 'package:jingyao_paint/drawing/canvas/tool_catalog.dart';
 import 'package:jingyao_paint/drawing/canvas_page.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
@@ -179,7 +180,9 @@ void main() {
       for (final b in ['钢笔', '铅笔', '马克笔', '喷枪', '小帮手', '橡皮擦', '油漆桶', '文字']) {
         expect(chip(b), findsOneWidget, reason: b);
       }
-      for (final b in ['荧光笔', '柔边笔', '彩虹笔', '印章', '晕染笔', '吸管', '选择移动']) {
+      // 印章 is the heading of the stamps (always there), not a brush yet.
+      expect(find.widgetWithText(BrushTile, '印章'), findsNothing);
+      for (final b in ['荧光笔', '柔边笔', '彩虹笔', '晕染笔', '吸管', '选择移动']) {
         expect(chip(b), findsNothing, reason: b);
       }
       await tester.tap(find.byKey(const ValueKey('addTo.brushes')));
@@ -192,6 +195,31 @@ void main() {
       expect(chip('彩虹笔'), findsOneWidget);
       expect(chip('吸管'), findsOneWidget);
       expect(find.byKey(const ValueKey('moveToolButton')), findsOneWidget);
+    });
+
+    testWidgets('the stamps are there with any brush; picking one picks the '
+        'stamp brush, even before it was added', (tester) async {
+      final app = await pumpWithBasics(tester);
+      expect(app.settings.brush, BrushType.pen);
+      await openTools(tester);
+      expect(chip('印章'), findsOneWidget, reason: 'the group heading');
+      await scrollTools(tester, find.byKey(const ValueKey('addTo.stamps')));
+      for (final st in ['爱心', '星星', '小花']) {
+        expect(chip(st), findsOneWidget, reason: st);
+      }
+      await tester.tap(find.ancestor(
+          of: chip('星星'), matching: find.byType(ChoiceChip)));
+      await tester.pump();
+      expect(app.settings.brush, BrushType.stamp);
+      expect(app.settings.stamp, StampShape.star);
+      expect(
+          tester
+              .widget<ChoiceChip>(find.ancestor(
+                  of: chip('星星'), matching: find.byType(ChoiceChip)))
+              .selected,
+          isTrue);
+      // The stamp brush shows among the brushes while it's in use.
+      expect(chip('印章'), findsNWidgets(2));
     });
   });
 

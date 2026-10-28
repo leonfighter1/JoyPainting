@@ -751,12 +751,20 @@ void main() {
             of: find.byTooltip(tooltip), matching: find.byType(IconButton)));
 
     testWidgets(
-        'move and clear are buttons; new and delete are in the ☰ menu; '
-        'paintings save themselves', (tester) async {
+        '✋, move and clear (a broom) are buttons, in that order; new and '
+        'delete are in the ☰ menu; paintings save themselves', (tester) async {
       await pumpApp(tester);
-      for (final t in ['选择移动', '清空画布', '更多']) {
+      final order = ['拖动画板', '选择移动', '清空画布', '更多'];
+      for (final t in order) {
         expect(find.byTooltip(t), findsOneWidget, reason: t);
       }
+      final xs = [for (final t in order) tester.getCenter(find.byTooltip(t)).dx];
+      expect(xs, [...xs]..sort(), reason: 'left to right: ${order.join(', ')}');
+      expect(
+          find.descendant(
+              of: find.byKey(const ValueKey('clearButton')),
+              matching: find.byIcon(Icons.cleaning_services_rounded)),
+          findsOneWidget);
       for (final t in ['新建画作', '保存画作', '删除这幅画']) {
         expect(find.byTooltip(t), findsNothing, reason: '$t: not a button');
       }

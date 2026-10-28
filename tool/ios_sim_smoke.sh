@@ -39,15 +39,25 @@ for kind in phone tablet; do
   xcrun simctl io "$udid" screenshot "$OUT/$kind.png"
   xcrun simctl spawn "$udid" log show --last 2m \
     --predicate 'process == "Runner"' > "$OUT/$kind.log" 2>&1 || true
+  # Why the system stopped the app, if it did: other processes (launchd,
+  # runningboardd, SpringBoard) log that, not the app.
+  xcrun simctl spawn "$udid" log show --last 3m \
+    --predicate 'eventMessage CONTAINS[c] "jingyaopaint"' \
+    > "$OUT/$kind-system.log" 2>&1 || true
   if xcrun simctl spawn "$udid" launchctl list | grep -q "$BUNDLE"; then
     echo "$kind: running"
   else
     echo "::error::$kind: the app is not running (crashed on launch?). See $kind.log."
     # The telling lines as annotations too: they show on the run page
-    # without signing in or downloading the artifacts.
-    grep -iE "error|exception|fault|crash|terminat|signal|assert" "$OUT/$kind.log" \
-      | tail -n 12 | while IFS= read -r line; do
+    # without signing in or downloading the artifacts. Log levels are
+    # matched as whole words: "fault" alone would match every "Default".
+    grep -E " (Error|Fault) |[Ee]xception|[Cc]rash|[Tt]erminat|SIG[A-Z]+|[Aa]ssert" \
+      "$OUT/$kind.log" | tail -n 8 | while IFS= read -r line; do
         echo "::error::$kind log: ${line:0:400}"
+      done || true
+    grep -iE "terminat|exit|kill|jetsam|watchdog|crash|signal" \
+      "$OUT/$kind-system.log" | tail -n 8 | while IFS= read -r line; do
+        echo "::error::$kind system: ${line:0:400}"
       done || true
     report=$(ls -t "$HOME"/Library/Logs/DiagnosticReports/Runner* 2>/dev/null | head -n 1 || true)
     if [ -n "$report" ]; then

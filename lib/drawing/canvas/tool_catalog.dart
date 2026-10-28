@@ -203,8 +203,14 @@ abstract final class ToolCatalog {
             name: st.name,
             label: s.stampName(st),
             glyph: (c) => Icon(AppTheme.stampIcon(st), size: 18, color: c),
-            selected: settings.stamp == st,
-            onSelect: () => settings.stamp = st,
+            // Picking a stamp picks the stamp brush too, so the group works
+            // from any brush.
+            selected:
+                settings.brush == BrushType.stamp && settings.stamp == st,
+            onSelect: () {
+              settings.brush = BrushType.stamp;
+              settings.stamp = st;
+            },
             basic: basicStamps.contains(st),
           ),
       ],

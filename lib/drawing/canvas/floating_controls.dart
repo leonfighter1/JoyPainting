@@ -223,10 +223,10 @@ class ZoomChip extends StatelessWidget {
 }
 
 
-/// The painting's own actions in the title bar, one tap away: the move tool
-/// (选择移动, from the intermediate level), clear, ✋ (move the paper) and
-/// the ☰ menu. Paintings save themselves; a new one is in the menu. Undo
-/// and redo float on the paper.
+/// The painting's own actions in the title bar, one tap away, in this
+/// order: ✋ (move the paper), the move tool (选择移动, from the
+/// intermediate level), clear (a broom) and the ☰ menu. Paintings save
+/// themselves; a new one is in the menu. Undo and redo float on the paper.
 class CanvasBarActions extends StatelessWidget {
   const CanvasBarActions({
     super.key,
@@ -262,6 +262,19 @@ class CanvasBarActions extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // ✋ Move the paper: one tap away, and in the title bar it never
+        // crowds the corner controls on a narrow phone.
+        ValueListenableBuilder(
+          valueListenable: panMode,
+          builder: (context, panning, _) => IconButton(
+            tooltip: s.panCanvas,
+            isSelected: panning,
+            icon: const Icon(Icons.pan_tool_outlined),
+            selectedIcon: const Icon(Icons.pan_tool_rounded),
+            style: on(panning),
+            onPressed: () => panMode.value = !panning,
+          ),
+        ),
         ListenableBuilder(
           listenable: changes,
           builder: (context, _) {
@@ -279,26 +292,14 @@ class CanvasBarActions extends StatelessWidget {
                     onPressed: onMove,
                   ),
                 IconButton(
+                  key: const ValueKey('clearButton'),
                   tooltip: s.clear,
-                  icon: const Icon(Icons.layers_clear_rounded),
+                  icon: const Icon(Icons.cleaning_services_rounded),
                   onPressed: canClear() ? onClear : null,
                 ),
               ],
             );
           },
-        ),
-        // ✋ Move the paper: one tap away, and in the title bar it never
-        // crowds the corner controls on a narrow phone.
-        ValueListenableBuilder(
-          valueListenable: panMode,
-          builder: (context, panning, _) => IconButton(
-            tooltip: s.panCanvas,
-            isSelected: panning,
-            icon: const Icon(Icons.pan_tool_outlined),
-            selectedIcon: const Icon(Icons.pan_tool_rounded),
-            style: on(panning),
-            onPressed: () => panMode.value = !panning,
-          ),
         ),
         MenuButton(tooltip: s.more, onPressed: onMenu),
       ],

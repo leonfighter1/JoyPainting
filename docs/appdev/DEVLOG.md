@@ -1,5 +1,13 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v6.1.1 (stamps within reach, a tidier title bar)
+- Reported: the stamps (and adding stamps) only appeared while the stamp brush was in use. With 6.1.0 making that brush addable, they were out of reach for a new kid. Asked meanwhile: the title bar in the order 拖拽, 选择移动, 清空, and a different icon for clear.
+- Done: the 印章 section always shows; a stamp option picks the stamp brush; the bar reordered with a broom for clear.
+- 6.1.0's iOS check, run again by the docs push: failed again, the iPhone this time (the iPad ran). One of the two each time, no crash report: more like the runners than a crash, but not dismissed. The annotations were noise (MISTAKES rule 67); `ios_sim_smoke.sh` now reports the system's reason for stopping the app, which this push's run should show.
+- Mistakes: MISTAKES rule 67. (Also an older test looked for the text 印章 to mean the stamp brush; it now looks for the brush button.)
+- Harness: PASS (analyze 0 issues, 419 tests, build web ok).
+- Not tested: on a real device.
+
 ## 2026-10-28: v6.1.0 (my own brushes, helpers, a simpler title bar)
 - 6.0.0 after pushing: Web and iOS passed (live version.json 6.0.0+25).
 - Asked: remove new and save from the title bar (autosave), put the move tool there, simplify the brushes and let kids make their own, and give the tools that aren't brushes (picker, eraser) their own extendable group, keeping the basic ones. Asked back which "custom brushes" meant; the answer: both choosing which brushes show and saving presets.
