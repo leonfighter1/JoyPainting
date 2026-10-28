@@ -22,7 +22,7 @@ Future<Uint8List> viaCache(StrokeLayerCache cache, List<Stroke> strokes,
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder)
     ..drawRect(Offset.zero & _size, Paint()..color = paper);
-  cache.paint(canvas, _size, strokes, paper, ratio, eraser: eraser);
+  cache.paint(canvas, _size, strokes, paper, ratio, intoLayer: eraser);
   final image = await recorder.endRecording().toImage(60, 40);
   final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
   image.dispose();

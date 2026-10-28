@@ -69,9 +69,9 @@ class ReplayTimeline {
 /// Paints the replay of [timeline] at [seconds] on a paper of [size]: the
 /// paper, the finished strokes on [layers] from [cache] (at [ratio] pixels
 /// per point) and the stroke being drawn on top. The eraser cuts into its
-/// layer, the blender mixes it, as when the painting was made. Strokes come
-/// bottom layer first, so the layers above the one being drawn on are
-/// still empty.
+/// layer, light and shadow mix with it, the blender mixes it, as when the
+/// painting was made. Strokes come bottom layer first, so the layers above
+/// the one being drawn on are still empty.
 void paintReplayFrame(
     Canvas canvas,
     Size size,
@@ -85,8 +85,8 @@ void paintReplayFrame(
   final done = timeline.strokes.sublist(0, now.done);
   final drawing = now.drawing;
   canvas.drawRect(Offset.zero & size, Paint()..color = paper);
-  if (drawing?.brush == BrushType.eraser) {
-    cache.paint(canvas, size, done, layers, paper, ratio, eraser: drawing);
+  if (drawing != null && drawing.paintsIntoLayer) {
+    cache.paint(canvas, size, done, layers, paper, ratio, intoLayer: drawing);
     return;
   }
   cache.paint(canvas, size, done, layers, paper, ratio);

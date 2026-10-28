@@ -54,13 +54,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.4.1**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.4.2**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **5.4.1** | 2026-10-28 | Thin lines with a texture show again; picking a level no longer stalls while its sample painting is added (a card says it's being made); sample paintings are named "（示例）" |
+| **5.4.2** | 2026-10-28 | Light & shadow (soft light, overlay, highlight) show while you draw, as they look once the finger lifts |
+| 5.4.1 | 2026-10-28 | Thin lines with a texture show again; picking a level no longer stalls while its sample painting is added (a card says it's being made); sample paintings are named "（示例）" |
 | 5.4.0 | 2026-10-28 | A tidier brushes & colors drawer (groups that open and close, size and opacity under the colors), the layers button floating next to it, 3 quiet seconds between music tracks, a wider keyboard shortcut list |
 | 5.3.1 | 2026-10-28 | Download or send a picture without its photo; in a browser, Settings says whether the paintings are kept and can ask the browser to keep them |
 | 5.3.0 | 2026-10-28 | A coloring book in My Paintings: 8 line drawings to color in, the lines locked on top so coloring, filling and erasing go under them |
@@ -88,6 +89,14 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 5.4.2 (2026-10-28): light & shadow while drawing
+
+**Fixed**
+- **A stroke with light & shadow (光影) could be invisible while it was drawn**: with 柔光 (soft light), 叠加 (overlay) or 提亮 (highlight) on white paper, nothing showed until the finger lifted (found with 自由画 + 炭笔 + 柔光). While drawing, the stroke now mixes with the strokes of its layer, never the paper, exactly as it does once finished. The replay draws it the same way.
+
+**Good to know**
+- Finished strokes already mixed only with their own layer; only the stroke being drawn (and being replayed) mixed with the paper.
 
 ### 5.4.1 (2026-10-28): thin textured lines, quicker samples
 

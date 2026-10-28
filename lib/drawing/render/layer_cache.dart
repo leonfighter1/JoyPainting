@@ -56,15 +56,16 @@ class StrokeLayerCache {
         : null;
   }
 
-  /// Paints [strokes] (and the [eraser] being used, if any) on [canvas] at
-  /// [size], from the picture kept at [ratio] pixels per paper point.
+  /// Paints [strokes] (and [intoLayer], a stroke being drawn into this
+  /// layer: the eraser, light and shadow) on [canvas] at [size], from the
+  /// picture kept at [ratio] pixels per paper point.
   void paint(Canvas canvas, Size size, List<Stroke> strokes, Color paper,
-      double ratio, {Stroke? eraser}) {
+      double ratio, {Stroke? intoLayer}) {
     final width = (size.width * ratio).ceil();
     final height = (size.height * ratio).ceil();
     if (!enabled || width <= 0 || height <= 0 || width * height > maxPixels) {
       dispose();
-      paintStrokes(canvas, size, [...strokes, ?eraser], paper: paper);
+      paintStrokes(canvas, size, [...strokes, ?intoLayer], paper: paper);
       return;
     }
     _update(size, strokes, paper.toARGB32(), ratio, width, height);
@@ -73,15 +74,16 @@ class StrokeLayerCache {
         0, 0, image.width.toDouble(), image.height.toDouble());
     final dst = Rect.fromLTWH(0, 0, image.width / ratio, image.height / ratio);
     final look = Paint()..filterQuality = FilterQuality.medium;
-    if (eraser == null) {
+    if (intoLayer == null) {
       canvas.drawImageRect(image, src, dst, look);
       return;
     }
-    // The eraser cuts into the strokes' layer, not the paper under it.
+    // Into the strokes' layer, not the paper under it: the eraser cuts
+    // into it, light and shadow mix with it.
     canvas
       ..saveLayer(Offset.zero & size, Paint())
       ..drawImageRect(image, src, dst, look);
-    eraser.paint(canvas);
+    intoLayer.paint(canvas);
     canvas.restore();
   }
 
@@ -201,11 +203,11 @@ class LayeredCache {
   /// tests.
   int get rebuilds => _caches.values.fold(0, (n, c) => n + c.rebuilds);
 
-  /// Paints [strokes] on [layers] (and the [eraser] being used on its
+  /// Paints [strokes] on [layers] (and [intoLayer] being drawn on its
   /// layer, if any) at [ratio] pixels per paper point. No paper.
   void paint(Canvas canvas, Size size, List<Stroke> strokes,
       List<PaintingLayer> layers, Color paper, double ratio,
-      {Stroke? eraser}) {
+      {Stroke? intoLayer}) {
     _caches.removeWhere((id, cache) {
       final gone = !layers.any((l) => l.id == id);
       if (gone) cache.dispose();
@@ -218,15 +220,15 @@ class LayeredCache {
         for (final s in strokes)
           if (s.layerId == layer.id) s,
       ];
-      final erasing = eraser?.layerId == layer.id ? eraser : null;
-      if (own.isEmpty && erasing == null) continue;
+      final drawn = intoLayer?.layerId == layer.id ? intoLayer : null;
+      if (own.isEmpty && drawn == null) continue;
       final cache = _caches.putIfAbsent(layer.id, StrokeLayerCache.new);
       final seeThrough = layer.opacity < 1;
       if (seeThrough) {
         canvas.saveLayer(
             page, Paint()..color = Color.fromRGBO(0, 0, 0, layer.opacity));
       }
-      cache.paint(canvas, size, own, paper, ratio, eraser: erasing);
+      cache.paint(canvas, size, own, paper, ratio, intoLayer: drawn);
       if (seeThrough) canvas.restore();
     }
   }

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jingyao_paint/app_theme.dart' show kThemeIds;
 import 'package:jingyao_paint/drawing/canvas_page.dart';
 import 'package:jingyao_paint/drawing/drawing_controller.dart';
+import 'package:jingyao_paint/drawing/render/layer_cache.dart';
 import 'package:jingyao_paint/drawing/render/render_image.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/gallery/level_samples.dart';
@@ -197,6 +198,54 @@ void main() {
       expect(strokes, hasLength(2));
       expect(strokes.every((s) => s.fadesGrain), isTrue);
       await tester.pump(const Duration(seconds: 1));
+    });
+
+    test('light and shadow show while drawing as they will once finished, '
+        'soft light on white paper too', () async {
+      const size = Size(200, 40);
+
+      /// Dark pixels along the line, painted as the screen paints it: the
+      /// paper, the finished layers (with a stroke drawn into its layer),
+      /// then the stroke being drawn.
+      Future<int> dark(DrawingController d) async {
+        final cache = LayeredCache();
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder)
+          ..drawRect(Offset.zero & size, Paint()..color = Colors.white);
+        cache.paint(canvas, size, d.strokes, d.layers, d.paper, 1,
+            intoLayer: d.intoLayer);
+        d.paintCurrent(canvas, size);
+        final image = await recorder.endRecording().toImage(200, 40);
+        final data = (await image.toByteData())!;
+        cache.dispose();
+        var n = 0;
+        for (var x = 20; x < 180; x++) {
+          if (data.getUint8((20 * 200 + x) * 4) < 200) n++;
+        }
+        return n;
+      }
+
+      for (final blend in StrokeBlend.values) {
+        final d = DrawingController()
+          ..begin(
+              Stroke(
+                  brush: BrushType.pen,
+                  color: Colors.black,
+                  size: 12,
+                  blend: blend,
+                  texture: StrokeTexture.charcoal,
+                  fadesGrain: true,
+                  usesRealPressure: false),
+              const PointVector(10, 20, 0.5));
+        for (var x = 12.0; x <= 190; x += 2) {
+          d.extend(PointVector(x, 20, 0.5));
+        }
+        final drawing = await dark(d);
+        d.end();
+        final finished = await dark(d);
+        expect(drawing, greaterThan(100), reason: '${blend.name} while drawing');
+        expect(drawing, finished, reason: '${blend.name} the same once done');
+      }
     });
 
     test('textures are saved and look the same when reopened', () async {

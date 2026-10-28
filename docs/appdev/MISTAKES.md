@@ -64,8 +64,15 @@
 61. When a new floating control goes on the paper, search the tests for strokes, drags and taps at fixed spots in its corner (on the 393×829 test phone too) and move them clear, so they don't land on the control.
 62. Don't run `dart format` on a whole existing file: the repo isn't laid out by the current formatter, so it rewrites hundreds of untouched lines and buries the real change. Format only new files, and match the layout around an edit by hand.
 63. Before changing how existing strokes paint, count how many strokes in the samples (and the local tarot cards) the change touches. If it would change approved art, put the new look behind a flag that only new strokes get.
+64. The stroke being drawn and the finished strokes are painted by different paths (`paintCurrent` over the paper; finished ones on their layer's own sheet). When a stroke looks wrong while drawing, check every per-stroke option (light & shadow, texture, opacity, layer) in both paths on white paper, and ask for the user's exact settings before settling on a cause.
 
 ## Log
+
+### 2026-10-28: The wrong cause for "no trail while drawing"
+- **Symptom:** the user saw no trail while drawing with a texture. My probes (normal blend only) showed textured strokes drawing fine; asked, the user said "a thin pen, a straight line", and 5.4.1 fixed thin textured lines (a real but different problem). The user then found the trigger: freehand + charcoal + soft light.
+- **Root cause:** soft light, overlay and screen on white paper change nothing. The stroke being drawn was painted over the paper; finished strokes on their layer's own transparent sheet, where the blend shows the color. So the stroke appeared only after lifting. My probes never set a blend.
+- **Fix:** strokes with a blend are painted into their layer while drawn, like the eraser (`Stroke.paintsIntoLayer`), in the replay too; a test covers every blend while drawing and finished.
+- **Rule:** 64.
 
 ### 2026-10-28: The formatter rewrote whole files; a texture fix nearly changed the samples
 - **Symptom:** after `dart format` on six edited files, the diff showed 274 changed lines in `stroke.dart` and 522 in `v4_test.dart` for edits of a few lines each. And the first fix for thin textured lines (the grain fading on every thin stroke) would have changed 1,279 strokes of the approved 湖畔晨光 sample.

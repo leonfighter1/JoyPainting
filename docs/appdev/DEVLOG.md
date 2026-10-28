@@ -1,5 +1,13 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v5.4.2 (light & shadow while drawing)
+- 5.4.1 after pushing: Web and iOS passed (live version.json 5.4.1+22).
+- Reported: with freehand + charcoal + soft light, no trail while drawing. Cause: the stroke being drawn blended with the white paper (soft light, overlay and screen leave white unchanged); finished strokes blend only with their own layer. Strokes with a blend now go into their layer while drawn, like the eraser; the replay too.
+- Mistakes: MISTAKES rule 64 (5.4.1 chased thin lines because my probes never set a blend).
+- Harness: PASS (analyze 0 issues, 401 tests, build web ok).
+- Not tested: on a real device.
+- Next: from the plan, background cache rebuilds and replay keyframes (measure first).
+
 ## 2026-10-28: v5.4.1 (thin textured lines, samples without the stall)
 - 5.4.0 after pushing: Web and iOS passed (live version.json 5.4.0+21).
 - Asked: a stall when changing the level (a progress bar while the sample is made, and "（示例）" in sample names); textured strokes showing no trail. The user later found the second fine on another computer.

@@ -447,6 +447,14 @@ class Stroke {
   /// (strokes drawn since 5.4.1, saved as `fadesGrain`). Older strokes keep
   /// the full grain at any width, as they were painted with it.
   final bool fadesGrain;
+
+  /// Whether it's painted into its layer even while it's being drawn, as
+  /// it will be once finished: the eraser cuts into the layer, and light
+  /// and shadow mix with the layer's strokes, never with the paper (soft
+  /// light or overlay on white paper would show nothing).
+  bool get paintsIntoLayer =>
+      brush == BrushType.eraser ||
+      (blend != StrokeBlend.normal && brush != BrushType.smudge);
   TextPainter? _textPainter;
   Offset? _from;
   Offset? _to;

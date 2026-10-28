@@ -32,7 +32,7 @@ class FinishedStrokesPainter extends CustomPainter {
     canvas.drawRect(Offset.zero & size, Paint()..color = controller.paper);
     cache.paint(canvas, size, controller.strokes, controller.layers,
         controller.paper, ratio.value,
-        eraser: controller.eraser);
+        intoLayer: controller.intoLayer);
   }
 
   @override

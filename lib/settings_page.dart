@@ -17,7 +17,7 @@ import 'theme/theme_spec.dart';
 import 'widgets/name_dialog.dart';
 import 'widgets/parent_gate.dart';
 
-const appVersion = '5.4.1';
+const appVersion = '5.4.2';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({

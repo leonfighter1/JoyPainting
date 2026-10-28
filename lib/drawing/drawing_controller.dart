@@ -59,15 +59,17 @@ class DrawingController extends ChangeNotifier {
   static const maxUndo = 100;
 
   /// Bumped when what's finished (strokes, layers, paper) changes, and on
-  /// every move of the eraser, which cuts into it; not while another stroke
-  /// is being drawn. The finished drawing has its own layer, so a big
-  /// painting isn't painted again for every point of a new stroke.
+  /// every move of a stroke painted into its layer (the eraser, light and
+  /// shadow); not while another stroke is being drawn. The finished drawing
+  /// has its own layer, so a big painting isn't painted again for every
+  /// point of a new stroke.
   final finishedRevision = ValueNotifier<int>(0);
 
-  bool get _erasing => current?.brush == BrushType.eraser;
+  bool get _intoLayer => current?.paintsIntoLayer ?? false;
 
-  /// The eraser stroke being drawn, if the eraser is in use.
-  Stroke? get eraser => _erasing ? current : null;
+  /// The stroke being drawn if it's painted into its layer with the
+  /// finished ones (see [Stroke.paintsIntoLayer]).
+  Stroke? get intoLayer => _intoLayer ? current : null;
 
   /// Bumped whenever the finished drawing changes, so listeners can tell an
   /// edit worth saving apart from a repaint of the stroke being drawn.
@@ -210,14 +212,14 @@ class DrawingController extends ChangeNotifier {
   void begin(Stroke stroke, [PointVector? point]) {
     current = stroke;
     if (point != null) stroke.points.add(point);
-    if (_erasing) finishedRevision.value++;
+    if (_intoLayer) finishedRevision.value++;
     notifyListeners();
   }
 
   void extend(PointVector point) {
     if (current == null) return;
     current!.points.add(point);
-    if (_erasing) finishedRevision.value++;
+    if (_intoLayer) finishedRevision.value++;
     notifyListeners();
   }
 
@@ -225,7 +227,7 @@ class DrawingController extends ChangeNotifier {
   /// second finger turns the touch into a pinch.
   void cancel() {
     if (current == null) return;
-    if (_erasing) finishedRevision.value++;
+    if (_intoLayer) finishedRevision.value++;
     current = null;
     notifyListeners();
   }
@@ -438,18 +440,18 @@ class DrawingController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Paints the finished strokes, and the eraser while it's being used
-  /// (it cuts into its layer).
+  /// Paints the finished strokes, and the stroke being drawn when it goes
+  /// into its layer (see [Stroke.paintsIntoLayer]).
   void paintFinished(Canvas canvas, Size size) => paintStrokes(
-      canvas, size, [...strokes, if (_erasing) ?current],
+      canvas, size, [...strokes, if (_intoLayer) ?current],
       paper: paper, layers: _layers);
 
-  /// Paints the stroke being drawn, unless it's the eraser. A blender
+  /// Paints the stroke being drawn, unless it goes into its layer. A blender
   /// stroke shows its layer under it, blurred; [finished], a picture of
   /// that layer's finished strokes, saves painting them again.
   void paintCurrent(Canvas canvas, Size size, {ui.Image? finished}) {
     final c = current;
-    if (c == null || _erasing) return;
+    if (c == null || _intoLayer) return;
     if (c.brush == BrushType.smudge) {
       paintSmudgeOver(canvas, size, strokesOn(c.layerId), c,
           paper: paper, finished: finished);
