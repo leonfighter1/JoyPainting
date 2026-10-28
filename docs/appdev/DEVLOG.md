@@ -5,7 +5,8 @@
 - 4.1.0 after pushing: the Web workflow deployed it (live version.json 4.1.0+14); the iOS workflow failed at "Start on the iPhone and iPad simulators": the iPhone was "not running" 30 s after launch, the iPad was fine. Every earlier iOS run passed. Logs and artifacts need a GitHub sign-in, so the cause is unknown (a crash from the new code, or the busy macOS runners); `ios_sim_smoke.sh` now puts the log's telling lines and the crash report into annotations, which this 4.2.0 push will show.
 - Mistakes: none new.
 - Harness: PASS (analyze 0 issues, 363 tests, build web ok).
-- Next: read the iOS run for 4.2.0; then F6 layers (5.0.0).
+- After pushing: Web and iOS both passed for 4.2.0 (iPhone and iPad simulators running; live version.json 4.2.0+15). 4.2.0 holds all of 4.1.0, so the 4.1.0 iPhone failure was a one-off on the runners.
+- Next: F6 layers (5.0.0).
 
 ## 2026-10-28: v4.1.0 (code split, smooth big paintings, color picker, paint bucket)
 - Asked: turn the suggested improvements into a technical plan with code reuse and splitting first (docs/appdev/TECH_PLAN.md), check the Android SDK (it was installed on 2026-10-24; my "no SDK" claim came from a stale FEATURES note), keep records current, then build the items one by one, picking version numbers and pushing each version without asking; use Chrome when the emulator fails.

@@ -93,7 +93,7 @@ What changed in each version, newest first, in the app's own words (Chinese UI n
 
 **Good to know**
 - A GIF is made on the device; in a browser it uses fewer, smaller frames so it stays quick.
-- The 4.1.0 iOS check on GitHub failed on the iPhone simulator (the app wasn't running 30 s after launch; the iPad was fine). The cause isn't known yet; the check now reports the app's log lines on the run page, so this release's run will tell more. The web version is not affected.
+- The 4.1.0 iOS check on GitHub failed once on the iPhone simulator (the app wasn't running 30 s after launch). This release, which contains all of 4.1.0, passed on both the iPhone and the iPad, so it was a one-off on GitHub's busy Mac machines. The check now also reports the app's log lines on the run page.
 - Not yet tried on real devices: replaying very long paintings and making GIFs on an older phone.
 
 ### 4.1.0 (2026-10-28): paint bucket, color picker, smooth big paintings
