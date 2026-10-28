@@ -636,6 +636,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
       _drawing.setPaperSize(null);
       resetView();
     },
+    onNew: _newPainting,
     onRename: _renamePainting,
     onDelete: _confirmDeletePainting,
     onSettings: widget.onOpenSettings,
@@ -677,6 +678,19 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     }
   }
 
+  /// The brush in use before the move tool was picked at the top.
+  BrushType? _beforeMove;
+
+  /// The 选择移动 button: picks the move tool, or goes back to the brush.
+  void _toggleMove() {
+    if (_settings.brush == BrushType.move) {
+      _settings.brush = _beforeMove ?? BrushType.pen;
+    } else {
+      _beforeMove = _settings.brush;
+      _settings.brush = BrushType.move;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
@@ -697,12 +711,11 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
         ),
         actions: [
           CanvasBarActions(
-            changes: Listenable.merge([_drawing, widget.session]),
-            canSave: () => _hasPainting,
+            changes: Listenable.merge([_drawing, widget.session, _settings]),
+            settings: _settings,
             canClear: () => _drawing.strokes.isNotEmpty,
             panMode: panMode,
-            onNew: _newPainting,
-            onSave: _savePainting,
+            onMove: _toggleMove,
             onClear: _confirmClear,
             onMenu: _openMenu,
           ),

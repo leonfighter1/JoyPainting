@@ -10,6 +10,12 @@ import 'tool_glyphs.dart';
 /// The groups of options in the tools drawer that show only their basic
 /// choices until more are added with 添加工具 (see `showAddToolsSheet`).
 enum ToolGroup {
+  /// What paints: pens, pencils, markers and the rest.
+  brushes,
+
+  /// 小帮手: tools that aren't brushes (the eraser, the paint bucket, text,
+  /// the color picker). More can join this group.
+  helpers,
   shapes,
   stamps,
   gradients,
@@ -17,6 +23,8 @@ enum ToolGroup {
   textures;
 
   String title(S s) => switch (this) {
+    brushes => s.tools,
+    helpers => s.helpers,
     shapes => s.shapes,
     stamps => s.brushName(BrushType.stamp),
     gradients => s.gradient,
@@ -26,7 +34,7 @@ enum ToolGroup {
 
   /// Whether [level] offers this group at all.
   bool allowedAt(SkillLevel level) => switch (this) {
-    shapes || stamps => true,
+    brushes || helpers || shapes || stamps => true,
     gradients => level.gradients,
     blends => level.lightAndShadow,
     textures => level.textures,
@@ -44,11 +52,15 @@ class ToolOption {
     required this.selected,
     required this.onSelect,
     this.basic = false,
+    this.brush,
   });
 
   final ToolGroup group;
   final String name;
   final String label;
+
+  /// The brush or helper it picks, for the drawer's round brush buttons.
+  final BrushType? brush;
 
   /// Its picture, in the given text color.
   final Widget Function(Color color) glyph;
@@ -67,6 +79,38 @@ class ToolOption {
 /// What each group offers, which choices are basic, and which levels can
 /// add the rest.
 abstract final class ToolCatalog {
+  /// The brushes, in order; the first four are there from the start.
+  static const brushes = [
+    BrushType.pen,
+    BrushType.pencil,
+    BrushType.marker,
+    BrushType.spray,
+    BrushType.highlighter,
+    BrushType.soft,
+    BrushType.rainbow,
+    BrushType.stamp,
+    BrushType.smudge,
+  ];
+  static const basicBrushes = {
+    BrushType.pen,
+    BrushType.pencil,
+    BrushType.marker,
+    BrushType.spray,
+  };
+
+  /// The helpers, in order. The move tool has its own button at the top.
+  static const helpers = [
+    BrushType.eraser,
+    BrushType.bucket,
+    BrushType.text,
+    BrushType.picker,
+  ];
+  static const basicHelpers = {
+    BrushType.eraser,
+    BrushType.bucket,
+    BrushType.text,
+  };
+
   /// With freehand, the shapes every level starts with.
   static const basicShapes = {
     ShapeKind.line,
@@ -100,7 +144,25 @@ abstract final class ToolCatalog {
   /// Every option of [group] that [settings]' level offers, in order.
   static List<ToolOption> options(ToolGroup group, AppSettings settings, S s) {
     final intermediate = settings.level.index >= SkillLevel.intermediate.index;
+    ToolOption tool(BrushType b, Set<BrushType> basic) => ToolOption(
+      group: group,
+      name: b.name,
+      label: s.brushName(b),
+      glyph: (c) => Icon(AppTheme.brushIcon(b), size: 18, color: c),
+      selected: settings.brush == b,
+      onSelect: () => settings.brush = b,
+      basic: basic.contains(b),
+      brush: b,
+    );
     return switch (group) {
+      ToolGroup.brushes => [
+        for (final b in brushes)
+          if (settings.level.allows(b)) tool(b, basicBrushes),
+      ],
+      ToolGroup.helpers => [
+        for (final b in helpers)
+          if (settings.level.allows(b)) tool(b, basicHelpers),
+      ],
       ToolGroup.shapes => [
         ToolOption(
           group: group,
@@ -194,6 +256,10 @@ abstract final class ToolCatalog {
 
   /// The keys of every option that can be added, at the advanced level.
   static List<String> addableKeys() => [
+    for (final b in brushes)
+      if (!basicBrushes.contains(b)) 'brushes.${b.name}',
+    for (final b in helpers)
+      if (!basicHelpers.contains(b)) 'helpers.${b.name}',
     'shapes.free',
     for (final k in ShapeKind.values)
       if (!basicShapes.contains(k)) 'shapes.${k.name}',

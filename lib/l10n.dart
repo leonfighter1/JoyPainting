@@ -244,7 +244,13 @@ class S {
 
   // Tools
   String get tools => _t('画笔', 'Brushes');
-  String get moreBrushes => _t('更多画笔', 'More brushes');
+  String get helpers => _t('小帮手', 'Helpers');
+  String get saveBrush => _t('存为我的画笔', 'Save as my brush');
+  String myBrushName(int n) => _t('我的画笔 $n', 'My brush $n');
+  String get nameMyBrush => _t('给这支画笔起个名字', 'Name this brush');
+  String deleteMyBrush(String name) => _t('删除「$name」？', 'Delete "$name"?');
+  String myBrushSaved(String name) => _t('「$name」存好了，在画笔里', '"$name" is saved with the brushes');
+  String get myBrushesFull => _t('「我的画笔」最多 12 支，先删掉一支吧', 'Up to 12 brushes of your own: delete one first');
   String get colors => _t('颜料', 'Colors');
   String get brushSize => _t('笔刷大小', 'Brush size');
   String get pickColor => _t('选择颜色', 'Pick a color');

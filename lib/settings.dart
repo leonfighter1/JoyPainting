@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'drawing/brush_preset.dart';
 import 'drawing/stroke.dart';
 import 'skill_level.dart';
 import 'widgets/corner_float.dart';
@@ -150,6 +151,7 @@ class AppSettings extends ChangeNotifier {
   static const _kLayersCorner = 'layersCorner';
   static String _kSection(String section) => 'toolSection.$section';
   static const _kAddedTools = 'addedTools';
+  static const _kBrushPresets = 'brushPresets';
   static const _kBrush = 'brush';
   static const _kColor = 'color';
   static const _kStamp = 'stamp';
@@ -337,6 +339,60 @@ class AppSettings extends ChangeNotifier {
     _prefs.setStringList(_kAddedTools, value.toList()..sort());
     notifyListeners();
   }
+
+  /// 我的画笔: brushes saved with their settings, oldest first.
+  List<BrushPreset> get brushPresets => [
+        for (final raw in _prefs.getStringList(_kBrushPresets) ?? const [])
+          ?_decodePreset(raw),
+      ];
+
+  static BrushPreset? _decodePreset(String raw) {
+    try {
+      return BrushPreset.fromJson(jsonDecode(raw));
+    } on FormatException {
+      return null;
+    }
+  }
+
+  set brushPresets(List<BrushPreset> value) {
+    _prefs.setStringList(
+        _kBrushPresets, [for (final p in value) jsonEncode(p.toJson())]);
+    notifyListeners();
+  }
+
+  /// The brush in use with its settings, as [name] (see [brushPresets]).
+  BrushPreset presetNow(String id, String name) => BrushPreset(
+        id: id,
+        name: name,
+        brush: brush,
+        size: size,
+        opacity: opacity,
+        color: color,
+        gradient: gradient,
+        blend: blend,
+        texture: texture,
+      );
+
+  /// Picks [p]'s brush with its settings.
+  void usePreset(BrushPreset p) {
+    brush = p.brush;
+    size = p.size;
+    opacity = p.opacity;
+    if (p.brush.usesColor) color = p.color;
+    gradient = p.gradient;
+    blend = p.blend;
+    texture = p.texture;
+  }
+
+  /// Whether the brush in use is [p], with the same settings.
+  bool isPreset(BrushPreset p) =>
+      brush == p.brush &&
+      (size - p.size).abs() < 0.01 &&
+      (opacity - p.opacity).abs() < 0.01 &&
+      (!p.brush.usesColor || color.toARGB32() == p.color.toARGB32()) &&
+      gradient == p.gradient &&
+      blend == p.blend &&
+      texture == p.texture;
 
   BrushType _brush;
   Color _color;

@@ -5,7 +5,9 @@ import '../../app_theme.dart';
 import '../../theme/cute_theme.dart';
 import '../stroke.dart';
 
-/// A large, round, colorful brush button with its name underneath.
+/// A large, round, colorful brush button with its name underneath. A
+/// brush of one's own (我的画笔) shows its color as a [dot] and can be
+/// pressed long ([onLongPress]).
 class BrushTile extends StatelessWidget {
   const BrushTile({
     super.key,
@@ -13,12 +15,16 @@ class BrushTile extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.dot,
+    this.onLongPress,
   });
 
   final BrushType brush;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final Color? dot;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -30,20 +36,44 @@ class BrushTile extends StatelessWidget {
         selected: selected,
         label: label,
         excludeSemantics: true,
+        onLongPress: onLongPress,
         child: InkWell(
           onTap: onTap,
+          onLongPress: onLongPress,
           borderRadius: BorderRadius.circular(20),
           child: SizedBox(
             width: 62,
             child: Column(
               children: [
-                BrushBubble(
-                  brush: brush,
-                  selected: selected,
-                  size: selected ? 56 : 52,
-                  iconSize: 28,
-                  raised: true,
-                  duration: const Duration(milliseconds: 180),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    BrushBubble(
+                      brush: brush,
+                      selected: selected,
+                      size: selected ? 56 : 52,
+                      iconSize: 28,
+                      raised: true,
+                      duration: const Duration(milliseconds: 180),
+                    ),
+                    if (dot case final color?)
+                      Positioned(
+                        right: -2,
+                        bottom: -2,
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black26, blurRadius: 2),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(

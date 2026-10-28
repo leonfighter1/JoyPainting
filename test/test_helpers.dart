@@ -81,7 +81,6 @@ final allToolsAdded = <String, Object>{
 /// Every tools drawer section open, as before 5.4: most tests pick options
 /// from all of them. drawer_test covers which ones start closed.
 const allSectionsOpen = <String, Object>{
-  'flutter.toolSection.moreBrushes': true,
   'flutter.toolSection.gradient': true,
   'flutter.toolSection.lightAndShadow': true,
   'flutter.toolSection.texture': true,

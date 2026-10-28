@@ -26,7 +26,9 @@ What it does:
   - Drag the grips on the paper's right and bottom edges to make it wider or taller (or narrower and shorter). What's drawn keeps its size, and undo puts the paper back. The ☰ menu → 画纸恢复默认大小 makes it fill the screen again.
   - Pin the palette beside the paper (a slim strip under it on an upright phone) to change brushes and colors while drawing.
   - Brushes and colors live in a drawer that opens from the "画笔 · 颜色" button. Its groups open and close with a tap on their heading: the everyday brushes, colors and shapes start open, and the extras of higher levels (more brushes, gradients, light & shadow, textures) start closed. Size and opacity sit right under the colors.
-  - Shapes, stamps, gradients, light & shadow and textures show only their basic choices at first; 「＋ 添加」 in each group (or 添加工具 at the bottom) picks more, several at once: 21 shapes (clouds, moons, lightning, speech bubbles, arcs, waves…), 7 stamps, 10 gradients (rainbow too), 9 kinds of light & shadow and 11 textures (watercolor, crayon, dots, hatching, wood…), as the level allows.
+  - The drawer keeps brushes (画笔: pen, pencil, marker, spray to start) apart from helpers (小帮手: eraser, paint bucket, text, and the color picker when added). Save the brush in use, with its size, opacity, color, gradient, light & shadow and texture, as one of 我的画笔; tap it to paint with it again, press it long to delete it.
+  - The title bar has 选择移动 (the move tool; tap again to go back to the brush), clear, ✋ and ☰. Paintings save themselves; 新建画作 is in the ☰ menu.
+  - Brushes, helpers, shapes, stamps, gradients, light & shadow and textures show only their basic choices at first; 「＋ 添加」 in each group (or 添加工具 at the bottom) picks more, several at once: 21 shapes (clouds, moons, lightning, speech bubbles, arcs, waves…), 7 stamps, 10 gradients (rainbow too), 9 kinds of light & shadow and 11 textures (watercolor, crayon, dots, hatching, wood…), as the level allows.
   - At the Advanced level a layers button sits right above the "画笔 · 颜色" button.
   - These buttons and the undo bar can be dragged to any corner of the paper.
 - **Kids**:
@@ -55,13 +57,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.0.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.1.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **6.0.0** | 2026-10-28 | Add tools as you need them (添加工具): the drawer keeps the basic choices, and a popup adds more, several at once; 14 new shapes (arc and wave too), 4 stamps, 4 gradients, 4 kinds of light & shadow and 6 textures |
+| **6.1.0** | 2026-10-28 | My own brushes (我的画笔); brushes and helpers (小帮手) apart, each starting with the basic ones; the move tool in the title bar; no save or new buttons there (paintings save themselves; new is in the ☰ menu) |
+| 6.0.0 | 2026-10-28 | Add tools as you need them (添加工具): the drawer keeps the basic choices, and a popup adds more, several at once; 14 new shapes (arc and wave too), 4 stamps, 4 gradients, 4 kinds of light & shadow and 6 textures |
 | 5.4.3 | 2026-10-28 | Shapes (line, rectangle, circle…) with light & shadow show while you drag them |
 | 5.4.2 | 2026-10-28 | Light & shadow (soft light, overlay, highlight) show while you draw, as they look once the finger lifts |
 | 5.4.1 | 2026-10-28 | Thin lines with a texture show again; picking a level no longer stalls while its sample painting is added (a card says it's being made); sample paintings are named "（示例）" |
@@ -92,6 +95,17 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 6.1.0 (2026-10-28): my own brushes, helpers, and a simpler title bar
+
+**New**
+- **我的画笔 (my brushes)**: 「存为我的画笔」 under the brushes saves the one you're using, with its size, opacity, color, gradient, light & shadow and texture, under a name you give it (up to 12). It sits with the brushes, showing its color as a dot; one tap paints with it again, a long press deletes it.
+- **小帮手 (helpers)**: tools that aren't brushes have their own group: 橡皮擦, 油漆桶 and 文字, and 吸管 can be added. More helpers can join it later.
+
+**Changed**
+- **Brushes** start with 钢笔, 铅笔, 马克笔 and 喷枪; 荧光笔, 柔边笔, 彩虹笔, 印章 and 晕染笔 are added with 「＋ 添加」, as the level allows.
+- **The title bar** has 选择移动 (from the Intermediate level; tap it again to go back to your brush), 清空, ✋ and ☰. The 新建 and 保存 buttons are gone: paintings save themselves as you draw (Ctrl+S still saves at once), and 新建画作 is now in the ☰ menu under 画作.
+- The pinned palette strip on phones shows the same brushes and helpers as the drawer.
 
 ### 6.0.0 (2026-10-28): add the tools you want
 
@@ -528,7 +542,7 @@ What the tests cover:
 - **`test/picker_test.dart`**: the color seen at a point (paint, paper, shadows, see-through paint), the picker's loupe and its return to the last brush, and picking a color off the canvas.
 - **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
 - **`test/rotation_test.dart`**: turning the paper with two fingers, snapping to a quarter turn, beginners only zooming, the R key, and a turned paper (angle on the chip, grips hidden, strokes under the finger).
-- **`test/add_tools_test.dart`**: the drawer's basic choices, adding several at once and taking them out, 取消, what each level can add, the chosen option staying in sight; every shape (in its box, closed ones closed, the outline saved for older versions, arc and wave), every stamp, the new gradients, and the new light & shadow and textures being saved.
+- **`test/add_tools_test.dart`**: the drawer's basic choices (brushes and helpers too), adding several at once and taking them out, 取消, what each level can add, the chosen option staying in sight; 我的画笔 (saving, picking again, deleting, kept in settings); every shape (in its box, closed ones closed, the outline saved for older versions, arc and wave), every stamp, the new gradients, and the new light & shadow and textures being saved.
 - **`test/live_stroke_test.dart`**: every brush, light & shadow and shape (each combination, then mirror drawing, a texture, low opacity and a see-through layer) shows while it is drawn as it will once finished, with the layers repainted only on their signal, as the screen does.
 - **`test/drawer_test.dart`**: the tools drawer's groups (which start open, opening and closing them, what a closed one shows, its screen reader state), size and opacity under the colors, and the layers button (next to the tools button, following it until dragged, never onto undo's corner, opening the layers).
 - **`test/coloring_test.dart`**: every coloring page (lines on a locked top layer, the layer under them active, the lines never picked up, closed areas the paint bucket fills without leaking) and opening one from My Paintings.

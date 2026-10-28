@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 import '../../l10n.dart';
 import '../../settings.dart';
-import '../../skill_level.dart';
 import '../../theme/cute_theme.dart';
 import '../stroke.dart';
 import 'brush_tile.dart';
 import 'canvas_keys.dart';
 import 'add_tools_sheet.dart';
 import 'color_widgets.dart';
+import 'my_brushes.dart';
 import 'palette_strip.dart';
 import 'tool_catalog.dart';
 import 'tool_section.dart';
@@ -146,22 +146,6 @@ class ToolPanel extends StatelessWidget {
       for (final c in settings.customColors)
         if (!palette.any((p) => p.toARGB32() == c.toARGB32())) c,
     ];
-    final brushes = settings.level.brushes;
-    final everyday = [
-      for (final b in brushes)
-        if (SkillLevel.beginner.allows(b)) b,
-    ];
-    final more = [
-      for (final b in brushes)
-        if (!SkillLevel.beginner.allows(b)) b,
-    ];
-    Widget tile(BrushType b) => BrushTile(
-      brush: b,
-      label: s.brushName(b),
-      selected: brush == b,
-      onTap: () => settings.brush = b,
-    );
-
     /// [section]'s heading and, while it's open, its [items]. While it's
     /// closed the heading shows what's [chosen] in it (or a [swatch]).
     List<Widget> section(
@@ -204,17 +188,72 @@ class ToolPanel extends StatelessWidget {
           ),
         ];
 
+    /// The brushes or helpers the drawer shows, as round buttons, then
+    /// [extra] and a chip to add more.
+    List<Widget> tiles(ToolGroup group, {List<Widget> extra = const []}) => [
+          for (final o in ToolCatalog.options(group, settings, s))
+            if (o.shownWith(added))
+              BrushTile(
+                brush: o.brush!,
+                label: o.label,
+                selected: o.selected,
+                onTap: o.onSelect,
+              ),
+          ...extra,
+          Padding(
+            padding: const EdgeInsets.only(top: 14, left: 4),
+            child: AddToolChip(
+              group: group,
+              onTap: () => showAddToolsSheet(context, settings, first: group),
+            ),
+          ),
+        ];
+    String? chosenIn(List<BrushType> list) =>
+        list.contains(brush) ? s.brushName(brush) : null;
+    // 我的画笔 the level can use, after the brushes.
+    final presets = [
+      for (final p in settings.brushPresets)
+        if (settings.level.allows(p.brush)) p,
+    ];
+    final preset = presets.where(settings.isPreset).firstOrNull;
+
     return ListView(
       key: CanvasKeys.toolsList,
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
       children: [
-        ...section(ToolSection.brushes, s.tools, [
-          for (final b in everyday) tile(b),
-        ], chosen: everyday.contains(brush) ? s.brushName(brush) : null),
-        if (more.isNotEmpty)
-          ...section(ToolSection.moreBrushes, s.moreBrushes, [
-            for (final b in more) tile(b),
-          ], chosen: more.contains(brush) ? s.brushName(brush) : null),
+        ...section(
+          ToolSection.brushes,
+          s.tools,
+          tiles(ToolGroup.brushes, extra: [
+            for (final p in presets)
+              BrushTile(
+                key: ValueKey('preset.${p.id}'),
+                brush: p.brush,
+                label: p.name,
+                dot: p.brush.usesColor ? p.color : null,
+                selected: p == preset,
+                onTap: () => settings.usePreset(p),
+                onLongPress: () => deleteMyBrush(context, settings, p),
+              ),
+          ]),
+          chosen: preset?.name ?? chosenIn(ToolCatalog.brushes),
+        ),
+        // Saving the brush in use as one's own, right under the brushes.
+        if (ToolSection.brushes.isOpen(settings) && !brush.drawsNothing &&
+            ToolCatalog.brushes.contains(brush))
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: SaveBrushChip(settings: settings),
+            ),
+          ),
+        ...section(
+          ToolSection.helpers,
+          s.helpers,
+          tiles(ToolGroup.helpers),
+          chosen: chosenIn(ToolCatalog.helpers),
+        ),
         // How to use the tool just picked, right under it.
         if (switch (brush) {
               BrushType.text => s.textHint,

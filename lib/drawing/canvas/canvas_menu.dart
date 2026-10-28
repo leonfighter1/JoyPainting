@@ -23,6 +23,7 @@ Future<void> showCanvasMenu(
   required VoidCallback onPaperColor,
   required VoidCallback onDefaultPaperSize,
   VoidCallback? onImportPhoto,
+  required VoidCallback onNew,
   required VoidCallback onRename,
   required VoidCallback onDelete,
   required VoidCallback onSettings,
@@ -119,6 +120,13 @@ Future<void> showCanvasMenu(
     DropMenuSection(
       title: s.menuPainting,
       items: [
+        // Paintings save themselves, so there's no save; a new one starts
+        // here.
+        DropMenuItem(
+          icon: Icons.add_circle_outline_rounded,
+          label: s.newPainting,
+          onSelected: onNew,
+        ),
         DropMenuItem(
           icon: Icons.drive_file_rename_outline_rounded,
           label: s.rename,

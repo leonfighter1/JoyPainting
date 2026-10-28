@@ -7,6 +7,7 @@ import '../../theme/cute_theme.dart';
 import '../stroke.dart';
 import 'brush_tile.dart';
 import 'color_widgets.dart';
+import 'tool_catalog.dart';
 
 /// The pinned palette on an upright phone: one row under the paper with
 /// every brush and the colors, scrolling sideways, so most of the screen
@@ -62,13 +63,20 @@ class PaletteStrip extends StatelessWidget {
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         children: [
-                          for (final b in settings.level.brushes)
-                            MiniBrush(
-                              brush: b,
-                              label: s.brushName(b),
-                              selected: b == brush,
-                              onTap: () => settings.brush = b,
-                            ),
+                          // The brushes and helpers the drawer shows.
+                          for (final group in const [
+                            ToolGroup.brushes,
+                            ToolGroup.helpers,
+                          ])
+                            for (final o
+                                in ToolCatalog.options(group, settings, s))
+                              if (o.shownWith(settings.addedTools))
+                                MiniBrush(
+                                  brush: o.brush!,
+                                  label: o.label,
+                                  selected: o.selected,
+                                  onTap: o.onSelect,
+                                ),
                         ],
                       ),
                     ),

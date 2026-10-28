@@ -1,5 +1,14 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v6.1.0 (my own brushes, helpers, a simpler title bar)
+- 6.0.0 after pushing: Web and iOS passed (live version.json 6.0.0+25).
+- Asked: remove new and save from the title bar (autosave), put the move tool there, simplify the brushes and let kids make their own, and give the tools that aren't brushes (picker, eraser) their own extendable group, keeping the basic ones. Asked back which "custom brushes" meant; the answer: both choosing which brushes show and saving presets.
+- Done: `BrushPreset` and 我的画笔 (save, pick, long-press delete); `ToolGroup.brushes` and `ToolGroup.helpers` (小帮手) with basic and addable members; the title bar with 选择移动, 清空, ✋, ☰; 新建画作 in the ☰ menu (there was none there, so removing the button alone would have lost it); the phone strip following the drawer.
+- Mistakes: none new.
+- Harness: PASS (analyze 0 issues, 418 tests, build web ok).
+- Not tested: on a real device.
+- Next: from the plan, background cache rebuilds and replay keyframes (measure first).
+
 ## 2026-10-28: v6.0.0 (adding tools)
 - 5.4.3 after pushing: Web and iOS passed (live version.json 5.4.3+24); that iOS run also covers 5.4.2's code.
 - Asked: make shapes, textures and the like an "add" feature, a multi-select popup that puts each choice in its own group, the drawer keeping only basic options; enrich shapes, textures and the other intermediate and advanced options. Later: add arc and wave shapes.

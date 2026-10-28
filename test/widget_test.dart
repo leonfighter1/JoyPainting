@@ -1,6 +1,7 @@
 import 'dart:ui' show SemanticsAction;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jingyao_paint/widgets/menu_button.dart';
 import 'package:jingyao_paint/app_theme.dart';
@@ -9,6 +10,7 @@ import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/gallery/gallery_page.dart';
 import 'package:jingyao_paint/main.dart';
 import 'package:jingyao_paint/settings.dart';
+import 'package:jingyao_paint/skill_level.dart';
 import 'package:jingyao_paint/theme/cute_theme.dart';
 import 'package:jingyao_paint/theme/theme_spec.dart';
 import 'package:jingyao_paint/widgets/corner_float.dart';
@@ -748,20 +750,21 @@ void main() {
         tester.widget<IconButton>(find.ancestor(
             of: find.byTooltip(tooltip), matching: find.byType(IconButton)));
 
-    testWidgets('new, save and clear are buttons; delete is in the ⋮ menu',
-        (tester) async {
+    testWidgets(
+        'move and clear are buttons; new and delete are in the ☰ menu; '
+        'paintings save themselves', (tester) async {
       await pumpApp(tester);
-      for (final t in ['新建画作', '保存画作', '清空画布', '更多']) {
+      for (final t in ['选择移动', '清空画布', '更多']) {
         expect(find.byTooltip(t), findsOneWidget, reason: t);
       }
-      expect(find.byTooltip('删除这幅画'), findsNothing,
-          reason: 'delete moved into the menu');
-      // Nothing to save or clear on a blank page yet.
-      for (final t in ['保存画作', '清空画布']) {
-        expect(button(tester, t).onPressed, isNull, reason: t);
+      for (final t in ['新建画作', '保存画作', '删除这幅画']) {
+        expect(find.byTooltip(t), findsNothing, reason: '$t: not a button');
       }
+      // Nothing to clear on a blank page yet.
+      expect(button(tester, '清空画布').onPressed, isNull);
       await tester.tap(find.byIcon(MenuButton.icon));
       await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, '新建画作'), findsOneWidget);
       final delete = find.widgetWithText(ListTile, '删除这幅画');
       await tester.ensureVisible(delete);
       expect(tester.widget<ListTile>(delete).enabled, isFalse);
@@ -769,10 +772,26 @@ void main() {
       await tester.pumpAndSettle();
 
       await drawStroke(tester);
-      for (final t in ['保存画作', '清空画布']) {
-        expect(button(tester, t).onPressed, isNotNull, reason: t);
-      }
+      expect(button(tester, '清空画布').onPressed, isNotNull);
       await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('选择移动 picks the move tool; a second tap goes back to the '
+        'brush; beginners have no such button', (tester) async {
+      final app = await pumpApp(tester);
+      app.settings.brush = BrushType.pencil;
+      await tester.pump();
+      final move = find.byKey(const ValueKey('moveToolButton'));
+      await tester.tap(move);
+      await tester.pump();
+      expect(app.settings.brush, BrushType.move);
+      expect(tester.widget<IconButton>(move).isSelected, isTrue);
+      await tester.tap(move);
+      await tester.pump();
+      expect(app.settings.brush, BrushType.pencil);
+      app.settings.level = SkillLevel.beginner;
+      await tester.pumpAndSettle();
+      expect(move, findsNothing);
     });
 
     testWidgets('the ⋮ menu unfolds from the top, in groups', (tester) async {
@@ -793,10 +812,12 @@ void main() {
       }
     });
 
-    testWidgets('save saves at once and says so', (tester) async {
+    testWidgets('Ctrl+S still saves at once and says so', (tester) async {
       final app = await pumpApp(tester);
       await drawStroke(tester);
-      await tester.tap(find.byTooltip('保存画作'));
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
       await tester.pump();
       await tester.pump();
       expect((await app.store.list()), hasLength(1));

@@ -9,6 +9,7 @@ import '../../settings.dart';
 import '../../theme/cute_theme.dart';
 import '../../widgets/menu_button.dart';
 import '../drawing_controller.dart';
+import '../stroke.dart';
 import 'canvas_view.dart';
 
 /// The button that brings out the tools drawer. It shows the current brush
@@ -222,29 +223,30 @@ class ZoomChip extends StatelessWidget {
 }
 
 
-/// The painting's own actions in the title bar, one tap away: new, save,
-/// clear, ✋ (move the paper) and the ☰ menu. Everything else lives in
-/// the menu; undo and redo float on the paper.
+/// The painting's own actions in the title bar, one tap away: the move tool
+/// (选择移动, from the intermediate level), clear, ✋ (move the paper) and
+/// the ☰ menu. Paintings save themselves; a new one is in the menu. Undo
+/// and redo float on the paper.
 class CanvasBarActions extends StatelessWidget {
   const CanvasBarActions({
     super.key,
     required this.changes,
-    required this.canSave,
+    required this.settings,
     required this.canClear,
     required this.panMode,
-    required this.onNew,
-    required this.onSave,
+    required this.onMove,
     required this.onClear,
     required this.onMenu,
   });
 
-  /// Whatever changes [canSave] and [canClear].
+  /// Whatever changes [canClear] and the brush.
   final Listenable changes;
-  final bool Function() canSave;
+  final AppSettings settings;
   final bool Function() canClear;
   final ValueNotifier<bool> panMode;
-  final VoidCallback onNew;
-  final VoidCallback onSave;
+
+  /// Picks the move tool, or goes back to the brush used before it.
+  final VoidCallback onMove;
   final VoidCallback onClear;
   final VoidCallback onMenu;
 
@@ -252,47 +254,50 @@ class CanvasBarActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final cute = CuteTheme.of(context);
+    ButtonStyle? on(bool active) => active
+        ? IconButton.styleFrom(
+            backgroundColor: cute.onHeader.withValues(alpha: 0.18),
+          )
+        : null;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-          tooltip: s.newPainting,
-          icon: const Icon(Icons.add_circle_outline_rounded),
-          onPressed: onNew,
-        ),
         ListenableBuilder(
           listenable: changes,
-          builder: (context, _) => Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                tooltip: s.savePainting,
-                icon: const Icon(Icons.save_rounded),
-                onPressed: canSave() ? onSave : null,
-              ),
-              IconButton(
-                tooltip: s.clear,
-                icon: const Icon(Icons.layers_clear_rounded),
-                onPressed: canClear() ? onClear : null,
-              ),
-            ],
-          ),
+          builder: (context, _) {
+            final moving = settings.brush == BrushType.move;
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (settings.level.allows(BrushType.move))
+                  IconButton(
+                    key: const ValueKey('moveToolButton'),
+                    tooltip: s.brushName(BrushType.move),
+                    isSelected: moving,
+                    icon: Icon(AppTheme.brushIcon(BrushType.move)),
+                    style: on(moving),
+                    onPressed: onMove,
+                  ),
+                IconButton(
+                  tooltip: s.clear,
+                  icon: const Icon(Icons.layers_clear_rounded),
+                  onPressed: canClear() ? onClear : null,
+                ),
+              ],
+            );
+          },
         ),
         // ✋ Move the paper: one tap away, and in the title bar it never
         // crowds the corner controls on a narrow phone.
         ValueListenableBuilder(
           valueListenable: panMode,
-          builder: (context, on, _) => IconButton(
+          builder: (context, panning, _) => IconButton(
             tooltip: s.panCanvas,
-            isSelected: on,
+            isSelected: panning,
             icon: const Icon(Icons.pan_tool_outlined),
             selectedIcon: const Icon(Icons.pan_tool_rounded),
-            style: on
-                ? IconButton.styleFrom(
-                    backgroundColor: cute.onHeader.withValues(alpha: 0.18),
-                  )
-                : null,
-            onPressed: () => panMode.value = !on,
+            style: on(panning),
+            onPressed: () => panMode.value = !panning,
           ),
         ),
         MenuButton(tooltip: s.more, onPressed: onMenu),

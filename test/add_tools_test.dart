@@ -142,11 +142,20 @@ void main() {
           for (final g in ToolGroup.values)
             if (g.allowedAt(s.level)) g,
         ],
-        [ToolGroup.shapes, ToolGroup.stamps],
+        [
+          ToolGroup.brushes,
+          ToolGroup.helpers,
+          ToolGroup.shapes,
+          ToolGroup.stamps,
+        ],
       );
+      expect(keysOf(ToolGroup.brushes), 'rainbow,stamp');
+      expect(keysOf(ToolGroup.helpers), '', reason: 'no picker yet');
       s.level = SkillLevel.intermediate;
       expect(keysOf(ToolGroup.shapes), contains('free,arrow'));
       expect(keysOf(ToolGroup.shapes), contains('pentagon'));
+      expect(keysOf(ToolGroup.brushes), 'highlighter,soft,rainbow,stamp');
+      expect(keysOf(ToolGroup.helpers), 'picker');
       expect(ToolGroup.gradients.allowedAt(s.level), isTrue);
       expect(ToolGroup.textures.allowedAt(s.level), isFalse);
     });
@@ -162,6 +171,121 @@ void main() {
     });
   });
 
+  group('Brushes and helpers', () {
+    testWidgets('four brushes and the basic helpers to start; more are added '
+        'the same way; the move tool is at the top', (tester) async {
+      final app = await pumpWithBasics(tester);
+      await openTools(tester);
+      for (final b in ['钢笔', '铅笔', '马克笔', '喷枪', '小帮手', '橡皮擦', '油漆桶', '文字']) {
+        expect(chip(b), findsOneWidget, reason: b);
+      }
+      for (final b in ['荧光笔', '柔边笔', '彩虹笔', '印章', '晕染笔', '吸管', '选择移动']) {
+        expect(chip(b), findsNothing, reason: b);
+      }
+      await tester.tap(find.byKey(const ValueKey('addTo.brushes')));
+      await tester.pumpAndSettle();
+      await tapInSheet(tester, 'add.brushes.rainbow');
+      await tapInSheet(tester, 'add.helpers.picker');
+      await tester.tap(find.byKey(const ValueKey('addToolsDone')));
+      await tester.pumpAndSettle();
+      expect(app.settings.addedTools, {'brushes.rainbow', 'helpers.picker'});
+      expect(chip('彩虹笔'), findsOneWidget);
+      expect(chip('吸管'), findsOneWidget);
+      expect(find.byKey(const ValueKey('moveToolButton')), findsOneWidget);
+    });
+  });
+
+  group('My brushes', () {
+    testWidgets('the brush in use is saved with its settings, picked again in '
+        'one tap, and deleted by a long press', (tester) async {
+      final app = await pumpWithBasics(tester);
+      final s = app.settings
+        ..brush = BrushType.marker
+        ..color = const Color(0xFFE53935)
+        ..size = 24
+        ..opacity = 0.6
+        ..texture = StrokeTexture.crayon;
+      await openTools(tester);
+      await tester.tap(find.byKey(const ValueKey('saveBrush')));
+      await tester.pumpAndSettle();
+      expect(find.text('给这支画笔起个名字'), findsOneWidget);
+      expect(
+        tester
+            .widget<TextField>(
+              find.descendant(
+                of: find.byType(AlertDialog),
+                matching: find.byType(TextField),
+              ),
+            )
+            .controller!
+            .text,
+        '我的画笔 1',
+      );
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        ),
+        '小红笔',
+      );
+      await tester.pump();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(FilledButton),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(s.brushPresets.single.name, '小红笔');
+      expect(chip('小红笔'), findsOneWidget);
+
+      // Something else, then the saved brush again.
+      s
+        ..brush = BrushType.pen
+        ..color = const Color(0xFF1E88E5)
+        ..texture = StrokeTexture.none;
+      await tester.pump();
+      await tester.tap(chip('小红笔'));
+      await tester.pump();
+      expect(s.brush, BrushType.marker);
+      expect(s.color.toARGB32(), 0xFFE53935);
+      expect(s.size, 24);
+      expect(s.opacity, closeTo(0.6, 0.01));
+      expect(s.texture, StrokeTexture.crayon);
+      expect(s.isPreset(s.brushPresets.single), isTrue);
+
+      await tester.longPress(chip('小红笔'));
+      await tester.pumpAndSettle();
+      expect(find.text('删除「小红笔」？'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, '删除'));
+      await tester.pumpAndSettle();
+      expect(s.brushPresets, isEmpty);
+      expect(chip('小红笔'), findsNothing);
+    });
+
+    test('my brushes are saved; a broken entry is skipped', () async {
+      final app = await createTestApp(
+        prefs: {
+          'flutter.brushPresets': <String>['not json'],
+        },
+      );
+      final s = app.settings;
+      expect(s.brushPresets, isEmpty);
+      s
+        ..brush = BrushType.soft
+        ..color = const Color(0xFF43A047)
+        ..gradient = GradientStyle.rainbow
+        ..blend = StrokeBlend.color;
+      s.brushPresets = [s.presetNow('a', '彩虹软笔')];
+      final back = s.brushPresets.single;
+      expect(back.name, '彩虹软笔');
+      expect(back.brush, BrushType.soft);
+      expect(back.gradient, GradientStyle.rainbow);
+      expect(back.blend, StrokeBlend.color);
+      expect(back.color.toARGB32(), 0xFF43A047);
+    });
+  });
+
   group('New shapes', () {
     test('every shape fits its box; the closed ones close; a wave runs along '
         'the drag, even a flat one', () {
@@ -172,7 +296,9 @@ void main() {
         final bounds = path.getBounds();
         expect(bounds.isEmpty, isFalse, reason: k.name);
         // A wave swings a twelfth of its length to either side of the drag.
-        final room = k == ShapeKind.wave ? box.inflate((b - a).distance / 12) : box;
+        final room = k == ShapeKind.wave
+            ? box.inflate((b - a).distance / 12)
+            : box;
         expect(
           room.contains(bounds.topLeft) && room.contains(bounds.bottomRight),
           isTrue,
@@ -186,8 +312,15 @@ void main() {
           );
         }
       }
-      final flat = ShapeKind.wave.path(const Offset(0, 50), const Offset(120, 50));
-      expect(flat.getBounds().height, closeTo(20, 1), reason: 'waves up and down');
+      final flat = ShapeKind.wave.path(
+        const Offset(0, 50),
+        const Offset(120, 50),
+      );
+      expect(
+        flat.getBounds().height,
+        closeTo(20, 1),
+        reason: 'waves up and down',
+      );
       expect(
         ShapeKind.arc.path(a, b).getBounds(),
         isA<Rect>()

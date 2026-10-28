@@ -14,7 +14,14 @@ import 'package:jingyao_paint/widgets/parent_gate.dart';
 
 import 'test_helpers.dart';
 import 'widget_test.dart'
-    show drawStroke, inGallery, leaveSettings, openSettings, openTab, pumpApp;
+    show
+        drawStroke,
+        inGallery,
+        leaveSettings,
+        openSettings,
+        openTab,
+        pumpApp,
+        tapMenu;
 
 /// Answers the grown-up question shown on screen.
 Future<void> answerGrownUp(WidgetTester tester, {bool wrong = false}) async {
@@ -90,7 +97,7 @@ void main() {
       await drawStroke(tester);
       await tester.pump(const Duration(seconds: 1)); // autosave
 
-      await tester.tap(find.byIcon(Icons.add_circle_outline_rounded));
+      await tapMenu(tester, '新建画作');
       await tester.pumpAndSettle();
       expect(app.session.name, '我的画作 2');
       expect(find.textContaining('我的画作 2'), findsOneWidget,

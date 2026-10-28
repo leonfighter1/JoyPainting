@@ -8,7 +8,7 @@ import '../../theme/cute_theme.dart';
 /// intermediate and advanced levels add start closed.
 enum ToolSection {
   brushes(openAtFirst: true),
-  moreBrushes(openAtFirst: false),
+  helpers(openAtFirst: true),
   colors(openAtFirst: true),
   shapes(openAtFirst: true),
   stamps(openAtFirst: true),

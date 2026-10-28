@@ -35,8 +35,8 @@ void main() {
       final app = await pumpAsNew(tester);
       await openTools(tester);
       expect(find.text('钢笔'), findsOneWidget, reason: 'brushes open');
-      expect(heading(ToolSection.moreBrushes), findsOneWidget);
-      expect(find.text('柔边笔'), findsNothing, reason: 'more brushes closed');
+      expect(heading(ToolSection.helpers), findsOneWidget);
+      expect(find.text('橡皮擦'), findsOneWidget, reason: 'helpers open');
       await scrollTools(tester, heading(ToolSection.gradient));
       expect(find.text('上亮'), findsNothing, reason: 'gradients closed');
       for (final s in ToolSection.values) {
@@ -49,6 +49,7 @@ void main() {
         ],
         [
           ToolSection.brushes,
+          ToolSection.helpers,
           ToolSection.colors,
           ToolSection.shapes,
           ToolSection.stamps,
@@ -61,25 +62,22 @@ void main() {
     ) async {
       final app = await pumpAsNew(tester);
       await openTools(tester);
-      await tester.tap(heading(ToolSection.moreBrushes));
+      await tester.tap(find.text('油漆桶'));
       await tester.pumpAndSettle();
-      expect(find.text('柔边笔'), findsOneWidget);
-      await tester.tap(find.text('柔边笔'));
+      expect(app.settings.brush, BrushType.bucket);
+
+      // Closed, a heading says what's chosen in it.
+      await tester.tap(heading(ToolSection.helpers));
       await tester.pumpAndSettle();
-      expect(app.settings.brush, BrushType.soft);
+      expect(find.text('油漆桶'), findsNothing);
+      expect(find.text('· 油漆桶'), findsOneWidget);
+      expect(app.settings.sectionOpen('helpers', byDefault: true), isFalse);
 
       await closeTools(tester);
       await openTools(tester);
-      expect(find.text('柔边笔'), findsOneWidget, reason: 'still open');
-
-      // Closed, a heading says what's chosen in it.
-      await tester.tap(heading(ToolSection.moreBrushes));
-      await tester.pumpAndSettle();
-      expect(find.text('柔边笔'), findsNothing);
-      expect(find.text('· 柔边笔'), findsOneWidget);
-      expect(app.settings.sectionOpen('moreBrushes', byDefault: true), isFalse);
+      expect(find.text('· 油漆桶'), findsOneWidget, reason: 'still closed');
       expect(
-        tester.getSemantics(heading(ToolSection.moreBrushes)),
+        tester.getSemantics(heading(ToolSection.helpers)),
         isSemantics(
           isButton: true,
           hasExpandedState: true,
