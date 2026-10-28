@@ -314,6 +314,10 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
         _settings.brush = BrushType.text;
       case CanvasCommand.move:
         _settings.brush = BrushType.move;
+      case CanvasCommand.turnRight || CanvasCommand.turnLeft:
+        if (!_settings.level.rotation) return false;
+        _view.rotateCenter(
+            (command == CanvasCommand.turnRight ? 1 : -1) * math.pi / 12);
       case CanvasCommand.picker:
         if (!_settings.level.allows(BrushType.picker)) return false;
         _settings.brush = BrushType.picker;
@@ -647,6 +651,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     final s = S.of(context);
     final cute = CuteTheme.of(context);
     _view.animate = _animate;
+    _view.rotates = _settings.level.rotation;
     return Scaffold(
       appBar: GradientAppBar(
         // The kid's board, and the open painting's name (tap to rename).
@@ -928,7 +933,10 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                 // On top, outside the zoom: always the same size on screen.
                 ValueListenableBuilder(
                   valueListenable: view,
-                  builder: (context, matrix, _) => PaperGrips(
+                  // Grips sit on an upright paper's edges; none while turned.
+                  builder: (context, matrix, _) => rotationOf(matrix).abs() > 0.001
+                      ? const SizedBox.shrink()
+                      : PaperGrips(
                     room: room,
                     paperRect: MatrixUtils.transformRect(
                         matrix, layout.corner & size * layout.scale),

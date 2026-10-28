@@ -1,5 +1,12 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v5.2.0 (turning the paper)
+- Done: F8 (two-finger rotation with quarter-turn snapping, R / Shift+R, the angle on the zoom chip, grips hidden while turned, off for beginners).
+- Mistakes: a bash-quoted perl edit with `${...}` failed with "bad substitution" (nothing changed; redone with the Edit tool, as rule 48 says for such edits).
+- Harness: PASS (analyze 0 issues, 383 tests, build web ok).
+- Not tested: rotating with real fingers on a phone or tablet.
+- Next: the coloring pages (to be shown before pushing). The TECH_PLAN items F1–F8 are otherwise done.
+
 ## 2026-10-28: v5.1.0 (a photo to trace)
 - 5.0.0 after pushing: Web and iOS passed (live version.json 5.0.0+16).
 - Done: F7's photo part (photo strokes saved inside paintings, decoding once with repaints, import with upright turn, shrinking and fitting in the background, a locked see-through photo layer at the advanced level). The coloring pages are new artwork, so by the user's rule they wait for review before any push and were left out of 5.1.0.

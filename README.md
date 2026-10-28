@@ -21,6 +21,7 @@ What it does:
   - Drag to move, drag the corner knob to resize (same proportions), drag the top knob to turn.
   - A bar next to the selection copies, resizes, turns, recolors, changes opacity and deletes. Every change undoes in one step.
 - **Canvas**:
+  - Two fingers also turn the paper (Intermediate and up; it snaps straight; R / Shift+R on a computer).
   - Pinch to zoom and pan; ✋ (or holding Space, or a drag outside the paper) moves the paper with one finger or the mouse.
   - Drag the grips on the paper's right and bottom edges to make it wider or taller (or narrower and shorter). What's drawn keeps its size, and undo puts the paper back. The ☰ menu → 画纸恢复默认大小 makes it fill the screen again.
   - Pin the palette beside the paper (a slim strip under it on an upright phone) to change brushes and colors while drawing.
@@ -51,13 +52,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.1.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.2.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **5.1.0** | 2026-10-28 | Add a photo to trace (Intermediate and up): under the drawing, half see-through; on its own locked layer at the Advanced level |
+| **5.2.0** | 2026-10-28 | Turn the paper with two fingers (snaps straight; R on a computer), from the Intermediate level |
+| 5.1.0 | 2026-10-28 | Add a photo to trace (Intermediate and up): under the drawing, half see-through; on its own locked layer at the Advanced level |
 | 5.0.0 | 2026-10-28 | Layers at the Advanced level: add, reorder, hide, lock, rename, merge and fade layers; the eraser and blender work on one layer; exports, replays and GIFs show the layers |
 | 4.2.0 | 2026-10-28 | Replay a painting stroke by stroke (with speeds and a slider) and save it as a GIF; backup reminders in My Paintings with a one-tap backup |
 | 4.1.0 | 2026-10-28 | The paint bucket, the color picker, big paintings that stay smooth (drawing, erasing and undoing), and a tidier code base behind the drawing screen |
@@ -80,6 +82,22 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets).
+
+### 5.2.0 (2026-10-28): turn the paper
+
+**New**
+- **Turn the paper (转动画纸)**, from the Intermediate level: while pinching with two fingers, turn them and the paper turns too, so a curve can be drawn the way your hand likes. Near straight (and near a quarter turn) it snaps straight. On a computer, R turns it 15° and Shift+R turns it back. The chip at the top shows the angle; tap it to straighten the paper and fit it to the screen again.
+
+**Changed**
+- While the paper is turned, the grips on its edges for resizing it are hidden; straighten it to use them.
+- The keyboard shortcut list (?) has R · Shift+R.
+
+**Fixed**
+- Nothing new; see 5.1.0.
+
+**Good to know**
+- Beginners only zoom with two fingers, so the paper doesn't turn by accident.
+- Not yet tried with real fingers on a phone or tablet.
 
 ### 5.1.0 (2026-10-28): a photo to trace
 
@@ -399,6 +417,7 @@ What the tests cover:
 - **`test/layer_cache_test.dart`**: the kept picture of a painting looks the same as painting every stroke (paint, shadows, see-through paint, the eraser, the blender), and is painted again only when it must (not for new strokes, erasing, undo or redo).
 - **`test/picker_test.dart`**: the color seen at a point (paint, paper, shadows, see-through paint), the picker's loupe and its return to the last brush, and picking a color off the canvas.
 - **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
+- **`test/rotation_test.dart`**: turning the paper with two fingers, snapping to a quarter turn, beginners only zooming, the R key, and a turned paper (angle on the chip, grips hidden, strokes under the finger).
 - **`test/photo_test.dart`**: a photo on the paper (saved with its picture, moved, hit inside its box), painted at its opacity, made smaller and fitted, refused when unreadable, put under the drawing or on a locked layer at the bottom, and the menu item by level.
 - **`test/layers_test.dart`**: layers in the drawing (adding above the active one, keeping strokes in layer order, moving, merging, deleting, undo), picking only from the active shown and unlocked layer, saving layers, painting them (the eraser on its own layer, hidden and see-through layers, one kept picture per layer), the layers panel, and refusing to draw on a hidden layer.
 - **`test/replay_test.dart`**: the replay's timeline (order, point by point, the 40-second limit), its last frame matching the painting, the eraser while replayed, the GIF (header, frames, cancelling) and the replay page (play, pause, playing to the end).

@@ -475,6 +475,8 @@ class S {
             _t('画笔 · 橡皮 · 文字 · 移动', 'Pen · Eraser · Text · Move')),
         ('I · Alt + ${_t('点按', 'click')}',
             _t('吸管：吸取画上的颜色', 'Color picker: pick a color off the paper')),
+        ('R · Shift+R',
+            _t('转动画纸（双指也能转）', 'Turn the paper (two fingers do too)')),
         ('[  ]', _t('笔变细 / 变粗', 'Thinner / thicker brush')),
         ('Esc', _t('取消选中，关上工具栏', 'Deselect, close the tools')),
         ('?', _t('显示这张表', 'Show this list')),

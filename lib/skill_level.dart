@@ -49,6 +49,9 @@ enum SkillLevel {
 
   /// Adding a photo to trace.
   bool get photos => _intermediate;
+
+  /// Turning the paper with two fingers (or R).
+  bool get rotation => _intermediate;
   bool get gradients => _intermediate;
   bool get lightAndShadow => this == advanced;
   bool get textures => this == advanced;
