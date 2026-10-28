@@ -10,6 +10,7 @@ abstract final class CanvasKeys {
   static const toolsButton = Key('toolsButton');
   static const toolsFloat = Key('toolsFloat');
   static const undoFloat = Key('undoFloat');
+  static const layersFloat = Key('layersFloat');
   static const toolsList = Key('toolsList');
   static const selectionBar = Key('selectionBar');
 }

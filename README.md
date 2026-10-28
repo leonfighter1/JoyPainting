@@ -25,8 +25,9 @@ What it does:
   - Pinch to zoom and pan; ✋ (or holding Space, or a drag outside the paper) moves the paper with one finger or the mouse.
   - Drag the grips on the paper's right and bottom edges to make it wider or taller (or narrower and shorter). What's drawn keeps its size, and undo puts the paper back. The ☰ menu → 画纸恢复默认大小 makes it fill the screen again.
   - Pin the palette beside the paper (a slim strip under it on an upright phone) to change brushes and colors while drawing.
-  - Brushes and colors live in a drawer that opens from the "画笔 · 颜色" button.
-  - That button and the undo bar can be dragged to any corner of the paper.
+  - Brushes and colors live in a drawer that opens from the "画笔 · 颜色" button. Its groups open and close with a tap on their heading: the everyday brushes, colors and shapes start open, and the extras of higher levels (more brushes, gradients, light & shadow, textures) start closed. Size and opacity sit right under the colors.
+  - At the Advanced level a layers button sits right above the "画笔 · 颜色" button.
+  - These buttons and the undo bar can be dragged to any corner of the paper.
 - **Kids**:
   - Each kid has their own paintings; the title is their board ("Jingyao's Drawing Board").
   - Switch kids in Settings. Adding or deleting a kid and resetting the app ask a grown-up a multiplication first (like 12 × 15).
@@ -44,7 +45,7 @@ What it does:
   - Print from an in-app preview with a big close button (Android's own print screen has none).
   - Open `.jypaint` files received from other apps.
 - **Background music**:
-  - Plays while you draw and pauses in the background. On/off in the ☰ menu (top right); volume, track and play order (shuffle by default, in order, repeat one) in Settings.
+  - Plays while you draw and pauses in the background. On/off in the ☰ menu (top right); volume, track and play order (shuffle by default, in order, repeat one) in Settings. Each track ends with 3 quiet seconds before the next.
   - Five calm built-in tracks (阳光散步, 小星星摇篮曲, 欢乐颂, 两只老虎, 云朵飘飘), or add your own (MP3, M4A/AAC, WAV, OGG/Opus, FLAC, MIDI…).
 - **Keyboard** (browser, computer, iPad keyboard): Ctrl/⌘+Z undo, Ctrl+Y redo, Ctrl+S save, Ctrl+P print, Ctrl+C/X/V/D copy, cut, paste and duplicate the selection, Ctrl+A select all, Delete, Ctrl +/−/0/1 zoom, Space to move the paper, P/E/T/V tools, I or Alt + click for the color picker, [ ] size, Esc. Press ? for the list.
 - **Look**:
@@ -53,13 +54,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.3.1**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **5.4.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **5.3.1** | 2026-10-28 | Download or send a picture without its photo; in a browser, Settings says whether the paintings are kept and can ask the browser to keep them |
+| **5.4.0** | 2026-10-28 | A tidier brushes & colors drawer (groups that open and close, size and opacity under the colors), the layers button floating next to it, 3 quiet seconds between music tracks, a wider keyboard shortcut list |
+| 5.3.1 | 2026-10-28 | Download or send a picture without its photo; in a browser, Settings says whether the paintings are kept and can ask the browser to keep them |
 | 5.3.0 | 2026-10-28 | A coloring book in My Paintings: 8 line drawings to color in, the lines locked on top so coloring, filling and erasing go under them |
 | 5.2.0 | 2026-10-28 | Turn the paper with two fingers (snaps straight; R on a computer), from the Intermediate level |
 | 5.1.0 | 2026-10-28 | Add a photo to trace (Intermediate and up): under the drawing, half see-through; on its own locked layer at the Advanced level |
@@ -85,6 +87,24 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 5.4.0 (2026-10-28): a tidier drawer
+
+**New**
+- **Groups that open and close** in the brushes & colors drawer: tap a heading (画笔, 更多画笔, 颜料, 形状, 渐变, 光影, 纹理) to open or close it. The everyday groups start open; the extras of the Intermediate and Advanced levels start closed. A closed group shows what's picked in it ("渐变 · 上亮"), and the drawer remembers what you opened.
+- **The layers button (图层)** now floats next to the 画笔 · 颜色 button (Advanced level), showing the layer you draw on and how many there are. Drag it to another corner if it's in the way.
+
+**Changed**
+- Size and opacity sit right under the colors.
+- The tip on how to use a tool (text, eraser, paint bucket…) sits right under the brushes.
+- Music: each track ends with 3 quiet seconds before the next one (or, on repeat, the same one again).
+- The keyboard shortcut list (?) is 500 points wide, so each line fits; on a small screen it fills the width.
+
+**Fixed**
+- Nothing new; see 5.3.1.
+
+**Good to know**
+- The layers row at the top of the drawer is gone; use the floating button.
 
 ### 5.3.1 (2026-10-28): pictures without the photo
 
@@ -451,6 +471,7 @@ What the tests cover:
 - **`test/picker_test.dart`**: the color seen at a point (paint, paper, shadows, see-through paint), the picker's loupe and its return to the last brush, and picking a color off the canvas.
 - **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
 - **`test/rotation_test.dart`**: turning the paper with two fingers, snapping to a quarter turn, beginners only zooming, the R key, and a turned paper (angle on the chip, grips hidden, strokes under the finger).
+- **`test/drawer_test.dart`**: the tools drawer's groups (which start open, opening and closing them, what a closed one shows, its screen reader state), size and opacity under the colors, and the layers button (next to the tools button, following it until dragged, never onto undo's corner, opening the layers).
 - **`test/coloring_test.dart`**: every coloring page (lines on a locked top layer, the layer under them active, the lines never picked up, closed areas the paint bucket fills without leaking) and opening one from My Paintings.
 - **`test/photo_test.dart`**: a photo on the paper (saved with its picture, moved, hit inside its box), painted at its opacity, made smaller and fitted, refused when unreadable, put under the drawing or on a locked layer at the bottom, the menu item by level, and leaving the photo out of pictures (the switch in the format sheet).
 - **`test/layers_test.dart`**: layers in the drawing (adding above the active one, keeping strokes in layer order, moving, merging, deleting, undo), picking only from the active shown and unlocked layer, saving layers, painting them (the eraser on its own layer, hidden and see-through layers, one kept picture per layer), the layers panel, and refusing to draw on a hidden layer.

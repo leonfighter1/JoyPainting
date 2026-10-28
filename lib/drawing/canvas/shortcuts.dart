@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -63,10 +65,10 @@ CanvasCommand? commandFor(KeyEvent e, {required bool hasSelection}) {
     }
     if (repeat) return null;
     return switch (key) {
-      LogicalKeyboardKey.digit0 || LogicalKeyboardKey.numpad0 =>
-        CanvasCommand.fitView,
-      LogicalKeyboardKey.digit1 || LogicalKeyboardKey.numpad1 =>
-        CanvasCommand.actualSize,
+      LogicalKeyboardKey.digit0 ||
+      LogicalKeyboardKey.numpad0 => CanvasCommand.fitView,
+      LogicalKeyboardKey.digit1 ||
+      LogicalKeyboardKey.numpad1 => CanvasCommand.actualSize,
       LogicalKeyboardKey.keyS => CanvasCommand.save,
       LogicalKeyboardKey.keyP => CanvasCommand.print,
       LogicalKeyboardKey.keyA => CanvasCommand.selectAll,
@@ -82,7 +84,9 @@ CanvasCommand? commandFor(KeyEvent e, {required bool hasSelection}) {
   if (key == LogicalKeyboardKey.bracketLeft) return CanvasCommand.smallerBrush;
   if (key == LogicalKeyboardKey.bracketRight) return CanvasCommand.biggerBrush;
   if (key == LogicalKeyboardKey.keyR) {
-    return keys.isShiftPressed ? CanvasCommand.turnLeft : CanvasCommand.turnRight;
+    return keys.isShiftPressed
+        ? CanvasCommand.turnLeft
+        : CanvasCommand.turnRight;
   }
   if (repeat) return null;
   if (e.character == '?') return CanvasCommand.showShortcuts;
@@ -104,9 +108,13 @@ CanvasCommand? commandFor(KeyEvent e, {required bool hasSelection}) {
 /// The ⌘ key on Apple keyboards, Ctrl elsewhere.
 String get commandKeyLabel =>
     defaultTargetPlatform == TargetPlatform.macOS ||
-            defaultTargetPlatform == TargetPlatform.iOS
-        ? '⌘'
-        : 'Ctrl';
+        defaultTargetPlatform == TargetPlatform.iOS
+    ? '⌘'
+    : 'Ctrl';
+
+/// How wide the shortcut list is: room for each key and what it does on
+/// one line. Narrower only on a screen that hasn't the room.
+const shortcutsListWidth = 500.0;
 
 /// The list of keyboard shortcuts (the ? key, or the ☰ menu).
 Future<void> showShortcutsDialog(BuildContext context) {
@@ -115,28 +123,41 @@ Future<void> showShortcutsDialog(BuildContext context) {
     context: context,
     builder: (context) {
       final theme = Theme.of(context);
+      const inset = 16.0, padding = 24.0;
+      final room = MediaQuery.sizeOf(context).width - 2 * (inset + padding);
       return AlertDialog(
+        key: const ValueKey('shortcutsDialog'),
+        insetPadding: const EdgeInsets.symmetric(
+          horizontal: inset,
+          vertical: 24,
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(padding, 16, padding, 0),
         title: Text(s.keyboardShortcuts),
-        content: SingleChildScrollView(
-          child: Table(
-            columnWidths: const {0: IntrinsicColumnWidth()},
-            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-            children: [
-              for (final (keys, what) in s.shortcuts(commandKeyLabel))
-                TableRow(children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 4, 16, 4),
-                    child: Text(
-                      keys,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
+        content: SizedBox(
+          width: math.min(shortcutsListWidth, room),
+          child: SingleChildScrollView(
+            child: Table(
+              columnWidths: const {0: IntrinsicColumnWidth()},
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                for (final (keys, what) in s.shortcuts(commandKeyLabel))
+                  TableRow(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(0, 4, 16, 4),
+                        child: Text(
+                          keys,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
                       ),
-                    ),
+                      Text(what),
+                    ],
                   ),
-                  Text(what),
-                ]),
-            ],
+              ],
+            ),
           ),
         ),
         actions: [

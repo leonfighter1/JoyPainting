@@ -243,8 +243,9 @@ void main() {
   });
 
   group('Music play order', () {
-    testWidgets('in order and shuffle move on when a track ends; repeat loops',
-        (tester) async {
+    testWidgets(
+        'after each track, 3 quiet seconds; then the next one in order or '
+        'shuffle, the same one on repeat', (tester) async {
       final app = await createTestApp();
       final player = BackgroundMusic(
         settings: app.settings,
@@ -253,33 +254,63 @@ void main() {
         random: math.Random(3),
       )..start();
       addTearDown(player.dispose);
-      app.settings.musicOn = true;
-      await player.settled;
-      expect(app.engine.loop, isFalse, reason: 'shuffle by default');
-
-      app.settings.musicMode = MusicMode.repeatOne;
-      await player.settled;
-      expect(app.engine.loop, isTrue);
+      Future<void> ended() async {
+        app.engine.finishTrack();
+        await tester.pump(BackgroundMusic.gap);
+        await player.settled;
+      }
 
       app.settings
         ..musicTrack = 'builtin:clouds'
-        ..musicMode = MusicMode.sequence;
+        ..musicMode = MusicMode.sequence
+        ..musicOn = true;
       await player.settled;
-      expect(app.engine.loop, isFalse);
+      app.engine.calls.clear();
       app.engine.finishTrack();
+      await tester.pump(const Duration(milliseconds: 2900));
       await player.settled;
+      expect(app.engine.calls, isEmpty, reason: 'quiet for 3 seconds');
+      expect(app.settings.musicTrack, 'builtin:clouds');
+      await tester.pump(const Duration(milliseconds: 100));
+      await player.settled;
+      expect(app.engine.calls, ['play']);
       expect(app.settings.musicTrack, 'builtin:sunny', reason: 'wraps around');
-      app.engine.finishTrack();
-      await player.settled;
+      await ended();
       expect(app.settings.musicTrack, 'builtin:twinkle');
+
+      app.settings.musicMode = MusicMode.repeatOne;
+      await player.settled;
+      app.engine.calls.clear();
+      await ended();
+      expect(app.settings.musicTrack, 'builtin:twinkle');
+      expect(app.engine.calls, ['play'], reason: 'the same track again');
+
+      // A track picked during the quiet plays at once; the quiet is over.
+      app.engine.finishTrack();
+      app.settings.musicTrack = 'builtin:clouds';
+      await player.settled;
+      await tester.pump(BackgroundMusic.gap);
+      await player.settled;
+      expect(app.settings.musicTrack, 'builtin:clouds');
+
+      // Music turned off during the quiet: the next track waits for it.
+      app.settings.musicMode = MusicMode.sequence;
+      app.engine.finishTrack();
+      app.settings.musicOn = false;
+      await tester.pump(BackgroundMusic.gap);
+      await player.settled;
+      app.engine.calls.clear();
+      app.settings.musicOn = true;
+      await player.settled;
+      expect(app.engine.calls, ['play']);
+      expect(app.settings.musicTrack, 'builtin:sunny');
 
       await app.music.add('mine.mp3', tinyPng);
       app.settings.musicMode = MusicMode.shuffle;
       await player.settled;
       for (var i = 0; i < 5; i++) {
         final before = app.settings.musicTrack;
-        app.engine.finishTrack();
-        await player.settled;
+        await ended();
         expect(app.settings.musicTrack, isNot(before),
             reason: 'shuffle picks another track');
       }

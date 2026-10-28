@@ -27,9 +27,9 @@ class Kid {
   Map<String, Object?> toJson() => {'id': id, 'name': name};
 
   static Kid? fromJson(Object? json) => switch (json) {
-        {'id': final String id, 'name': final String name} => Kid(id, name),
-        _ => null,
-      };
+    {'id': final String id, 'name': final String name} => Kid(id, name),
+    _ => null,
+  };
 }
 
 /// How background music moves on when a track ends.
@@ -52,42 +52,51 @@ enum MusicMode {
 /// gradient, blend), mirror mode, paper, music and the kids.
 class AppSettings extends ChangeNotifier {
   AppSettings(this._prefs)
-      : locale = ValueNotifier(
-            Locale(_prefs.getString(_kLanguage) ?? _defaultLanguage(_prefs))),
-        onboarded = ValueNotifier(_prefs.getBool(_kOnboarded) ?? false),
-        themeId = ValueNotifier(_prefs.getString(_kTheme) ?? defaultThemeId),
-        fontId = ValueNotifier(_prefs.getString(_kFont) ?? defaultFontId),
-        textScale = ValueNotifier((_prefs.getDouble(_kTextScale) ?? 1)
+    : locale = ValueNotifier(
+        Locale(_prefs.getString(_kLanguage) ?? _defaultLanguage(_prefs)),
+      ),
+      onboarded = ValueNotifier(_prefs.getBool(_kOnboarded) ?? false),
+      themeId = ValueNotifier(_prefs.getString(_kTheme) ?? defaultThemeId),
+      fontId = ValueNotifier(_prefs.getString(_kFont) ?? defaultFontId),
+      textScale = ValueNotifier(
+        (_prefs.getDouble(_kTextScale) ?? 1)
             .clamp(minTextScale, maxTextScale)
-            .toDouble()),
-        _shape = ShapeKind.fromName(_prefs.getString(_kShape)),
-        _undoCorner = Corner.fromName(
-            _prefs.getString(_kUndoCorner), Corner.topRight),
-        _toolsCorner = Corner.fromName(
-            _prefs.getString(_kToolsCorner), Corner.bottomRight),
-        _fill = _prefs.getBool(_kFill) ?? false,
-        _freeShape = _prefs.getBool(_kFreeShape) ?? false,
-        _fillGap = (_prefs.getInt(_kFillGap) ?? defaultFillGap)
-            .clamp(0, maxFillGap),
-        _gradient = GradientStyle.fromName(_prefs.getString(_kGradient)),
-        _blend = StrokeBlend.fromName(_prefs.getString(_kBlend)),
-        _texture = StrokeTexture.fromName(_prefs.getString(_kTexture)),
-        _level = SkillLevel.fromName(_prefs.getString(_kLevel)),
-        _brush = BrushType.fromName(_prefs.getString(_kBrush)),
-        _color = Color(_prefs.getInt(_kColor) ?? Colors.black.toARGB32()),
-        _stamp = StampShape.fromName(_prefs.getString(_kStamp)),
-        _mirror = _prefs.getBool(_kMirror) ?? false,
-        _paper = Color(_prefs.getInt(_kPaper) ?? 0xFFFFFFFF),
-        _musicOn = _prefs.getBool(_kMusicOn) ?? false,
-        _musicVolume = _prefs.getDouble(_kMusicVolume) ?? defaultMusicVolume,
-        _musicTrack = _prefs.getString(_kMusicTrack) ?? defaultMusicTrack,
-        _musicMode = MusicMode.fromName(_prefs.getString(_kMusicMode)),
-        _kids = _readKids(_prefs),
-        _currentKidId = _prefs.getString(_kCurrentKid) ?? Kid.firstId,
-        _customColors = [
-          for (final v in _prefs.getStringList(_kCustomColors) ?? const [])
-            if (int.tryParse(v) case final int argb) Color(argb),
-        ];
+            .toDouble(),
+      ),
+      _shape = ShapeKind.fromName(_prefs.getString(_kShape)),
+      _undoCorner = Corner.fromName(
+        _prefs.getString(_kUndoCorner),
+        Corner.topRight,
+      ),
+      _toolsCorner = Corner.fromName(
+        _prefs.getString(_kToolsCorner),
+        Corner.bottomRight,
+      ),
+      _fill = _prefs.getBool(_kFill) ?? false,
+      _freeShape = _prefs.getBool(_kFreeShape) ?? false,
+      _fillGap = (_prefs.getInt(_kFillGap) ?? defaultFillGap).clamp(
+        0,
+        maxFillGap,
+      ),
+      _gradient = GradientStyle.fromName(_prefs.getString(_kGradient)),
+      _blend = StrokeBlend.fromName(_prefs.getString(_kBlend)),
+      _texture = StrokeTexture.fromName(_prefs.getString(_kTexture)),
+      _level = SkillLevel.fromName(_prefs.getString(_kLevel)),
+      _brush = BrushType.fromName(_prefs.getString(_kBrush)),
+      _color = Color(_prefs.getInt(_kColor) ?? Colors.black.toARGB32()),
+      _stamp = StampShape.fromName(_prefs.getString(_kStamp)),
+      _mirror = _prefs.getBool(_kMirror) ?? false,
+      _paper = Color(_prefs.getInt(_kPaper) ?? 0xFFFFFFFF),
+      _musicOn = _prefs.getBool(_kMusicOn) ?? false,
+      _musicVolume = _prefs.getDouble(_kMusicVolume) ?? defaultMusicVolume,
+      _musicTrack = _prefs.getString(_kMusicTrack) ?? defaultMusicTrack,
+      _musicMode = MusicMode.fromName(_prefs.getString(_kMusicMode)),
+      _kids = _readKids(_prefs),
+      _currentKidId = _prefs.getString(_kCurrentKid) ?? Kid.firstId,
+      _customColors = [
+        for (final v in _prefs.getStringList(_kCustomColors) ?? const [])
+          if (int.tryParse(v) case final int argb) Color(argb),
+      ];
 
   static Future<AppSettings> load() async =>
       AppSettings(await SharedPreferences.getInstance());
@@ -138,6 +147,8 @@ class AppSettings extends ChangeNotifier {
   static const _kTextStyle = 'textStyle';
   static const _kUndoCorner = 'undoCorner';
   static const _kToolsCorner = 'toolsCorner';
+  static const _kLayersCorner = 'layersCorner';
+  static String _kSection(String section) => 'toolSection.$section';
   static const _kBrush = 'brush';
   static const _kColor = 'color';
   static const _kStamp = 'stamp';
@@ -190,8 +201,8 @@ class AppSettings extends ChangeNotifier {
   /// The current kid's name ("" when not given), shown in the title.
   String get kidName => currentKid.name;
 
-  void _saveKids() => _prefs.setString(
-      _kKids, jsonEncode([for (final k in _kids) k.toJson()]));
+  void _saveKids() =>
+      _prefs.setString(_kKids, jsonEncode([for (final k in _kids) k.toJson()]));
 
   /// Switches to [id]'s paintings (see `Family`).
   set currentKidId(String id) {
@@ -202,8 +213,10 @@ class AppSettings extends ChangeNotifier {
   }
 
   Kid addKid(String name) {
-    final kid = Kid(DateTime.now().microsecondsSinceEpoch.toRadixString(36),
-        name.trim());
+    final kid = Kid(
+      DateTime.now().microsecondsSinceEpoch.toRadixString(36),
+      name.trim(),
+    );
     _kids.add(kid);
     _saveKids();
     notifyListeners();
@@ -292,6 +305,29 @@ class AppSettings extends ChangeNotifier {
     _prefs.setString(_kToolsCorner, value.name);
     notifyListeners();
   }
+
+  /// Where the layers button sits (advanced level). Until it's dragged, the
+  /// tools button's corner: right next to it.
+  Corner get layersCorner => switch (_prefs.getString(_kLayersCorner)) {
+    final name? => Corner.fromName(name, _toolsCorner),
+    null => _toolsCorner,
+  };
+
+  set layersCorner(Corner value) {
+    _prefs.setString(_kLayersCorner, value.name);
+    notifyListeners();
+  }
+
+  /// Whether the tools drawer's [section] is open; [byDefault] until it's
+  /// opened or closed.
+  bool sectionOpen(String section, {required bool byDefault}) =>
+      _prefs.getBool(_kSection(section)) ?? byDefault;
+
+  void setSectionOpen(String section, bool open) {
+    _prefs.setBool(_kSection(section), open);
+    notifyListeners();
+  }
+
   BrushType _brush;
   Color _color;
   StampShape _stamp;
@@ -328,9 +364,9 @@ class AppSettings extends ChangeNotifier {
   DateTime? get backupSnoozedUntil => _time(_kBackupSnooze(currentKid.id));
 
   DateTime? _time(String key) => switch (_prefs.getInt(key)) {
-        final int ms => DateTime.fromMillisecondsSinceEpoch(ms),
-        _ => null,
-      };
+    final int ms => DateTime.fromMillisecondsSinceEpoch(ms),
+    _ => null,
+  };
 
   /// All the current kid's paintings were exported at [when].
   void markBackedUp(DateTime when) {
@@ -345,6 +381,7 @@ class AppSettings extends ChangeNotifier {
     _prefs.setInt(_kBackupSnooze(currentKid.id), until.millisecondsSinceEpoch);
     notifyListeners();
   }
+
   static const defaultFillGap = 2;
   static const maxFillGap = 6;
 
@@ -356,8 +393,7 @@ class AppSettings extends ChangeNotifier {
   StrokeBlend get blend => _level.lightAndShadow ? _blend : StrokeBlend.normal;
 
   /// The grain new strokes are painted with.
-  StrokeTexture get texture =>
-      _level.textures ? _texture : StrokeTexture.none;
+  StrokeTexture get texture => _level.textures ? _texture : StrokeTexture.none;
 
   /// The brush in use; one the [level] hides counts as the pen.
   BrushType get brush => _level.allows(_brush) ? _brush : BrushType.pen;
@@ -373,7 +409,11 @@ class AppSettings extends ChangeNotifier {
   double get size => sizeFor(brush);
   double sizeFor(BrushType b) =>
       _prefs.getDouble(_kSize(b)) ??
-      switch (b) { BrushType.pencil => 6, BrushType.text => 16, _ => 10 };
+      switch (b) {
+        BrushType.pencil => 6,
+        BrushType.text => 16,
+        _ => 10,
+      };
   double get opacity => _level.opacity ? opacityFor(brush) : 1;
   double opacityFor(BrushType b) => _prefs.getDouble(_kOpacity(b)) ?? 1;
 
@@ -408,7 +448,9 @@ class AppSettings extends ChangeNotifier {
   }
 
   set textStyle(TextContent value) => _prefs.setString(
-      _kTextStyle, jsonEncode(value.copyWith(text: '').toJson()));
+    _kTextStyle,
+    jsonEncode(value.copyWith(text: '').toJson()),
+  );
 
   set font(String id) {
     _prefs.setString(_kFont, id);
@@ -578,7 +620,9 @@ class AppSettings extends ChangeNotifier {
   bool sampleAddedFor(SkillLevel level) => _samplesAdded.contains(level.name);
 
   void markSampleAdded(SkillLevel level) => _prefs.setStringList(
-      _samplesKey, {..._samplesAdded, level.name}.toList());
+    _samplesKey,
+    {..._samplesAdded, level.name}.toList(),
+  );
 
   List<String> get _samplesAdded =>
       _prefs.getStringList(_samplesKey) ??
@@ -606,8 +650,9 @@ class AppSettings extends ChangeNotifier {
       ..removeWhere((c) => c.toARGB32() == value.toARGB32())
       ..insert(0, value);
     if (_customColors.length > maxCustomColors) _customColors.removeLast();
-    _prefs.setStringList(_kCustomColors,
-        [for (final c in _customColors) c.toARGB32().toString()]);
+    _prefs.setStringList(_kCustomColors, [
+      for (final c in _customColors) c.toARGB32().toString(),
+    ]);
     notifyListeners();
   }
 

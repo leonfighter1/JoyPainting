@@ -12,43 +12,124 @@ import '../layers.dart';
 String layerTitle(S s, List<PaintingLayer> layers, PaintingLayer layer) =>
     layer.name.isNotEmpty ? layer.name : s.layerName(layers.indexOf(layer) + 1);
 
-/// The row at the top of the tools drawer (advanced level): the active
-/// layer and how many there are; a tap opens the layers.
-class LayersRow extends StatelessWidget {
-  const LayersRow({super.key, required this.drawing, required this.onOpen});
+/// The floating layers button (advanced level), next to the tools button
+/// until dragged elsewhere: the layer being drawn on and how many there
+/// are; a tap opens the layers. Fades away while the tools drawer is open,
+/// like the other floating buttons.
+class LayersButton extends StatelessWidget {
+  const LayersButton({
+    super.key,
+    required this.drawing,
+    required this.hide,
+    required this.onOpen,
+  });
 
   final DrawingController drawing;
+  final Animation<double> hide;
   final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
     final cute = CuteTheme.of(context);
-    return ListenableBuilder(
-      listenable: drawing,
-      builder: (context, _) {
-        final layers = drawing.layers;
-        return Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Material(
-            color: cute.spec.primary.withValues(alpha: 0.08),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
-            child: ListTile(
-              leading: Icon(Icons.layers_rounded, color: cute.spec.primary),
-              title: Text(s.layers,
-                  style: TextStyle(
-                      color: cute.ink, fontWeight: FontWeight.w800)),
-              subtitle: Text(
-                  s.layersButton(
-                      layerTitle(s, layers, drawing.active), layers.length),
-                  style: TextStyle(color: cute.ink)),
-              trailing: Icon(Icons.chevron_right_rounded, color: cute.ink),
-              onTap: onOpen,
+    final scheme = Theme.of(context).colorScheme;
+    return AnimatedBuilder(
+      animation: hide,
+      builder: (context, child) => IgnorePointer(
+        ignoring: hide.value > 0,
+        child: Opacity(opacity: 1 - hide.value, child: child),
+      ),
+      child: ListenableBuilder(
+        listenable: drawing,
+        builder: (context, _) {
+          final layers = drawing.layers;
+          final title = layerTitle(s, layers, drawing.active);
+          // excludeSemantics drops the InkWell's own tap action, so the
+          // action is given here.
+          return Semantics(
+            button: true,
+            label: '${s.layers}: ${s.layersButton(title, layers.length)}',
+            onTap: onOpen,
+            excludeSemantics: true,
+            child: Material(
+              color: scheme.surface,
+              elevation: 8,
+              shadowColor: cute.spec.primary.withValues(alpha: 0.4),
+              shape: StadiumBorder(
+                side: BorderSide(
+                  color: cute.spec.primary.withValues(alpha: 0.35),
+                  width: 1.5,
+                ),
+              ),
+              child: InkWell(
+                onTap: onOpen,
+                customBorder: const StadiumBorder(),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: scheme.primary,
+                        child: Icon(
+                          Icons.layers_rounded,
+                          color: scheme.onPrimary,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 110),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              s.layers,
+                              style: TextStyle(
+                                color: cute.ink,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                              ),
+                            ),
+                            Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: cute.ink, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      DecoratedBox(
+                        decoration: ShapeDecoration(
+                          color: cute.spec.primary.withValues(alpha: 0.15),
+                          shape: const StadiumBorder(),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          child: Text(
+                            '${layers.length}',
+                            style: TextStyle(
+                              color: cute.ink,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -60,14 +141,13 @@ Future<void> showLayerSheet(
   required DrawingController drawing,
   required Size paperSize,
   required ui.Image? Function(String layerId) thumbnail,
-}) =>
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) => LayerSheet(
-          drawing: drawing, paperSize: paperSize, thumbnail: thumbnail),
-    );
+}) => showModalBottomSheet<void>(
+  context: context,
+  showDragHandle: true,
+  isScrollControlled: true,
+  builder: (_) =>
+      LayerSheet(drawing: drawing, paperSize: paperSize, thumbnail: thumbnail),
+);
 
 /// The layers, top first: tap one to draw on it; drag to reorder; each can
 /// be shown or hidden, locked, renamed, merged down or deleted. Below the
@@ -98,7 +178,8 @@ class LayerSheet extends StatelessWidget {
         return SafeArea(
           child: ConstrainedBox(
             constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * 0.75),
+              maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -107,11 +188,14 @@ class LayerSheet extends StatelessWidget {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(s.layers,
-                            style: TextStyle(
-                                color: cute.ink,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800)),
+                        child: Text(
+                          s.layers,
+                          style: TextStyle(
+                            color: cute.ink,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
                       ),
                       FilledButton.tonalIcon(
                         icon: const Icon(Icons.add_rounded),
@@ -131,7 +215,9 @@ class LayerSheet extends StatelessWidget {
                     buildDefaultDragHandles: false,
                     itemCount: shown.length,
                     onReorderItem: (from, to) => drawing.moveLayer(
-                        shown[from].id, layers.length - 1 - to),
+                      shown[from].id,
+                      layers.length - 1 - to,
+                    ),
                     itemBuilder: (context, i) => _LayerTile(
                       key: ValueKey(shown[i].id),
                       index: i,
@@ -151,8 +237,10 @@ class LayerSheet extends StatelessWidget {
                     children: [
                       Tooltip(
                         message: s.layerOpacity,
-                        child: Icon(Icons.opacity_rounded,
-                            color: cute.spec.primary),
+                        child: Icon(
+                          Icons.opacity_rounded,
+                          color: cute.spec.primary,
+                        ),
                       ),
                       Expanded(
                         child: Slider(
@@ -162,17 +250,20 @@ class LayerSheet extends StatelessWidget {
                           semanticFormatterCallback: (v) =>
                               '${s.layerOpacity} ${s.percent(v)}',
                           // One undo for a whole drag.
-                          onChangeStart: (v) => drawing
-                              .updateLayer(active.copyWith(opacity: v)),
+                          onChangeStart: (v) =>
+                              drawing.updateLayer(active.copyWith(opacity: v)),
                           onChanged: (v) => drawing.updateLayer(
-                              drawing.active.copyWith(opacity: v),
-                              recordUndo: false),
+                            drawing.active.copyWith(opacity: v),
+                            recordUndo: false,
+                          ),
                         ),
                       ),
                       SizedBox(
                         width: 48,
-                        child: Text(s.percent(active.opacity),
-                            style: TextStyle(color: cute.ink)),
+                        child: Text(
+                          s.percent(active.opacity),
+                          style: TextStyle(color: cute.ink),
+                        ),
                       ),
                     ],
                   ),
@@ -209,8 +300,11 @@ class _LayerTile extends StatelessWidget {
   final Size paperSize;
 
   Future<void> _rename(BuildContext context) async {
-    final name = await showNameDialog(context,
-        title: S.of(context).renameLayer, initial: title);
+    final name = await showNameDialog(
+      context,
+      title: S.of(context).renameLayer,
+      initial: title,
+    );
     if (name != null) drawing.updateLayer(layer.copyWith(name: name));
   }
 
@@ -224,11 +318,13 @@ class _LayerTile extends StatelessWidget {
           content: Text(s.deleteLayerBody(title)),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(s.cancel)),
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(s.cancel),
+            ),
             FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(s.delete)),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(s.delete),
+            ),
           ],
         ),
       );
@@ -252,29 +348,37 @@ class _LayerTile extends StatelessWidget {
           index: index,
           child: _Thumbnail(image: image, paperSize: paperSize),
         ),
-        title: Text(title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                color: cute.ink,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w500)),
-        subtitle: Text(s.percent(layer.opacity),
-            style: TextStyle(color: cute.ink)),
+        title: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: cute.ink,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+          ),
+        ),
+        subtitle: Text(
+          s.percent(layer.opacity),
+          style: TextStyle(color: cute.ink),
+        ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
               tooltip: layer.visible ? s.hideLayer : s.showLayer,
-              icon: Icon(layer.visible
-                  ? Icons.visibility_rounded
-                  : Icons.visibility_off_rounded),
-              onPressed: () => drawing
-                  .updateLayer(layer.copyWith(visible: !layer.visible)),
+              icon: Icon(
+                layer.visible
+                    ? Icons.visibility_rounded
+                    : Icons.visibility_off_rounded,
+              ),
+              onPressed: () =>
+                  drawing.updateLayer(layer.copyWith(visible: !layer.visible)),
             ),
             IconButton(
               tooltip: layer.locked ? s.unlockLayer : s.lockLayer,
               icon: Icon(
-                  layer.locked ? Icons.lock_rounded : Icons.lock_open_rounded),
+                layer.locked ? Icons.lock_rounded : Icons.lock_open_rounded,
+              ),
               onPressed: () =>
                   drawing.updateLayer(layer.copyWith(locked: !layer.locked)),
             ),
@@ -285,7 +389,9 @@ class _LayerTile extends StatelessWidget {
                 PopupMenuItem(
                   value: () => _rename(context),
                   child: ListTile(
-                    leading: const Icon(Icons.drive_file_rename_outline_rounded),
+                    leading: const Icon(
+                      Icons.drive_file_rename_outline_rounded,
+                    ),
                     title: Text(s.renameLayer),
                   ),
                 ),

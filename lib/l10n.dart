@@ -239,6 +239,7 @@ class S {
 
   // Tools
   String get tools => _t('画笔', 'Brushes');
+  String get moreBrushes => _t('更多画笔', 'More brushes');
   String get colors => _t('颜料', 'Colors');
   String get brushSize => _t('笔刷大小', 'Brush size');
   String get pickColor => _t('选择颜色', 'Pick a color');

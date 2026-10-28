@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:jingyao_paint/drawing/canvas/shortcuts.dart'
+    show shortcutsListWidth;
 import 'package:jingyao_paint/drawing/canvas_page.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/gallery/painting_store.dart';
@@ -10,12 +12,14 @@ import 'package:jingyao_paint/onboarding_page.dart';
 import 'package:jingyao_paint/settings.dart';
 
 import 'test_helpers.dart';
-import 'widget_test.dart'
-    show drawStroke, inGallery, openTab, pumpApp;
+import 'widget_test.dart' show drawStroke, inGallery, openTab, pumpApp;
 
 /// Presses [key] with Ctrl (and Shift) held, as on a computer keyboard.
-Future<void> ctrl(WidgetTester tester, LogicalKeyboardKey key,
-    {bool shift = false}) async {
+Future<void> ctrl(
+  WidgetTester tester,
+  LogicalKeyboardKey key, {
+  bool shift = false,
+}) async {
   await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
   if (shift) await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
   await tester.sendKeyEvent(key);
@@ -26,8 +30,7 @@ Future<void> ctrl(WidgetTester tester, LogicalKeyboardKey key,
 
 void main() {
   group('Keyboard shortcuts', () {
-    testWidgets('Ctrl+Z undoes, Ctrl+Y and Ctrl+Shift+Z redo',
-        (tester) async {
+    testWidgets('Ctrl+Z undoes, Ctrl+Y and Ctrl+Shift+Z redo', (tester) async {
       final app = await pumpApp(tester);
       await drawStroke(tester);
       final drawing = app.session.drawing;
@@ -42,8 +45,9 @@ void main() {
       await tester.pump(const Duration(seconds: 1)); // autosave
     });
 
-    testWidgets('select all, copy, paste, duplicate, delete and Esc',
-        (tester) async {
+    testWidgets('select all, copy, paste, duplicate, delete and Esc', (
+      tester,
+    ) async {
       final app = await pumpApp(tester);
       await drawStroke(tester);
       final drawing = app.session.drawing;
@@ -57,11 +61,17 @@ void main() {
       await ctrl(tester, LogicalKeyboardKey.keyV);
       expect(drawing.strokes, hasLength(2), reason: 'pasted');
       final pasted = state.selected.value.single;
-      expect(pasted.bounds.topLeft - drawing.strokes.first.bounds.topLeft,
-          const Offset(24, 24), reason: 'a step down and right');
+      expect(
+        pasted.bounds.topLeft - drawing.strokes.first.bounds.topLeft,
+        const Offset(24, 24),
+        reason: 'a step down and right',
+      );
       await ctrl(tester, LogicalKeyboardKey.keyV);
-      expect(drawing.strokes, hasLength(3),
-          reason: 'pasting again adds another');
+      expect(
+        drawing.strokes,
+        hasLength(3),
+        reason: 'pasting again adds another',
+      );
 
       await ctrl(tester, LogicalKeyboardKey.keyD);
       expect(drawing.strokes, hasLength(4), reason: 'duplicated');
@@ -80,8 +90,9 @@ void main() {
       await tester.pump(const Duration(seconds: 1)); // autosave
     });
 
-    testWidgets('copied strokes can be pasted into another painting',
-        (tester) async {
+    testWidgets('copied strokes can be pasted into another painting', (
+      tester,
+    ) async {
       final app = await pumpApp(tester);
       await drawStroke(tester);
       await ctrl(tester, LogicalKeyboardKey.keyA);
@@ -94,8 +105,9 @@ void main() {
       await tester.pump(const Duration(seconds: 1)); // autosave
     });
 
-    testWidgets('letter keys pick tools, brackets change the size',
-        (tester) async {
+    testWidgets('letter keys pick tools, brackets change the size', (
+      tester,
+    ) async {
       final app = await pumpApp(tester);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
       await tester.pump();
@@ -128,8 +140,34 @@ void main() {
       expect(find.text('键盘快捷键'), findsOneWidget);
     });
 
-    testWidgets('keys do nothing to the paper while another tab is showing',
-        (tester) async {
+    testWidgets('the shortcut list is at least 500 wide, or fits a phone', (
+      tester,
+    ) async {
+      Future<double> listWidth(Size screen) async {
+        await pumpApp(tester, screen: screen);
+        await tester.sendKeyEvent(LogicalKeyboardKey.slash, character: '?');
+        await tester.pumpAndSettle();
+        final dialog = find.byKey(const ValueKey('shortcutsDialog'));
+        final box = tester.getRect(
+          find.descendant(of: dialog, matching: find.byType(Material)).first,
+        );
+        expect(box.left, greaterThanOrEqualTo(0));
+        expect(box.right, lessThanOrEqualTo(screen.width));
+        Navigator.of(tester.element(dialog)).pop();
+        await tester.pumpAndSettle();
+        return box.width;
+      }
+
+      expect(
+        await listWidth(const Size(1280, 800)),
+        greaterThanOrEqualTo(shortcutsListWidth),
+      );
+      expect(await listWidth(const Size(360, 640)), 360 - 2 * 16);
+    });
+
+    testWidgets('keys do nothing to the paper while another tab is showing', (
+      tester,
+    ) async {
       final app = await pumpApp(tester);
       await drawStroke(tester);
       await openTab(tester, 1);
@@ -150,11 +188,12 @@ void main() {
   });
 
   group('Copying a painting', () {
-    testWidgets('My Paintings makes a copy with its own name',
-        (tester) async {
+    testWidgets('My Paintings makes a copy with its own name', (tester) async {
       final app = await createTestApp();
       await app.store.save(
-          sampleDoc('a', DateTime(2026, 2, 1)).withName('小猫'), tinyPng);
+        sampleDoc('a', DateTime(2026, 2, 1)).withName('小猫'),
+        tinyPng,
+      );
       await pumpApp(tester, app: app);
       await openTab(tester, 1);
       await tester.tap(find.byType(PopupMenuButton<VoidCallback>).first);
@@ -163,10 +202,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(inGallery(find.text('小猫 副本')), findsOneWidget);
-      expect(inGallery(find.text('小猫')), findsOneWidget,
-          reason: 'the original stays');
-      final copy = (await app.store.list())
-          .firstWhere((m) => m.name == '小猫 副本');
+      expect(
+        inGallery(find.text('小猫')),
+        findsOneWidget,
+        reason: 'the original stays',
+      );
+      final copy = (await app.store.list()).firstWhere(
+        (m) => m.name == '小猫 副本',
+      );
       expect(copy.id, isNot('a'));
       final original = (await app.store.load('a'))!;
       final copied = (await app.store.load(copy.id))!;
@@ -174,8 +217,9 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
-    testWidgets('copying the open painting includes what was just drawn',
-        (tester) async {
+    testWidgets('copying the open painting includes what was just drawn', (
+      tester,
+    ) async {
       final app = await pumpApp(tester);
       await drawStroke(tester);
       final copy = await app.session.duplicate(app.session.id, 'copy');
@@ -188,10 +232,12 @@ void main() {
 
   group('Sample painting', () {
     testWidgets('each kid gets it once, in their language', (tester) async {
-      final app = await createTestApp(prefs: {
-        'flutter.level': 'beginner',
-        'flutter.samplesAdded': <String>[],
-      });
+      final app = await createTestApp(
+        prefs: {
+          'flutter.level': 'beginner',
+          'flutter.samplesAdded': <String>[],
+        },
+      );
       await app.session.restoreLast();
       var paintings = await app.store.list();
       expect([for (final m in paintings) m.name], ['快乐的一天']);
@@ -213,8 +259,9 @@ void main() {
       expect(paintings.where((m) => m.name == '快乐的一天'), isEmpty);
     });
 
-    testWidgets('a new install gets it after the setup, named in English',
-        (tester) async {
+    testWidgets('a new install gets it after the setup, named in English', (
+      tester,
+    ) async {
       final app = await createTestApp(fresh: true);
       await pumpApp(tester, app: app);
       expect(await app.store.list(), isEmpty, reason: 'not before the setup');
@@ -226,8 +273,9 @@ void main() {
   });
 
   group('Default kid name', () {
-    testWidgets('Athena in English, 靖瑶 in Chinese, until it is changed',
-        (tester) async {
+    testWidgets('Athena in English, 靖瑶 in Chinese, until it is changed', (
+      tester,
+    ) async {
       final app = await createTestApp(fresh: true);
       await pumpApp(tester, app: app);
       final field = find.byKey(OnboardingPage.nameFieldKey);
@@ -261,6 +309,9 @@ void main() {
 }
 
 extension on PaintingDoc {
-  PaintingDoc withName(String name) =>
-      PaintingDoc(meta: meta.copyWith(name: name), strokes: strokes, paper: paper);
+  PaintingDoc withName(String name) => PaintingDoc(
+    meta: meta.copyWith(name: name),
+    strokes: strokes,
+    paper: paper,
+  );
 }

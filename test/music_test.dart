@@ -141,12 +141,11 @@ void main() {
       player.start();
       addTearDown(player.dispose);
       await player.settled;
-      expect(app.engine.loop, isFalse, reason: 'moves on when a track ends');
       expect(app.settings.musicTrack,
           MusicLibrary.builtIn[math.Random(1).nextInt(5)].id);
     });
 
-    testWidgets('is quiet until switched on, then loops the chosen track',
+    testWidgets('is quiet until switched on, then plays the chosen track',
         (tester) async {
       final app = await createTestApp();
       app.settings.musicMode = MusicMode.repeatOne;

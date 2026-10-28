@@ -89,8 +89,11 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   /// Measured from the view and layout, never while building.
   void _updateCacheRatio() {
     if (!mounted) return;
-    _cacheRatio.value = cacheRatioFor(MediaQuery.devicePixelRatioOf(context),
-        _view.layout.scale, _view.zoom);
+    _cacheRatio.value = cacheRatioFor(
+      MediaQuery.devicePixelRatioOf(context),
+      _view.layout.scale,
+      _view.zoom,
+    );
   }
 
   /// The tools drawer: 0 = hidden, 1 = fully slid in.
@@ -175,8 +178,11 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   // --- Zoom and pan -------------------------------------------------------
 
   void _onFrameDown(PointerDownEvent e) => _view.fingerDown(
-      e.pointer, e.localPosition, e.position,
-      onPaper: _activePointer == e.pointer);
+    e.pointer,
+    e.localPosition,
+    e.position,
+    onPaper: _activePointer == e.pointer,
+  );
 
   void _onFrameMove(PointerMoveEvent e) =>
       _view.fingerMove(e.pointer, e.localPosition, e.position);
@@ -317,7 +323,8 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
       case CanvasCommand.turnRight || CanvasCommand.turnLeft:
         if (!_settings.level.rotation) return false;
         _view.rotateCenter(
-            (command == CanvasCommand.turnRight ? 1 : -1) * math.pi / 12);
+          (command == CanvasCommand.turnRight ? 1 : -1) * math.pi / 12,
+        );
       case CanvasCommand.picker:
         if (!_settings.level.allows(BrushType.picker)) return false;
         _settings.brush = BrushType.picker;
@@ -336,8 +343,11 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     paperWidth: () => widget.session.canvasSize.width,
     eraserCursor: _eraserCursor,
   );
-  late final _textTool =
-      TextTool(drawing: _drawing, settings: _settings, context: () => context);
+  late final _textTool = TextTool(
+    drawing: _drawing,
+    settings: _settings,
+    context: () => context,
+  );
   late final _moveTool = MoveTool(_selection);
   late final _panTool = PanTool(_view);
   late final _pickerTool = PickerTool(
@@ -354,11 +364,12 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     pixels: () {
       final size = widget.session.canvasSize;
       return paperPixels(
-          size: size,
-          paper: _drawing.paper,
-          painter: (canvas) => _paintKept(canvas, size),
-          // Browsers work it out on the screen's own thread: fewer pixels.
-          maxSide: kIsWeb ? 1024 : 2048);
+        size: size,
+        paper: _drawing.paper,
+        painter: (canvas) => _paintKept(canvas, size),
+        // Browsers work it out on the screen's own thread: fewer pixels.
+        maxSide: kIsWeb ? 1024 : 2048,
+      );
     },
   );
 
@@ -371,15 +382,23 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   /// The color seen at [at] on the paper, read from the kept pictures.
   Future<PaperSample> _samplePaper(Offset at) {
     final size = widget.session.canvasSize;
-    return PaperSampler.sample(at,
-        size: size,
-        paper: _drawing.paper,
-        painter: (canvas) => _paintKept(canvas, size));
+    return PaperSampler.sample(
+      at,
+      size: size,
+      paper: _drawing.paper,
+      painter: (canvas) => _paintKept(canvas, size),
+    );
   }
 
   /// Every shown layer, from the kept pictures (as on screen).
-  void _paintKept(Canvas canvas, Size size) => layerCache.paint(canvas, size,
-      _drawing.strokes, _drawing.layers, _drawing.paper, _cacheRatio.value);
+  void _paintKept(Canvas canvas, Size size) => layerCache.paint(
+    canvas,
+    size,
+    _drawing.strokes,
+    _drawing.layers,
+    _drawing.paper,
+    _cacheRatio.value,
+  );
 
   /// A screen position in the canvas stack's coordinates.
   Offset _onStage(Offset global) {
@@ -437,10 +456,9 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
 
   // --- Layers --------------------------------------------------------------
 
-  /// The layers row at the top of the tools drawer, at the advanced level.
-  Widget? get _layersRow => _settings.level.layers
-      ? LayersRow(drawing: _drawing, onOpen: _openLayers)
-      : null;
+  /// How big the tools button is, so the layers button can sit right above
+  /// (or below) it when they share a corner.
+  Size? _launcherSize;
 
   Future<void> _openLayers() {
     final size = widget.session.canvasSize;
@@ -448,8 +466,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
       context,
       drawing: _drawing,
       paperSize: size,
-      thumbnail: (id) =>
-          layerCache.imageOf(id, _drawing.strokesOn(id), size),
+      thumbnail: (id) => layerCache.imageOf(id, _drawing.strokesOn(id), size),
     );
   }
 
@@ -457,14 +474,21 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     final s = S.of(context);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-          content: Text(_drawing.active.visible ? s.layerLocked : s.layerHidden)));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            _drawing.active.visible ? s.layerLocked : s.layerHidden,
+          ),
+        ),
+      );
   }
 
   // --- Move tool: select, move, resize, turn ------------------------------
 
-  late final _selection =
-      SelectionController(drawing: _drawing, settings: _settings);
+  late final _selection = SelectionController(
+    drawing: _drawing,
+    settings: _settings,
+  );
 
   /// The strokes the move tool has selected, outlined on the paper.
   ValueNotifier<List<Stroke>> get selected => _selection.selected;
@@ -506,7 +530,8 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
     final f = selectionFrame.value;
     final paper = _paperBoxKey.currentContext?.findRenderObject();
     final stack = _stackKey.currentContext?.findRenderObject();
-    _barAnchor.value = f == null ||
+    _barAnchor.value =
+        f == null ||
             _selection.moving.value ||
             paper is! RenderBox ||
             stack is! RenderBox
@@ -560,23 +585,29 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
       messenger.showSnackBar(SnackBar(content: Text(s.photoUnreadable)));
       return;
     }
-    final topLeft =
-        paper.center(Offset.zero) - photo.size.center(Offset.zero);
+    final topLeft = paper.center(Offset.zero) - photo.size.center(Offset.zero);
     if (_settings.level.layers &&
         _drawing.layers.length < PaintingLayer.maxLayers) {
       final id = 'photo${DateTime.now().millisecondsSinceEpoch}';
       _drawing.addUnder(
         Stroke.photo(topLeft: topLeft, photo: photo, layer: id),
         newLayer: PaintingLayer(
-            id: id, name: s.photoLayer, opacity: 0.5, locked: true),
+          id: id,
+          name: s.photoLayer,
+          opacity: 0.5,
+          locked: true,
+        ),
       );
       messenger.showSnackBar(SnackBar(content: Text(s.photoAddedOnLayer)));
     } else {
-      _drawing.addUnder(Stroke.photo(
+      _drawing.addUnder(
+        Stroke.photo(
           topLeft: topLeft,
           photo: photo,
           opacity: 0.5,
-          layer: _drawing.newStrokeLayer));
+          layer: _drawing.newStrokeLayer,
+        ),
+      );
       messenger.showSnackBar(SnackBar(content: Text(s.photoAdded)));
     }
   }
@@ -592,23 +623,23 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
 
   /// The ☰ menu.
   Future<void> _openMenu() => showCanvasMenu(
-        context,
-        session: widget.session,
-        settings: _settings,
-        panMode: panMode,
-        hasPainting: _hasPainting,
-        onReplay: () => showReplay(context, widget.session.currentDoc()),
-        onShortcuts: () => showShortcutsDialog(context),
-        onPaperColor: _pickPaper,
-        onImportPhoto: _settings.level.photos ? _importPhoto : null,
-        onDefaultPaperSize: () {
-          _drawing.setPaperSize(null);
-          resetView();
-        },
-        onRename: _renamePainting,
-        onDelete: _confirmDeletePainting,
-        onSettings: widget.onOpenSettings,
-      );
+    context,
+    session: widget.session,
+    settings: _settings,
+    panMode: panMode,
+    hasPainting: _hasPainting,
+    onReplay: () => showReplay(context, widget.session.currentDoc()),
+    onShortcuts: () => showShortcutsDialog(context),
+    onPaperColor: _pickPaper,
+    onImportPhoto: _settings.level.photos ? _importPhoto : null,
+    onDefaultPaperSize: () {
+      _drawing.setPaperSize(null);
+      resetView();
+    },
+    onRename: _renamePainting,
+    onDelete: _confirmDeletePainting,
+    onSettings: widget.onOpenSettings,
+  );
 
   Future<void> _renamePainting() async {
     final s = S.of(context);
@@ -711,6 +742,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                 );
                 // The drawer opens from the side the tools button is on.
                 final fromLeft = _settings.toolsCorner.isLeft;
+                final layers = _settings.level.layers;
                 return Stack(
                   key: _stackKey,
                   children: [
@@ -758,29 +790,55 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                               s,
                               _selection,
                               onStyle: () => showSelectionStyleSheet(
-                                  context, _selection, _settings),
+                                context,
+                                _selection,
+                                _settings,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    // Undo/redo and the tools button can each be dragged to any
-                    // corner; they never share one.
+                    // Undo/redo, the tools button and the layers button can
+                    // each be dragged to any corner. Undo/redo never shares
+                    // one; the layers button sits above (or below) the tools
+                    // button when they share one.
                     CornerFloat(
                       key: undoFloatKey,
                       corner: _settings.undoCorner,
-                      blocked: _settings.toolsCorner,
+                      blocked: {
+                        _settings.toolsCorner,
+                        if (layers) _settings.layersCorner,
+                      },
                       area: area,
                       margin: margin,
                       onCornerChanged: (c) => _settings.undoCorner = c,
                       child: UndoRedoBar(drawing: _drawing, hide: slide),
                     ),
+                    if (layers)
+                      CornerFloat(
+                        key: layersFloatKey,
+                        corner: _settings.layersCorner,
+                        blocked: {_settings.undoCorner},
+                        area: area,
+                        margin: margin,
+                        stackOver: (c) => !locked && c == _settings.toolsCorner
+                            ? (_launcherSize?.height ?? 56) + 10
+                            : 0,
+                        onCornerChanged: (c) => _settings.layersCorner = c,
+                        child: LayersButton(
+                          drawing: _drawing,
+                          hide: slide,
+                          onOpen: _openLayers,
+                        ),
+                      ),
                     if (!locked)
                       CornerFloat(
                         key: toolsFloatKey,
                         corner: _settings.toolsCorner,
-                        blocked: _settings.undoCorner,
+                        blocked: {_settings.undoCorner},
                         area: area,
                         margin: margin,
+                        onSize: (size) => setState(() => _launcherSize = size),
                         onCornerChanged: (c) => _settings.toolsCorner = c,
                         child: ToolsLauncher(
                           key: toolsButtonKey,
@@ -803,7 +861,6 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                           onClose: _closeTools,
                           onTogglePin: _togglePaletteLock,
                           onMoreColors: _pickColor,
-                          top: _layersRow,
                         ),
                       ),
                   ],
@@ -820,7 +877,6 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
               onUnpin: _togglePaletteLock,
               onMore: _openTools,
               onMoreColors: _pickColor,
-              top: _layersRow,
             );
           },
         ),
@@ -842,6 +898,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
   static const toolsButtonKey = CanvasKeys.toolsButton;
   static const toolsFloatKey = CanvasKeys.toolsFloat;
   static const undoFloatKey = CanvasKeys.undoFloat;
+  static const layersFloatKey = CanvasKeys.layersFloat;
   static const toolsListKey = CanvasKeys.toolsList;
   static const selectionBarKey = CanvasKeys.selectionBar;
 
@@ -870,17 +927,19 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
             final room = constraints.biggest;
             _view.room = room;
             final drawn = _drawing.contentBounds;
-            final size = _drawing.paperSize ??
+            final size =
+                _drawing.paperSize ??
                 Size(
                   math.max(room.width, drawn.right),
                   math.max(room.height, drawn.bottom),
                 );
             widget.session.canvasSize = size;
-            final layout =
-                _view.layout = _resizer.held.value ?? fitPaper(room, size);
+            final layout = _view.layout =
+                _resizer.held.value ?? fitPaper(room, size);
             // The cache follows the paper's scale on screen, after this frame.
-            WidgetsBinding.instance
-                .addPostFrameCallback((_) => _updateCacheRatio());
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _updateCacheRatio(),
+            );
             final sheet = PaperSheet(
               size: size,
               layout: layout,
@@ -915,7 +974,9 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                 onPointerSignal: (e) {
                   if (e is PointerScrollEvent) {
                     _view.zoomAt(
-                        e.localPosition, math.exp(-e.scrollDelta.dy / 400));
+                      e.localPosition,
+                      math.exp(-e.scrollDelta.dy / 400),
+                    );
                   }
                 },
                 behavior: HitTestBehavior.translucent,
@@ -934,19 +995,26 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                 ValueListenableBuilder(
                   valueListenable: view,
                   // Grips sit on an upright paper's edges; none while turned.
-                  builder: (context, matrix, _) => rotationOf(matrix).abs() > 0.001
+                  builder: (context, matrix, _) =>
+                      rotationOf(matrix).abs() > 0.001
                       ? const SizedBox.shrink()
                       : PaperGrips(
-                    room: room,
-                    paperRect: MatrixUtils.transformRect(
-                        matrix, layout.corner & size * layout.scale),
-                    paperSize: size,
-                    floats: {_settings.toolsCorner, _settings.undoCorner},
-                    onDown: _resizer.start,
-                    onMove: _resizer.move,
-                    onUp: _resizer.end,
-                    onStep: _resizer.step,
-                  ),
+                          room: room,
+                          paperRect: MatrixUtils.transformRect(
+                            matrix,
+                            layout.corner & size * layout.scale,
+                          ),
+                          paperSize: size,
+                          floats: {
+                            _settings.toolsCorner,
+                            _settings.undoCorner,
+                            if (_settings.level.layers) _settings.layersCorner,
+                          },
+                          onDown: _resizer.start,
+                          onMove: _resizer.move,
+                          onUp: _resizer.end,
+                          onStep: _resizer.step,
+                        ),
                 ),
               ],
             );

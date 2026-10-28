@@ -61,8 +61,15 @@
 58. Never pass a Windows path (`$TEMP`, `C:\...`) to `awk -v`: awk reads backslashes as escapes and the path breaks silently. Use a forward-slash path (`/tmp/...`) and read it with `ENVIRON["NAME"]`, then check the inserted text landed.
 59. Release APKs are split per CPU type, which adds 4000 (x86_64), 2000 (arm64) or 1000 (armv7) to the version code. Build emulator APKs with `--split-per-abi` (or `tool\build_apk.ps1`); an unsplit APK has a lower code and fails to install over them as a downgrade.
 60. Every child of the canvas stacks must stay positioned (`Positioned`, `Positioned.fill`, `CornerFloat`), even when it shows nothing: a `Stack` with loose constraints sizes itself to its non-positioned children, so a builder returning `SizedBox.shrink()` collapses the paper area to 0×0 (NaN layout). Wrap the builder in the `Positioned`, not the other way round.
+61. When a new floating control goes on the paper, search the tests for strokes, drags and taps at fixed spots in its corner (on the 393×829 test phone too) and move them clear, so they don't land on the control.
 
 ## Log
+
+### 2026-10-28: Test strokes landed on the new layers button
+- **Symptom:** five selection tests failed after the layers button was added (a stroke missing, a box selecting the wrong strokes).
+- **Root cause:** the tests drew their third line at (250–330, 650) on the 393×829 test phone, exactly where the layers button now sits above the tools button; the drag went to the button, not the paper.
+- **Fix:** the line moved to (230–310, 560), clear of the corner controls.
+- **Rule:** 61.
 
 ### 2026-10-27: A hidden progress bar collapsed the paper to nothing
 - **Symptom:** every canvas test failed with `'height == null || !height.isNaN'` in `PaperSheet`'s Stack, thousands of times per test (a full widget_test run hit the 10-minute limit).

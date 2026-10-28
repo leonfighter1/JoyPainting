@@ -224,7 +224,7 @@ void main() {
       for (final (from, to) in [
         (const Offset(60, 300), const Offset(140, 300)),
         (const Offset(60, 400), const Offset(140, 400)),
-        (const Offset(250, 650), const Offset(330, 650)),
+        (const Offset(230, 560), const Offset(310, 560)),
       ]) {
         await tester.dragFrom(from, to - from);
         await tester.pump();
@@ -394,7 +394,7 @@ void main() {
         (tester) async {
       final app = await threeLines(tester);
       await boxSelectTwo(tester);
-      await tester.tapAt(const Offset(290, 650));
+      await tester.tapAt(const Offset(270, 560));
       await tester.pump();
       expect(page(tester).selected.value, [app.session.drawing.strokes[2]]);
       expect(find.text('已选 1 个'), findsOneWidget);

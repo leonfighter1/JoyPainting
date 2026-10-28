@@ -15,13 +15,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// A real 1x1 PNG, so code that expects image bytes gets valid ones.
 final tinyPng = base64Decode(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+);
 
 /// Thumbnails are faked because real PNG encoding never completes under the
 /// fake clock widget tests run on.
-Future<Uint8List> fakeThumbnailer(List<Stroke> strokes, Size size, Color paper,
-        List<PaintingLayer> layers) async =>
-    tinyPng;
+Future<Uint8List> fakeThumbnailer(
+  List<Stroke> strokes,
+  Size size,
+  Color paper,
+  List<PaintingLayer> layers,
+) async => tinyPng;
 
 class TestApp {
   TestApp(this.settings, this.backend, this.session);
@@ -32,13 +36,20 @@ class TestApp {
   final musicFiles = MemoryMusicFiles();
   late final music = MusicLibrary(musicFiles);
   final engine = FakeMusicEngine();
-  late final player =
-      BackgroundMusic(settings: settings, library: music, engine: engine);
+  late final player = BackgroundMusic(
+    settings: settings,
+    library: music,
+    engine: engine,
+  );
 
   /// The storage all kids' paintings share.
   late StoreBackend base;
   late final family = Family(
-      settings: settings, backend: base, session: session, music: music);
+    settings: settings,
+    backend: base,
+    session: session,
+    music: music,
+  );
 
   PaintingStore get store => session.store;
 }
@@ -56,6 +67,16 @@ const testDefaults = <String, Object>{
   // Most tests count what My Paintings shows; backup_test covers the
   // backup reminder.
   'flutter.backupReminders': false,
+  ...allSectionsOpen,
+};
+
+/// Every tools drawer section open, as before 5.4: most tests pick options
+/// from all of them. drawer_test covers which ones start closed.
+const allSectionsOpen = <String, Object>{
+  'flutter.toolSection.moreBrushes': true,
+  'flutter.toolSection.gradient': true,
+  'flutter.toolSection.lightAndShadow': true,
+  'flutter.toolSection.texture': true,
 };
 
 Future<TestApp> createTestApp({
@@ -64,7 +85,8 @@ Future<TestApp> createTestApp({
   bool fresh = false,
 }) async {
   SharedPreferences.setMockInitialValues(
-      fresh ? prefs : {...testDefaults, ...prefs});
+    fresh ? prefs : {...testDefaults, ...prefs},
+  );
   final settings = await AppSettings.load();
   final memory = MemoryStoreBackend();
   final base = backend ?? memory;
@@ -77,17 +99,17 @@ Future<TestApp> createTestApp({
 }
 
 Stroke sampleStroke({BrushType brush = BrushType.pen, Color? color}) => Stroke(
-      brush: brush,
-      color: color ?? const Color(0xFFFF5A5F),
-      size: 8,
-      usesRealPressure: false,
-      isComplete: true,
-      points: const [
-        PointVector(10, 10, 0.5),
-        PointVector(40, 25, 0.6),
-        PointVector(80, 60, 0.7),
-      ],
-    );
+  brush: brush,
+  color: color ?? const Color(0xFFFF5A5F),
+  size: 8,
+  usesRealPressure: false,
+  isComplete: true,
+  points: const [
+    PointVector(10, 10, 0.5),
+    PointVector(40, 25, 0.6),
+    PointVector(80, 60, 0.7),
+  ],
+);
 
 PaintingDoc sampleDoc(String id, DateTime created, {int strokes = 1}) =>
     PaintingDoc(
@@ -114,7 +136,6 @@ class FakeMusicEngine implements MusicEngine {
   final List<String> calls = [];
   MusicSource? source;
   double volume = 0;
-  bool loop = true;
   VoidCallback? _onComplete;
 
   @override
@@ -122,12 +143,6 @@ class FakeMusicEngine implements MusicEngine {
 
   /// The track playing reached its end.
   void finishTrack() => _onComplete?.call();
-
-  @override
-  Future<void> setLoop(bool loop) async {
-    this.loop = loop;
-    calls.add('loop:$loop');
-  }
 
   /// Makes the next [play] fail, like an unplayable file.
   bool failNext = false;
@@ -137,8 +152,7 @@ class FakeMusicEngine implements MusicEngine {
   bool hangNext = false;
 
   @override
-  Future<void> play(MusicSource source, double volume,
-      {bool loop = true}) async {
+  Future<void> play(MusicSource source, double volume) async {
     if (failNext) {
       failNext = false;
       throw Exception('cannot play');
@@ -149,7 +163,6 @@ class FakeMusicEngine implements MusicEngine {
     }
     this.source = source;
     this.volume = volume;
-    this.loop = loop;
     calls.add('play');
   }
 

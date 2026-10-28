@@ -18,8 +18,9 @@ enum Corner {
 }
 
 /// A control that floats in one corner of its Stack and can be dragged to
-/// another. On release it glides to the nearest corner that [blocked] (the
-/// other floating control's corner) isn't using, so two never overlap.
+/// another. On release it glides to the nearest corner not in [blocked]
+/// (the other floating controls' corners), so two never overlap; one that
+/// may share a corner keeps [stackOver] room beside the control there.
 ///
 /// Must be a direct child of a [Stack]. A plain tap still reaches [child]:
 /// dragging only starts once the finger actually moves.
@@ -32,10 +33,12 @@ class CornerFloat extends StatefulWidget {
     required this.onCornerChanged,
     required this.child,
     this.margin = const EdgeInsets.fromLTRB(16, 14, 16, 16),
+    this.stackOver,
+    this.onSize,
   });
 
   final Corner corner;
-  final Corner blocked;
+  final Set<Corner> blocked;
 
   /// The size of the Stack this floats in.
   final Size area;
@@ -44,6 +47,13 @@ class CornerFloat extends StatefulWidget {
 
   /// Space kept between the control and the area's edges.
   final EdgeInsets margin;
+
+  /// Extra space kept from the top or bottom edge in a corner, to sit above
+  /// (or below) another control there; none if null or 0.
+  final double Function(Corner corner)? stackOver;
+
+  /// Told the control's size whenever it changes.
+  final ValueChanged<Size>? onSize;
 
   @override
   State<CornerFloat> createState() => _CornerFloatState();
@@ -58,9 +68,10 @@ class _CornerFloatState extends State<CornerFloat> {
   Offset _cornerOrigin(Corner c, Size size) {
     final m = widget.margin;
     final a = widget.area;
+    final over = widget.stackOver?.call(c) ?? 0;
     return Offset(
       c.isLeft ? m.left : a.width - size.width - m.right,
-      c.isTop ? m.top : a.height - size.height - m.bottom,
+      c.isTop ? m.top + over : a.height - size.height - m.bottom - over,
     );
   }
 
@@ -68,7 +79,7 @@ class _CornerFloatState extends State<CornerFloat> {
     final center = topLeft + size.center(Offset.zero);
     final candidates = [
       for (final c in Corner.values)
-        if (c != widget.blocked) c,
+        if (!widget.blocked.contains(c)) c,
     ];
     candidates.sort(
       (a, b) => (_cornerOrigin(a, size) + size.center(Offset.zero) - center)
@@ -85,7 +96,9 @@ class _CornerFloatState extends State<CornerFloat> {
   Widget build(BuildContext context) {
     final measured = _Measure(
       onSize: (s) {
-        if (s != _size) setState(() => _size = s);
+        if (s == _size) return;
+        setState(() => _size = s);
+        widget.onSize?.call(s);
       },
       child: GestureDetector(
         onPanStart: (_) => setState(
@@ -106,11 +119,12 @@ class _CornerFloatState extends State<CornerFloat> {
     if (size == null) {
       // First frame: place by edges until the control's size is known.
       final m = widget.margin;
+      final over = widget.stackOver?.call(widget.corner) ?? 0;
       return Positioned(
         left: widget.corner.isLeft ? m.left : null,
         right: widget.corner.isLeft ? null : m.right,
-        top: widget.corner.isTop ? m.top : null,
-        bottom: widget.corner.isTop ? null : m.bottom,
+        top: widget.corner.isTop ? m.top + over : null,
+        bottom: widget.corner.isTop ? null : m.bottom + over,
         child: measured,
       );
     }

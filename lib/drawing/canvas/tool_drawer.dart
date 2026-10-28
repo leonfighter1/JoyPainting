@@ -6,12 +6,14 @@ import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 import '../../l10n.dart';
 import '../../settings.dart';
+import '../../skill_level.dart';
 import '../../theme/cute_theme.dart';
 import '../stroke.dart';
 import 'brush_tile.dart';
 import 'canvas_keys.dart';
 import 'color_widgets.dart';
 import 'palette_strip.dart';
+import 'tool_section.dart';
 
 /// The tools drawer that slides in from the side the tools button is on.
 class ToolDrawer extends StatelessWidget {
@@ -26,12 +28,8 @@ class ToolDrawer extends StatelessWidget {
     required this.onMoreColors,
     required this.onDrag,
     required this.onDragEnd,
-    this.top,
     super.key,
   });
-
-  /// Shown above the brushes (the layers row, at the advanced level).
-  final Widget? top;
 
   final AppSettings settings;
   final List<Color> palette;
@@ -111,7 +109,6 @@ class ToolDrawer extends StatelessWidget {
                 settings: settings,
                 palette: palette,
                 onMoreColors: onMoreColors,
-                top: top,
               ),
             ),
           ],
@@ -121,23 +118,21 @@ class ToolDrawer extends StatelessWidget {
   }
 }
 
-/// Brushes, colors, shapes, stamp shapes, size and opacity, as wrapped
-/// groups in a scrolling column inside the tools drawer.
+/// Brushes (the everyday ones, then the rest of the level's), colors with
+/// size and opacity right under them, shapes, stamp shapes, and the looks
+/// (gradient, light and shadow, texture), each a [ToolSection], in a
+/// scrolling column inside the tools drawer.
 class ToolPanel extends StatelessWidget {
   const ToolPanel({
     super.key,
     required this.settings,
     required this.palette,
     required this.onMoreColors,
-    this.top,
   });
 
   final AppSettings settings;
   final List<Color> palette;
   final VoidCallback onMoreColors;
-
-  /// Shown above the brushes.
-  final Widget? top;
 
   @override
   Widget build(BuildContext context) {
@@ -149,49 +144,57 @@ class ToolPanel extends StatelessWidget {
       for (final c in settings.customColors)
         if (!palette.any((p) => p.toARGB32() == c.toARGB32())) c,
     ];
-    Widget wrap(List<Widget> items) =>
-        Wrap(spacing: 0, runSpacing: 6, children: items);
-    Widget heading(String text) => Padding(
-      padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: cute.ink,
-          fontWeight: FontWeight.w800,
-          fontSize: 13,
-        ),
-      ),
+    final brushes = settings.level.brushes;
+    final everyday = [
+      for (final b in brushes)
+        if (SkillLevel.beginner.allows(b)) b,
+    ];
+    final more = [
+      for (final b in brushes)
+        if (!SkillLevel.beginner.allows(b)) b,
+    ];
+    Widget tile(BrushType b) => BrushTile(
+      brush: b,
+      label: s.brushName(b),
+      selected: brush == b,
+      onTap: () => settings.brush = b,
     );
+
+    /// [section]'s heading and, while it's open, its [items]. While it's
+    /// closed the heading shows what's [chosen] in it (or a [swatch]).
+    List<Widget> section(
+      ToolSection section,
+      String title,
+      List<Widget> items, {
+      String? chosen,
+      Color? swatch,
+    }) {
+      final open = section.isOpen(settings);
+      return [
+        SectionHeading(
+          key: ValueKey('section.${section.name}'),
+          title: title,
+          open: open,
+          chosen: chosen,
+          swatch: swatch,
+          onTap: () => settings.setSectionOpen(section.name, !open),
+        ),
+        if (open) Wrap(spacing: 0, runSpacing: 6, children: items),
+      ];
+    }
 
     return ListView(
       key: CanvasKeys.toolsList,
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
       children: [
-        ?top,
-        wrap([
-          for (final b in settings.level.brushes)
-            BrushTile(
-              brush: b,
-              label: s.brushName(b),
-              selected: brush == b,
-              onTap: () => settings.brush = b,
-            ),
-        ]),
-        // Only the options that apply: the eraser, rainbow and move tools
-        // ignore colors; the eraser, text and move tools draw no shapes.
-        if (brush.usesColor) ...[
-          heading(s.colors),
-          wrap([
-            MoreColorsButton(tooltip: s.moreColors, onTap: onMoreColors),
-            for (final c in [...custom, ...palette])
-              Swatch(
-                color: c,
-                label: s.colorLabel(c),
-                selected: c.toARGB32() == settings.color.toARGB32(),
-                onTap: () => settings.color = c,
-              ),
-          ]),
-        ],
+        ...section(ToolSection.brushes, s.tools, [
+          for (final b in everyday) tile(b),
+        ], chosen: everyday.contains(brush) ? s.brushName(brush) : null),
+        if (more.isNotEmpty)
+          ...section(ToolSection.moreBrushes, s.moreBrushes, [
+            for (final b in more) tile(b),
+          ], chosen: more.contains(brush) ? s.brushName(brush) : null),
+        // How to use the tool just picked, right under it.
         if (switch (brush) {
               BrushType.text => s.textHint,
               BrushType.move => s.moveHint,
@@ -203,7 +206,7 @@ class ToolPanel extends StatelessWidget {
             }
             case final hint?)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
                 const SizedBox(width: 4),
@@ -218,109 +221,23 @@ class ToolPanel extends StatelessWidget {
               ],
             ),
           ),
-        if (brush.usesShapes) ...[
-          heading(s.shapes),
-          wrap([
-            ToolChip(
-              icon: AppTheme.shapeIcon(null),
-              label: s.shapeName(null),
-              selected: settings.shape == null && !settings.freeShape,
-              onTap: () => settings.shape = null,
-            ),
-            if (settings.level.freeShape)
-              ToolChip(
-                icon: Icons.format_shapes_rounded,
-                label: s.freeShape,
-                selected: settings.freeShape,
-                onTap: () => settings.freeShape = true,
+        // Only the options that apply: the eraser, rainbow and move tools
+        // ignore colors; the eraser, text and move tools draw no shapes.
+        if (brush.usesColor)
+          ...section(ToolSection.colors, s.colors, [
+            MoreColorsButton(tooltip: s.moreColors, onTap: onMoreColors),
+            for (final c in [...custom, ...palette])
+              Swatch(
+                color: c,
+                label: s.colorLabel(c),
+                selected: c.toARGB32() == settings.color.toARGB32(),
+                onTap: () => settings.color = c,
               ),
-            for (final shape in ShapeKind.values)
-              ToolChip(
-                icon: AppTheme.shapeIcon(shape),
-                label: s.shapeName(shape),
-                selected: settings.shape == shape,
-                onTap: () => settings.shape = shape,
-              ),
-            ToolChip(
-              icon: Icons.format_color_fill_rounded,
-              label: s.fillShape,
-              selected: settings.fill,
-              // Only closed shapes can be filled.
-              enabled: settings.shape?.closed ?? false,
-              onTap: () => settings.fill = !settings.fill,
-            ),
-          ]),
-        ],
-        if (brush == BrushType.stamp) ...[
-          heading(s.brushName(BrushType.stamp)),
-          wrap([
-            for (final shape in StampShape.values)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  avatar: Icon(
-                    AppTheme.stampIcon(shape),
-                    size: 18,
-                    color: settings.stamp == shape
-                        ? cute.onColor(accent)
-                        : accent,
-                  ),
-                  label: Text(s.stampName(shape)),
-                  selected: settings.stamp == shape,
-                  showCheckmark: false,
-                  selectedColor: accent,
-                  labelStyle: TextStyle(
-                    color: settings.stamp == shape
-                        ? cute.onColor(accent)
-                        : cute.ink,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  onSelected: (_) => settings.stamp = shape,
-                ),
-              ),
-          ]),
-        ],
-        if (settings.level.gradients &&
-            brush.usesColor &&
-            brush.kind == BrushKind.outline) ...[
-          heading(s.gradient),
-          wrap([
-            for (final g in GradientStyle.values)
-              ToolChip(
-                icon: AppTheme.gradientIcon(g),
-                label: s.gradientName(g),
-                selected: settings.gradient == g,
-                onTap: () => settings.gradient = g,
-              ),
-          ]),
-        ],
-        if (settings.level.lightAndShadow && brush.usesColor) ...[
-          heading(s.lightAndShadow),
-          wrap([
-            for (final b in AppTheme.blends)
-              ToolChip(
-                icon: AppTheme.blendIcon(b),
-                label: s.blendName(b),
-                selected: settings.blend == b,
-                onTap: () => settings.blend = b,
-              ),
-          ]),
-        ],
-        if (settings.level.textures && brush.usesTexture) ...[
-          heading(s.texture),
-          wrap([
-            for (final t in StrokeTexture.values)
-              ToolChip(
-                icon: AppTheme.textureIcon(t),
-                label: s.textureName(t),
-                selected: settings.texture == t,
-                onTap: () => settings.texture = t,
-              ),
-          ]),
-        ],
-        // Size and opacity mean nothing to the move tool and the picker.
+          ], swatch: settings.color),
+        // Size and opacity right under the colors, always in reach. They
+        // mean nothing to the move tool and the picker.
         if (!brush.drawsNothing) ...[
-          const Divider(height: 28),
+          const SizedBox(height: 8),
           // The paint bucket has no size; it can close gaps in lines.
           if (brush == BrushType.bucket && settings.level.freeShape)
             Row(
@@ -347,30 +264,30 @@ class ToolPanel extends StatelessWidget {
               ],
             ),
           if (brush.usesSize)
-          Row(
-            children: [
-              SliderLabel(
-                icon: Icons.line_weight_rounded,
-                tooltip: s.brushSize,
-                color: accent,
-              ),
-              Expanded(
-                child: Slider(
-                  min: 1,
-                  max: 60,
-                  divisions: 59,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  value: settings.size.clamp(1, 60),
-                  label: settings.size.round().toString(),
-                  semanticFormatterCallback: (v) =>
-                      '${s.brushSize} ${v.round()}',
-                  activeColor: accent,
-                  onChanged: (v) => settings.size = v,
+            Row(
+              children: [
+                SliderLabel(
+                  icon: Icons.line_weight_rounded,
+                  tooltip: s.brushSize,
+                  color: accent,
                 ),
-              ),
-              SizePreview(settings: settings),
-            ],
-          ),
+                Expanded(
+                  child: Slider(
+                    min: 1,
+                    max: 60,
+                    divisions: 59,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    value: settings.size.clamp(1, 60),
+                    label: settings.size.round().toString(),
+                    semanticFormatterCallback: (v) =>
+                        '${s.brushSize} ${v.round()}',
+                    activeColor: accent,
+                    onChanged: (v) => settings.size = v,
+                  ),
+                ),
+                SizePreview(settings: settings),
+              ],
+            ),
           if (settings.level.opacity)
             Row(
               children: [
@@ -396,6 +313,126 @@ class ToolPanel extends StatelessWidget {
               ],
             ),
         ],
+        if (brush.usesShapes)
+          ...section(
+            ToolSection.shapes,
+            s.shapes,
+            [
+              ToolChip(
+                icon: AppTheme.shapeIcon(null),
+                label: s.shapeName(null),
+                selected: settings.shape == null && !settings.freeShape,
+                onTap: () => settings.shape = null,
+              ),
+              if (settings.level.freeShape)
+                ToolChip(
+                  icon: Icons.format_shapes_rounded,
+                  label: s.freeShape,
+                  selected: settings.freeShape,
+                  onTap: () => settings.freeShape = true,
+                ),
+              for (final shape in ShapeKind.values)
+                ToolChip(
+                  icon: AppTheme.shapeIcon(shape),
+                  label: s.shapeName(shape),
+                  selected: settings.shape == shape,
+                  onTap: () => settings.shape = shape,
+                ),
+              ToolChip(
+                icon: Icons.format_color_fill_rounded,
+                label: s.fillShape,
+                selected: settings.fill,
+                // Only closed shapes can be filled.
+                enabled: settings.shape?.closed ?? false,
+                onTap: () => settings.fill = !settings.fill,
+              ),
+            ],
+            chosen: settings.freeShape
+                ? s.freeShape
+                : settings.shape == null
+                ? null
+                : s.shapeName(settings.shape),
+          ),
+        if (brush == BrushType.stamp)
+          ...section(ToolSection.stamps, s.brushName(BrushType.stamp), [
+            for (final shape in StampShape.values)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  avatar: Icon(
+                    AppTheme.stampIcon(shape),
+                    size: 18,
+                    color: settings.stamp == shape
+                        ? cute.onColor(accent)
+                        : accent,
+                  ),
+                  label: Text(s.stampName(shape)),
+                  selected: settings.stamp == shape,
+                  showCheckmark: false,
+                  selectedColor: accent,
+                  labelStyle: TextStyle(
+                    color: settings.stamp == shape
+                        ? cute.onColor(accent)
+                        : cute.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  onSelected: (_) => settings.stamp = shape,
+                ),
+              ),
+          ], chosen: s.stampName(settings.stamp)),
+        if (settings.level.gradients &&
+            brush.usesColor &&
+            brush.kind == BrushKind.outline)
+          ...section(
+            ToolSection.gradient,
+            s.gradient,
+            [
+              for (final g in GradientStyle.values)
+                ToolChip(
+                  icon: AppTheme.gradientIcon(g),
+                  label: s.gradientName(g),
+                  selected: settings.gradient == g,
+                  onTap: () => settings.gradient = g,
+                ),
+            ],
+            chosen: settings.gradient == GradientStyle.none
+                ? null
+                : s.gradientName(settings.gradient),
+          ),
+        if (settings.level.lightAndShadow && brush.usesColor)
+          ...section(
+            ToolSection.lightAndShadow,
+            s.lightAndShadow,
+            [
+              for (final b in AppTheme.blends)
+                ToolChip(
+                  icon: AppTheme.blendIcon(b),
+                  label: s.blendName(b),
+                  selected: settings.blend == b,
+                  onTap: () => settings.blend = b,
+                ),
+            ],
+            chosen: settings.blend == StrokeBlend.normal
+                ? null
+                : s.blendName(settings.blend),
+          ),
+        if (settings.level.textures && brush.usesTexture)
+          ...section(
+            ToolSection.texture,
+            s.texture,
+            [
+              for (final t in StrokeTexture.values)
+                ToolChip(
+                  icon: AppTheme.textureIcon(t),
+                  label: s.textureName(t),
+                  selected: settings.texture == t,
+                  onTap: () => settings.texture = t,
+                ),
+            ],
+            chosen: settings.texture == StrokeTexture.none
+                ? null
+                : s.textureName(settings.texture),
+          ),
         const Divider(height: 28),
         Row(
           children: [
@@ -535,9 +572,7 @@ class SizePreview extends StatelessWidget {
   /// [g] as a box decoration's gradient, faded by [alpha].
   static Gradient _boxGradient(StrokeGradient g, double alpha) {
     Alignment at(Offset f) => Alignment(f.dx * 2 - 1, f.dy * 2 - 1);
-    final colors = [
-      for (final c in g.colors) c.withValues(alpha: c.a * alpha),
-    ];
+    final colors = [for (final c in g.colors) c.withValues(alpha: c.a * alpha)];
     return g.radial
         ? RadialGradient(
             center: at(g.from),
@@ -553,7 +588,6 @@ class SizePreview extends StatelessWidget {
           );
   }
 }
-
 
 /// The tools drawer sliding in over the paper from the side the tools
 /// button is on, over a dimmed backdrop that closes it. [progress] is the
@@ -571,11 +605,7 @@ class SlidingToolDrawer extends StatelessWidget {
     required this.onClose,
     required this.onTogglePin,
     required this.onMoreColors,
-    this.top,
   });
-
-  /// Shown above the brushes in the drawer.
-  final Widget? top;
 
   final AnimationController progress;
 
@@ -628,14 +658,13 @@ class SlidingToolDrawer extends StatelessWidget {
               onToggleLock: onTogglePin,
               onClose: onClose,
               onMoreColors: onMoreColors,
-              top: top,
               // Dragging the header back toward its edge closes it.
               onDrag: (dx) => progress.value -= (fromLeft ? -dx : dx) / width,
               onDragEnd: (velocity) =>
                   (fromLeft ? -velocity : velocity) > 300 ||
-                          progress.value < 0.6
-                      ? onClose()
-                      : onOpen(),
+                      progress.value < 0.6
+                  ? onClose()
+                  : onOpen(),
             ),
           ),
         ),
@@ -658,11 +687,7 @@ class PinnedPaletteLayout extends StatelessWidget {
     required this.onUnpin,
     required this.onMore,
     required this.onMoreColors,
-    this.top,
   });
-
-  /// Shown above the brushes in the panel.
-  final Widget? top;
 
   final Widget stage;
   final double availableWidth;
@@ -705,7 +730,6 @@ class PinnedPaletteLayout extends StatelessWidget {
         onToggleLock: onUnpin,
         onClose: onUnpin,
         onMoreColors: onMoreColors,
-        top: top,
         onDrag: (_) {},
         onDragEnd: (_) {},
       ),

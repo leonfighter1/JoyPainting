@@ -15,22 +15,30 @@ import 'layer_cache_test.dart' show maxDiff;
 import 'test_helpers.dart';
 import 'v3_test.dart' show box;
 import 'v4_test.dart' show line;
-import 'widget_test.dart' show drawStroke, openTools, pumpApp;
+import 'widget_test.dart' show drawStroke, pumpApp;
 
 const _size = Size(60, 40);
 
-Stroke red({String? layer}) =>
-    box(const Rect.fromLTWH(0, 0, 60, 40), const Color(0xFFFF0000))
-        .onLayer(layer ?? PaintingLayer.baseId);
+Stroke red({String? layer}) => box(
+  const Rect.fromLTWH(0, 0, 60, 40),
+  const Color(0xFFFF0000),
+).onLayer(layer ?? PaintingLayer.baseId);
 
 Stroke eraserAcross({String? layer}) => line(
-        const Offset(0, 20), const Offset(60, 20),
-        brush: BrushType.eraser, size: 10, color: Colors.black)
-    .onLayer(layer ?? PaintingLayer.baseId);
+  const Offset(0, 20),
+  const Offset(60, 20),
+  brush: BrushType.eraser,
+  size: 10,
+  color: Colors.black,
+).onLayer(layer ?? PaintingLayer.baseId);
 
 /// The RGB at (x, y) of [strokes] on [layers], over white paper.
 Future<List<int>> rgbAt(
-    List<Stroke> strokes, List<PaintingLayer> layers, int x, int y) async {
+  List<Stroke> strokes,
+  List<PaintingLayer> layers,
+  int x,
+  int y,
+) async {
   final raw = await renderRgba(strokes, _size, 1, layers: layers);
   final i = (y * raw.width + x) * 4;
   return raw.rgba.sublist(i, i + 3);
@@ -49,8 +57,11 @@ void main() {
       d.selectLayer(PaintingLayer.baseId);
       final under = box(const Rect.fromLTWH(5, 5, 5, 5), Colors.green);
       d.add(under);
-      expect(d.strokes.map((s) => s.layerId),
-          [PaintingLayer.baseId, PaintingLayer.baseId, top]);
+      expect(d.strokes.map((s) => s.layerId), [
+        PaintingLayer.baseId,
+        PaintingLayer.baseId,
+        top,
+      ]);
       d.undo();
       d.undo();
       d.undo();
@@ -80,8 +91,11 @@ void main() {
     test('only the active, shown and unlocked layer can be picked from', () {
       final d = DrawingController()..add(red());
       d.addLayer();
-      expect(d.hitStroke(const Offset(30, 20)), isNull,
-          reason: 'the red box is on another layer');
+      expect(
+        d.hitStroke(const Offset(30, 20)),
+        isNull,
+        reason: 'the red box is on another layer',
+      );
       d.selectLayer(PaintingLayer.baseId);
       expect(d.hitStroke(const Offset(30, 20)), isNotNull);
       d.updateLayer(d.active.copyWith(locked: true));
@@ -106,15 +120,21 @@ void main() {
       ];
       final doc = PaintingDoc(
         meta: sampleDoc('p', DateTime(2026)).meta,
-        strokes: [red(), red(layer: 'L2')],
+        strokes: [
+          red(),
+          red(layer: 'L2'),
+        ],
         layers: layers,
       );
       final back = PaintingDoc.decode(doc.encode());
       expect(back.layers, layers);
       expect(back.strokes.map((s) => s.layer), [null, 'L2']);
       final plain = PaintingDoc(meta: doc.meta, strokes: [red()]);
-      expect(plain.toJson().containsKey('layers'), isFalse,
-          reason: 'a one-layer painting saves as before');
+      expect(
+        plain.toJson().containsKey('layers'),
+        isFalse,
+        reason: 'a one-layer painting saves as before',
+      );
       expect(red().toJson().containsKey('layer'), isFalse);
     });
   });
@@ -125,64 +145,80 @@ void main() {
     test('the eraser cuts only into its own layer', () async {
       final strokes = [red(), eraserAcross(layer: 'L2')];
       expect(await rgbAt(strokes, layers, 30, 20), [255, 0, 0]);
-      expect(await rgbAt([red(), eraserAcross()], [PaintingLayer.base], 30, 20),
-          [255, 255, 255],
-          reason: 'on the same layer it does');
-    });
-
-    test('a hidden layer is not painted; a half see-through one is faded',
-        () async {
-      final strokes = [red(layer: 'L2')];
       expect(
-          await rgbAt(strokes,
-              [PaintingLayer.base, layers[1].copyWith(visible: false)], 30, 20),
-          [255, 255, 255]);
-      final faded = await rgbAt(
-          strokes, [PaintingLayer.base, layers[1].copyWith(opacity: 0.5)], 30, 20);
-      expect(faded[0], 255);
-      expect(faded[1], inInclusiveRange(125, 130));
+        await rgbAt([red(), eraserAcross()], [PaintingLayer.base], 30, 20),
+        [255, 255, 255],
+        reason: 'on the same layer it does',
+      );
     });
 
-    test('kept pictures, one per layer, look the same and are kept apart',
-        () async {
-      final see = [
-        PaintingLayer.base,
-        const PaintingLayer(id: 'L2', opacity: 0.6),
-      ];
-      final strokes = [
-        red(),
-        box(const Rect.fromLTWH(10, 10, 30, 20), Colors.blue).onLayer('L2'),
-        eraserAcross(layer: 'L2'),
-      ];
-      final cache = LayeredCache();
-      Future<Uint8List> viaCache(List<Stroke> s) async {
-        final recorder = ui.PictureRecorder();
-        final canvas = Canvas(recorder)
-          ..drawRect(Offset.zero & _size, Paint()..color = Colors.white);
-        cache.paint(canvas, _size, s, see, Colors.white, 1);
-        final image = await recorder.endRecording().toImage(60, 40);
-        final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-        return data!.buffer.asUint8List();
-      }
+    test(
+      'a hidden layer is not painted; a half see-through one is faded',
+      () async {
+        final strokes = [red(layer: 'L2')];
+        expect(
+          await rgbAt(
+            strokes,
+            [PaintingLayer.base, layers[1].copyWith(visible: false)],
+            30,
+            20,
+          ),
+          [255, 255, 255],
+        );
+        final faded = await rgbAt(
+          strokes,
+          [PaintingLayer.base, layers[1].copyWith(opacity: 0.5)],
+          30,
+          20,
+        );
+        expect(faded[0], 255);
+        expect(faded[1], inInclusiveRange(125, 130));
+      },
+    );
 
-      final cached = await viaCache(strokes);
-      final direct = (await renderRgba(strokes, _size, 1, layers: see)).rgba;
-      expect(maxDiff(cached, direct), lessThanOrEqualTo(2));
-      final before = cache.rebuilds;
-      await viaCache([
-        ...strokes,
-        box(const Rect.fromLTWH(0, 0, 5, 5), Colors.green).onLayer('L2'),
-      ]);
-      expect(cache.rebuilds, before, reason: 'added onto its layer only');
-    });
+    test(
+      'kept pictures, one per layer, look the same and are kept apart',
+      () async {
+        final see = [
+          PaintingLayer.base,
+          const PaintingLayer(id: 'L2', opacity: 0.6),
+        ];
+        final strokes = [
+          red(),
+          box(const Rect.fromLTWH(10, 10, 30, 20), Colors.blue).onLayer('L2'),
+          eraserAcross(layer: 'L2'),
+        ];
+        final cache = LayeredCache();
+        Future<Uint8List> viaCache(List<Stroke> s) async {
+          final recorder = ui.PictureRecorder();
+          final canvas = Canvas(recorder)
+            ..drawRect(Offset.zero & _size, Paint()..color = Colors.white);
+          cache.paint(canvas, _size, s, see, Colors.white, 1);
+          final image = await recorder.endRecording().toImage(60, 40);
+          final data = await image.toByteData(
+            format: ui.ImageByteFormat.rawRgba,
+          );
+          return data!.buffer.asUint8List();
+        }
+
+        final cached = await viaCache(strokes);
+        final direct = (await renderRgba(strokes, _size, 1, layers: see)).rgba;
+        expect(maxDiff(cached, direct), lessThanOrEqualTo(2));
+        final before = cache.rebuilds;
+        await viaCache([
+          ...strokes,
+          box(const Rect.fromLTWH(0, 0, 5, 5), Colors.green).onLayer('L2'),
+        ]);
+        expect(cache.rebuilds, before, reason: 'added onto its layer only');
+      },
+    );
   });
 
-  testWidgets('advanced: the layers row opens the layers; a new layer is '
+  testWidgets('advanced: the layers button opens the layers; a new layer is '
       'drawn on; a hidden one says why it can\'t be', (tester) async {
     final app = await pumpApp(tester);
-    await openTools(tester);
-    expect(find.byType(LayersRow), findsOneWidget);
-    await tester.tap(find.byType(LayersRow));
+    expect(find.byType(LayersButton), findsOneWidget);
+    await tester.tap(find.byType(LayersButton));
     await tester.pumpAndSettle();
     expect(find.byType(LayerSheet), findsOneWidget);
     await tester.tap(find.text('新建图层'));
@@ -195,8 +231,11 @@ void main() {
     expect(drawing.active.visible, isFalse);
     Navigator.of(tester.element(find.byType(LayerSheet))).pop();
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('收起画笔和颜色'));
-    await tester.pumpAndSettle();
+    expect(
+      find.text('图层 2'),
+      findsOneWidget,
+      reason: 'the button names the layer drawn on',
+    );
     await drawStroke(tester);
     expect(drawing.strokes, isEmpty);
     expect(find.text('这个图层隐藏了，先让它显示出来再画。'), findsOneWidget);
@@ -207,11 +246,10 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('below advanced there is no layers row', (tester) async {
+  testWidgets('below advanced there is no layers button', (tester) async {
     final app = await pumpApp(tester);
     app.settings.level = SkillLevel.intermediate;
     await tester.pumpAndSettle();
-    await openTools(tester);
-    expect(find.byType(LayersRow), findsNothing);
+    expect(find.byType(LayersButton), findsNothing);
   });
 }

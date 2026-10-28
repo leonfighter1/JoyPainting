@@ -1,5 +1,15 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-28: v5.4.0 (a tidier drawer, the layers button, quiet between tracks)
+- After pushing 5.3.0 and 5.3.1: 5.3.0's Web passed and its iOS run was cancelled by the 5.3.1 push; 5.3.1's Web and iOS both passed (live version.json 5.3.1+20).
+- Asked (while 5.3.1 was being finished): drawer groups that open and close, everyday ones open by default; size and opacity under the colors; layers as their own draggable button next to the tools button; a 3-second pause after each music track; a shortcut list at least 500 wide that fits small screens.
+- Done: `ToolSection`s with `SectionHeading`s (remembered per section; closed headings show what's picked), sliders under the colors and the tool tip under the brushes; `LayersButton` in its own `CornerFloat` (stacked above the tools button while sharing its corner, following it until dragged; `blocked` became a set); music plays each track once and `BackgroundMusic` waits `gap` before the next (also on repeat); the shortcut list's width. `ToolSection`/`SectionHeading` live in `canvas/tool_section.dart` so `tool_drawer.dart` stays at 744 lines.
+- Checked by eye: screenshots from a local test with the real fonts (`local_art/screens/shots_test.dart`, not in git): phone canvas with the layers button above the tools button, the drawer on a phone and a tablet as a new user sees it, the shortcut list on a tablet and a 360×640 phone.
+- Mistakes: MISTAKES rule 61 (test strokes drawn where the new layers button now sits).
+- Harness: PASS (analyze 0 issues, 397 tests, build web ok).
+- Not tested: on a real phone or tablet (see DEVICE_CHECKLIST.md); the 3-second pause with real audio (the end of a track is reported by the player, as before).
+- Next: from the plan, background cache rebuilds and replay keyframes (measure first).
+
 ## 2026-10-28: v5.3.1 (the plan's leftovers)
 - Asked: check for unfinished items, then do them. Found five planned details left out (TECH_PLAN section 5, "剩余"); did the first three.
 - Done: a 照片也放进去 switch in the download and send format sheets (pictures without the photo; `.jypaint` keeps it); in a browser, Settings says whether the browser promised to keep the paintings, with a button that asks it to (`navigator.storage.persist()`); `docs/appdev/DEVICE_CHECKLIST.md` for real-device checks after each release.
