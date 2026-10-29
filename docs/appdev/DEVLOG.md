@@ -11,6 +11,10 @@
 - Mistakes: MISTAKES rules 73 (a layer's bounds clip) and 74 (browser tests here).
 - Harness: PASS (analyze 0 issues, 435 tests, build web ok).
 - Not tested: on a real device (share sheet with an SVG, a see-through PNG in the photo gallery); opening the SVG in Illustrator or Inkscape (only Chrome here).
+- After pushing (`bb65879`): both checks failed, and the site stayed at 6.3.0.
+  - Web: the new browser test failed ("4 tests passed, 1 failed"; the log needs a sign-in). A web build of the same export run in headless Chrome here had everything, including the letter outlines. So the test browser most likely can't load the font files. The test now accepts the words as outlines or as text, and prints what it found as a notice (MISTAKES rule 74).
+  - iOS: the iPhone simulator had the app "not running" 30 s after launch, with no crash report and ordinary log lines. This is the same as at 4.1.0 and 6.1.0, which passed when rerun; nothing in 6.4.0 runs at start. It runs again with the fix.
+- The user found the first logo had no character, so I made a second (`local_art/logo/liyang_logo2_test.dart`). 丽 from 黄油体's own outlines hangs on a wire hanger: its 一 is the hanger's bar. A tape measure goes round the garment's waist (bespoke means measured), and its end flies up (扬, with twists showing its back). A crooked red 定制 seal signs it. Ink black, tape yellow and vermilion; the name in 黄油体, the English line in 快乐体. Fixed while looking: a hanger like a pot lid (now wire), a hook floating off the shoulders, a seal cutting off 制, the tape's flag-like end.
 - Next: the remaining TECH_PLAN items.
 
 ## 2026-10-29: v6.3.0 (samples by choice, a coloring book for each level, clearer icons)

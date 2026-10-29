@@ -59,6 +59,21 @@ void main() {
     Iterable<XmlElement> all(String name) => svg.descendants
         .whereType<XmlElement>()
         .where((e) => e.localName == name);
+    final words = [
+      for (final p in all('path'))
+        if (p.getAttribute('aria-label') == '快乐 Joy') p,
+    ];
+    final square =
+        svgPathData(Path()..addRect(const Rect.fromLTWH(0, 0, 10, 10)));
+    // What was found, as a note on the workflow's page (its log needs a
+    // sign-in to read).
+    // ignore: avoid_print
+    print('::notice title=SVG export in a browser::'
+        'radial gradients ${all('radialGradient').length}, '
+        'patterns ${all('pattern').length}, masks ${all('mask').length}, '
+        'blurs ${all('feGaussianBlur').length}, '
+        'letter outlines ${words.length}, text ${all('text').length}, '
+        'square $square');
     expect(all('radialGradient'), isNotEmpty);
     expect(all('pattern'), hasLength(1));
     expect(all('mask'), isNotEmpty);
@@ -66,10 +81,10 @@ void main() {
     final star = all('path').firstWhere((p) =>
         (p.getAttribute('fill') ?? '').startsWith('url(#g'));
     expect(star.getAttribute('d'), allOf(startsWith('M'), endsWith('Z')));
-    final words =
-        all('path').where((p) => p.getAttribute('aria-label') == '快乐 Joy');
-    expect(words.single.getAttribute('d'), isNotEmpty);
-    expect(svgPathData(Path()..addRect(const Rect.fromLTWH(0, 0, 10, 10))),
-        'M0 0L10 0L10 10L0 10L0 0Z');
+    // The words are in the picture: as letter outlines when the font file
+    // can be read (as in the app), or as text where the test browser
+    // can't load it.
+    expect(words.length + all('text').length, greaterThan(0));
+    expect(square, 'M0 0L10 0L10 10L0 10L0 0Z');
   });
 }

@@ -74,14 +74,14 @@
 71. Any centered Column that shows text (empty states, hints) must scroll when it doesn't fit; adding a button or lengthening a hint above it can push it past a small phone's height with big text.
 72. For art drawn from code (coloring pages, samples), choose subjects whose shapes code can get right (architecture, patterns, stylized nature); render each one and judge it whole and at zoom before keeping it, and replace it rather than patch it when the proportions are wrong.
 73. A `saveLayer`'s bounds clip what is painted on it. Code that copies Flutter painting into another format (the SVG canvas) must clip to them too, at least for pictures, which can reach past a stroke; compare its output with Flutter's own render, not just its structure.
-74. `flutter test --platform chrome` doesn't run on this PC: every browser test file, even the old `web_store_test.dart`, waits about 10 minutes and fails with "Connection closed before test suite loaded". Don't spend time on it here; put browser-only tests in the Web workflow and read their result there.
+74. `flutter test --platform chrome` doesn't run on this PC: every browser test file, even the old `web_store_test.dart`, waits about 10 minutes and fails with "Connection closed before test suite loaded". Don't spend time on it here. To check web code here, build a small page with `flutter build web -t <file> --no-web-resources-cdn` that prints its findings, serve it (`local_art/svg_check/serve.js`) and read the prints from headless Chrome (`--enable-logging=stderr --virtual-time-budget=30000 --dump-dom`), as `local_art/svg_check/web_main.dart` does. Browser-only tests still go in the Web workflow; have them print a `::notice::` line with what they found, since its log needs a sign-in.
 
 ## Log
 
 ### 2026-10-29: Browser tests never loaded on this PC
 - **Symptom:** `flutter test --platform chrome` on the new `svg_web_test.dart` (and on the whole SVG test file) waited about 10 minutes, then failed with "Connection closed before test suite loaded". The old `web_store_test.dart`, which passes in CI, failed the same way.
 - **Root cause:** this PC's set-up for running tests in Chrome, not the tests (not looked into further).
-- **Fix:** the new browser test runs in the Web workflow next to `web_store_test.dart`.
+- **Fix:** the new browser test runs in the Web workflow next to `web_store_test.dart`. There it failed ("4 tests passed, 1 failed", no details without a sign-in). The same export in a real web build of a check page, in headless Chrome here, had everything: letter outlines from the font, gradients, the texture pattern, masks, blur, an exact square. The likely difference is that the test browser can't load the app's font files, so the letters were written as text; the test now accepts either and prints what it found as a notice.
 - **Rule:** 74.
 
 ### 2026-10-29: The blender showed its whole blurred picture in the SVG
