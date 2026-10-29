@@ -63,18 +63,23 @@ String _layerName(PaintingLayer layer, int index) =>
 
 final _fontFiles = <String, Future<FontOutlines?>>{};
 
-/// The letter shapes of the bundled font [family], read once.
-Future<FontOutlines?> _outlines(String family) =>
-    _fontFiles[family] ??= () async {
-      final asset = [
-        for (final f in kFonts)
-          if (f.family == family) f.fileAsset,
-      ].firstOrNull;
-      if (asset == null) return null;
-      try {
-        return FontOutlines.parse(await rootBundle.load(asset));
-      } catch (e) {
-        debugPrint('Font $family not read for SVG: $e');
-        return null;
-      }
-    }();
+/// The letter shapes of the bundled font [family], read once. A font file
+/// that can't be read, or doesn't arrive within 10 seconds, leaves its
+/// letters as text rather than holding the export up (and is tried again
+/// next time).
+Future<FontOutlines?> _outlines(String family) async {
+  final asset = [
+    for (final f in kFonts)
+      if (f.family == family) f.fileAsset,
+  ].firstOrNull;
+  if (asset == null) return null;
+  final read = _fontFiles[family] ??=
+      rootBundle.load(asset).then(FontOutlines.parse);
+  try {
+    return await read.timeout(const Duration(seconds: 10));
+  } catch (e) {
+    _fontFiles.remove(family);
+    debugPrint('Font $family not read for SVG: $e');
+    return null;
+  }
+}

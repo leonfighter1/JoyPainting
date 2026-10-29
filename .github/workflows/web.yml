@@ -50,7 +50,7 @@ jobs:
           set +e
           flutter test --platform chrome test/web_store_test.dart test/svg_web_test.dart 2>&1 | tee browser-tests.log
           status=${PIPESTATUS[0]}
-          grep -E "\[E\]|Expected|Actual|Which|Error|Exception|Unsupported|SVG text" browser-tests.log \
+          grep -E "\[E\]|❌|Expected|Actual|Which|Error|Exception|Unsupported|SVG text" browser-tests.log \
             | head -n 30 | while IFS= read -r line; do
               echo "::warning::${line:0:400}"
             done
