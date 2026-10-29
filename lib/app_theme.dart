@@ -16,18 +16,22 @@ const kFonts = [
     family: 'ZCOOLKuaiLe',
     names: {'zh': '快乐体', 'en': 'KuaiLe (happy)'},
     licenseAsset: 'assets/fonts/zcoolkuaile/OFL.txt',
+    fileAsset: 'assets/fonts/zcoolkuaile/ZCOOLKuaiLe-Regular.ttf',
   ),
   CuteFont(
     id: 'huangyou',
     family: 'ZCOOLQingKeHuangYou',
     names: {'zh': '黄油体', 'en': 'HuangYou (chubby)'},
     licenseAsset: 'assets/fonts/zcoolqingkehuangyou/OFL.txt',
+    fileAsset:
+        'assets/fonts/zcoolqingkehuangyou/ZCOOLQingKeHuangYou-Regular.ttf',
   ),
   CuteFont(
     id: 'longcang',
     family: 'LongCang',
     names: {'zh': '手写体', 'en': 'LongCang (handwritten)'},
     licenseAsset: 'assets/fonts/longcang/OFL.txt',
+    fileAsset: 'assets/fonts/longcang/LongCang-Regular.ttf',
   ),
   CuteFont.system,
 ];

@@ -17,18 +17,21 @@ IconData _formatIcon(ExportFormat f) => switch (f) {
   ExportFormat.png => Icons.image_rounded,
   ExportFormat.jpg => Icons.photo_rounded,
   ExportFormat.pdf => Icons.picture_as_pdf_rounded,
+  ExportFormat.svg => Icons.polyline_rounded,
   ExportFormat.painting => Icons.brush_rounded,
 };
 
 /// A sheet listing [formats] under [title] (and [hint]); the one tapped,
 /// or null if the sheet was closed. With [photos], a switch above the
-/// formats sets whether pictures include the painting's photos.
+/// formats sets whether pictures include the painting's photos. With [paper],
+/// another sets whether PNG and SVG pictures keep the paper's color.
 Future<ExportFormat?> pickExportFormat(
   BuildContext context, {
   required String title,
   String? hint,
   List<ExportFormat> formats = ExportFormat.values,
   ValueNotifier<bool>? photos,
+  ValueNotifier<bool>? paper,
 }) {
   final s = S.of(context);
   return showModalBottomSheet<ExportFormat>(
@@ -70,6 +73,21 @@ Future<ExportFormat?> pickExportFormat(
                     onChanged: (v) => photos.value = v,
                   ),
                 ),
+              if (paper != null)
+                ValueListenableBuilder<bool>(
+                  valueListenable: paper,
+                  builder: (context, on, _) => SwitchListTile(
+                    key: const ValueKey('exportPaper'),
+                    secondary: Icon(
+                      Icons.texture_rounded,
+                      color: cute.spec.primary,
+                    ),
+                    title: Text(s.exportPaper),
+                    subtitle: Text(s.exportPaperHint),
+                    value: on,
+                    onChanged: (v) => paper.value = v,
+                  ),
+                ),
               for (final f in formats)
                 ListTile(
                   leading: CircleAvatar(
@@ -95,20 +113,27 @@ Future<ExportFormat?> pickExportFormat(
 ValueNotifier<bool>? _photoChoice(PaintingDoc doc) =>
     hasPhoto(doc) ? ValueNotifier(true) : null;
 
-/// Downloads [doc] as a PNG, JPG or PDF, as the user picks: a download in
-/// the browser; in the apps, pictures go to the photo gallery and a PDF to
-/// the share sheet (Save to Files…).
+/// Downloads [doc] as a PNG, JPG, PDF or SVG, as the user picks: a
+/// download in the browser; in the apps, pictures go to the photo gallery,
+/// and a PDF or SVG to the share sheet (Save to Files…).
 Future<void> downloadPainting(BuildContext context, PaintingDoc doc) async {
   final s = S.of(context);
   final messenger = ScaffoldMessenger.of(context);
   final origin = shareOrigin(context);
   final photos = _photoChoice(doc);
+  final paper = ValueNotifier(true);
   final format = await pickExportFormat(
     context,
     title: s.downloadAs,
     hint: kIsWeb ? null : s.downloadHintApps,
-    formats: const [ExportFormat.png, ExportFormat.jpg, ExportFormat.pdf],
+    formats: const [
+      ExportFormat.png,
+      ExportFormat.jpg,
+      ExportFormat.pdf,
+      ExportFormat.svg,
+    ],
     photos: photos,
+    paper: paper,
   );
   if (format == null) return;
   try {
@@ -116,11 +141,12 @@ Future<void> downloadPainting(BuildContext context, PaintingDoc doc) async {
       doc,
       format,
       photos: photos?.value ?? true,
+      paper: paper.value,
     );
     if (kIsWeb) {
       downloadInBrowser(file.bytes, file.name, file.mimeType);
       messenger.showSnackBar(SnackBar(content: Text(s.downloaded(file.name))));
-    } else if (format == ExportFormat.pdf) {
+    } else if (format == ExportFormat.pdf || format == ExportFormat.svg) {
       await deliverExport(file, origin);
     } else {
       await saveImage(
@@ -142,11 +168,13 @@ Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
   final messenger = ScaffoldMessenger.of(context);
   final origin = shareOrigin(context);
   final photos = _photoChoice(doc);
+  final paper = ValueNotifier(true);
   final format = await pickExportFormat(
     context,
     title: s.sendAs,
     hint: kIsWeb ? s.sendHintWeb : null,
     photos: photos,
+    paper: paper,
   );
   if (format == null) return;
   try {
@@ -154,6 +182,7 @@ Future<void> showSendSheet(BuildContext context, PaintingDoc doc) async {
       doc,
       format,
       photos: photos?.value ?? true,
+      paper: paper.value,
     );
     if (kIsWeb) {
       final result = await sendFromBrowser(

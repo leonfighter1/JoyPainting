@@ -40,9 +40,10 @@ jobs:
 
       - run: flutter pub get
 
-      # Saving paintings in the browser (IndexedDB) only runs in a browser.
-      - name: Browser storage tests (Chrome)
-        run: flutter test --platform chrome test/web_store_test.dart
+      # Saving paintings in the browser (IndexedDB), and the SVG export with
+      # the web engine measuring paths and text, only run in a browser.
+      - name: Browser tests (Chrome)
+        run: flutter test --platform chrome test/web_store_test.dart test/svg_web_test.dart
 
       # The rendering engine (CanvasKit) is served from this site too, not
       # from Google's CDN, so the app loads wherever GitHub Pages does.

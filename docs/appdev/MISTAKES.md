@@ -73,8 +73,22 @@
 70. Write new code files with the Write tool and change them with the Edit tool; never pass more than a few lines of code through a shell command (`node -e`, heredocs): one apostrophe in a comment breaks the whole command.
 71. Any centered Column that shows text (empty states, hints) must scroll when it doesn't fit; adding a button or lengthening a hint above it can push it past a small phone's height with big text.
 72. For art drawn from code (coloring pages, samples), choose subjects whose shapes code can get right (architecture, patterns, stylized nature); render each one and judge it whole and at zoom before keeping it, and replace it rather than patch it when the proportions are wrong.
+73. A `saveLayer`'s bounds clip what is painted on it. Code that copies Flutter painting into another format (the SVG canvas) must clip to them too, at least for pictures, which can reach past a stroke; compare its output with Flutter's own render, not just its structure.
+74. `flutter test --platform chrome` doesn't run on this PC: every browser test file, even the old `web_store_test.dart`, waits about 10 minutes and fails with "Connection closed before test suite loaded". Don't spend time on it here; put browser-only tests in the Web workflow and read their result there.
 
 ## Log
+
+### 2026-10-29: Browser tests never loaded on this PC
+- **Symptom:** `flutter test --platform chrome` on the new `svg_web_test.dart` (and on the whole SVG test file) waited about 10 minutes, then failed with "Connection closed before test suite loaded". The old `web_store_test.dart`, which passes in CI, failed the same way.
+- **Root cause:** this PC's set-up for running tests in Chrome, not the tests (not looked into further).
+- **Fix:** the new browser test runs in the Web workflow next to `web_store_test.dart`.
+- **Rule:** 74.
+
+### 2026-10-29: The blender showed its whole blurred picture in the SVG
+- **Symptom:** in Chrome's rendering of the exported SVG, the blender stroke was right, but a blurred band of what was under it showed above and below the stroke, cutting the colored bars there.
+- **Root cause:** the blender draws a blurred picture of a region bigger than the stroke into a layer bounded by the stroke, then masks it. Flutter clips a layer to its bounds; the SVG canvas treated the bounds as a hint, so the parts of the picture outside the stroke's box showed.
+- **Fix:** pictures are clipped to their layer's region (`drawImageRect` in `svg_canvas.dart`). Found by comparing headless Chrome's rendering with the app's PNG pixel by pixel; the structure checks had passed.
+- **Rule:** 73.
 
 ### 2026-10-29: Long code in shell commands broke on quotes
 - **Symptom:** twice a Bash command adding several hundred lines of Dart (a `node -e` script, then a `cat <<'EOF'` heredoc) failed with "unexpected EOF while looking for matching `''", and nothing was written.

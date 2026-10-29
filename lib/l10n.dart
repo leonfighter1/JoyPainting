@@ -243,8 +243,12 @@ class S {
   String get exportPhotos => _t('照片也放进去', 'Include the photo');
   String get exportPhotosHint => _t('关掉后，图片和 PDF 里只有画的部分',
       'When off, pictures and PDFs show only what was drawn');
-  String get downloadHintApps => _t('PNG 和 JPG 存进相册；PDF 在分享菜单里存到文件。',
-      'PNG and JPG go to your photos; save a PDF to Files from the share menu.');
+  String get exportPaper => _t('带上纸的颜色', 'Keep the paper color');
+  String get exportPaperHint => _t('关掉后，PNG 和 SVG 的背景是透明的，适合做 Logo',
+      'When off, PNG and SVG get a see-through background, good for logos');
+  String get downloadHintApps => _t(
+      'PNG 和 JPG 存进相册；PDF 和 SVG 在分享菜单里存到文件。',
+      'PNG and JPG go to your photos; save a PDF or SVG to Files from the share menu.');
   String get clearTitle => _t('清空画布？', 'Clear canvas?');
   String get clearBody =>
       _t('清空后可以用“撤销”找回。', 'You can bring it back with Undo.');
@@ -365,12 +369,15 @@ class S {
         'png' => _t('图片（PNG）', 'Image (PNG)'),
         'jpg' => _t('图片（JPG）', 'Image (JPG)'),
         'pdf' => _t('PDF 文档', 'PDF document'),
+        'svg' => _t('矢量图（SVG）', 'Vector picture (SVG)'),
         _ => _t('画作文件（可继续画）', 'Painting file (editable)'),
       };
   String formatHint(String format) => switch (format) {
         'png' => _t('清晰无损，适合收藏', 'Sharpest quality'),
         'jpg' => _t('文件更小，适合聊天发送', 'Smaller, good for chat apps'),
         'pdf' => _t('适合打印或发邮件', 'Good for printing or email'),
+        'svg' => _t('放大多少倍都清晰，适合做 Logo 和印刷',
+            'Sharp at any size: good for logos and printing'),
         _ => _t('对方装了快乐涂鸦，打开就能继续画',
             'Opens in JoyPainting to keep drawing'),
       };

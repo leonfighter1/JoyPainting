@@ -7,6 +7,7 @@ import 'package:perfect_freehand/perfect_freehand.dart';
 import 'brush_type.dart';
 import 'layers.dart';
 import 'photos.dart';
+import 'render/vector_hooks.dart';
 import 'shape_kind.dart';
 import 'stroke_style.dart';
 import 'stroke_texture.dart';

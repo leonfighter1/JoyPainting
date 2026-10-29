@@ -6,6 +6,7 @@ class CuteFont {
     required this.family,
     required this.names,
     this.licenseAsset,
+    this.fileAsset,
   });
 
   final String id;
@@ -17,6 +18,10 @@ class CuteFont {
   /// The font's license text (for example its OFL.txt), shown on the
   /// licenses page.
   final String? licenseAsset;
+
+  /// The font file itself, so exported pictures can draw its letters as
+  /// shapes; null for the platform font.
+  final String? fileAsset;
 
   static const system = CuteFont(
     id: 'system',

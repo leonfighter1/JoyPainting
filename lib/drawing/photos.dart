@@ -39,6 +39,11 @@ class StrokePhoto {
 abstract final class Photos {
   static final _images = Expando<ui.Image>('photo');
   static final _decoding = Expando<Future<void>>('decoding');
+  static final _sources = Expando<StrokePhoto>('source');
+
+  /// The picture [image] was decoded from, so an export can keep its
+  /// original bytes; null for any other image.
+  static StrokePhoto? photoOf(ui.Image image) => _sources[image];
 
   /// Bumped whenever a picture finishes decoding.
   static final decoded = ValueNotifier<int>(0);
@@ -64,6 +69,7 @@ abstract final class Photos {
           final frame = await codec.getNextFrame();
           codec.dispose();
           _images[photo] = frame.image;
+          _sources[frame.image] = photo;
           decoded.value++;
         } catch (_) {
           // An unreadable picture stays a placeholder.

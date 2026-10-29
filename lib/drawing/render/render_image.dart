@@ -7,14 +7,18 @@ import '../stroke.dart';
 import 'paint_strokes.dart';
 
 /// Renders [strokes] on [paper] into an image of [size] times [pixelRatio]
-/// (each side at most 16384 pixels). The caller disposes it.
+/// (each side at most 16384 pixels). The caller disposes it. Without
+/// [background] the paper stays see-through (the blender still mixes with
+/// its color).
 Future<ui.Image> renderImage(List<Stroke> strokes, Size size, double pixelRatio,
-    {Color paper = Colors.white, List<PaintingLayer>? layers}) async {
+    {Color paper = Colors.white,
+    List<PaintingLayer>? layers,
+    bool background = true}) async {
   // Pictures must be decoded before they can be painted.
   await Photos.ready([for (final s in strokes) ?s.photo]);
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder)..scale(pixelRatio);
-  canvas.drawRect(Offset.zero & size, Paint()..color = paper);
+  if (background) canvas.drawRect(Offset.zero & size, Paint()..color = paper);
   paintStrokes(canvas, size, strokes, paper: paper, layers: layers);
   return recorder.endRecording().toImage(
       (size.width * pixelRatio).round().clamp(1, 1 << 14),
@@ -23,9 +27,11 @@ Future<ui.Image> renderImage(List<Stroke> strokes, Size size, double pixelRatio,
 
 /// Renders [strokes] on [paper] as PNG bytes.
 Future<Uint8List> renderPng(List<Stroke> strokes, Size size, double pixelRatio,
-    {Color paper = Colors.white, List<PaintingLayer>? layers}) async {
-  final image =
-      await renderImage(strokes, size, pixelRatio, paper: paper, layers: layers);
+    {Color paper = Colors.white,
+    List<PaintingLayer>? layers,
+    bool background = true}) async {
+  final image = await renderImage(strokes, size, pixelRatio,
+      paper: paper, layers: layers, background: background);
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   image.dispose();
   return data!.buffer.asUint8List();

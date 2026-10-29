@@ -58,7 +58,12 @@ extension StrokePainting on Stroke {
         Paint()..color = color.withValues(alpha: 0.16),
       );
     }
-    _laidOutText.paint(canvas, _textTopLeft);
+    if (canvas case final TextShapesCanvas shapes) {
+      shapes.drawTextShapes(
+          _laidOutText, _textTopLeft, text!, color.withValues(alpha: 1));
+    } else {
+      _laidOutText.paint(canvas, _textTopLeft);
+    }
     if (translucent) canvas.restore();
   }
 
@@ -104,23 +109,17 @@ extension StrokePainting on Stroke {
     }
 
     if (strength == 1) return grain(BlendMode.dstIn);
-    // Paint kept: the solid share everywhere, plus the grain's share.
+    // Paint kept: the solid share everywhere, plus the grain's share of the
+    // rest. The grain laid over the solid share gives exactly that
+    // (1 - s + g·s), with blend modes an SVG can show too.
     canvas
       ..saveLayer(_bounds, Paint()..blendMode = BlendMode.dstIn)
       ..drawRect(
         _bounds,
         Paint()..color = Color.fromRGBO(255, 255, 255, 1 - strength),
-      )
-      ..saveLayer(
-        _bounds,
-        Paint()
-          ..blendMode = BlendMode.plus
-          ..color = Color.fromRGBO(255, 255, 255, strength),
       );
     grain(BlendMode.srcOver);
-    canvas
-      ..restore()
-      ..restore();
+    canvas.restore();
   }
 
   /// Lines at least this wide show their texture fully.

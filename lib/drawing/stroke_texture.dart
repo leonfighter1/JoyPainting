@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import 'render/vector_hooks.dart';
+
 /// The surface a stroke is painted with: the grain that shows through
 /// its paint, like canvas weave, paper, charcoal or the hairs of a brush.
 ///
@@ -67,9 +69,10 @@ enum StrokeTexture {
       area,
       Paint()
         ..blendMode = mode
-        ..shader = ImageShader(
-            tile, TileMode.repeated, TileMode.repeated, m.storage,
-            filterQuality: FilterQuality.low),
+        ..shader = ShaderSpec.describe(
+            ImageShader(tile, TileMode.repeated, TileMode.repeated, m.storage,
+                filterQuality: FilterQuality.low),
+            TileSpec(tile, m.storage)),
     );
   }
 

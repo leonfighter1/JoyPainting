@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
+import 'render/vector_hooks.dart';
+
 /// How a stroke mixes with what's under it.
 enum StrokeBlend {
   normal(BlendMode.srcOver),
@@ -78,10 +80,15 @@ class StrokeGradient {
         ? stops
         : [for (var i = 0; i < faded.length; i++) i / (faded.length - 1)];
     final a = at(from), z = at(to);
+    // Described too, for the SVG export.
     if (radial) {
-      return ui.Gradient.radial(a, math.max(0.5, (z - a).distance), faded, positions);
+      final r = math.max(0.5, (z - a).distance);
+      return ShaderSpec.describe(ui.Gradient.radial(a, r, faded, positions),
+          GradientSpec.radial(a, r, faded, positions!));
     }
-    return ui.Gradient.linear(a, z == a ? a + const Offset(0, 1) : z, faded, positions);
+    final end = z == a ? a + const Offset(0, 1) : z;
+    return ShaderSpec.describe(ui.Gradient.linear(a, end, faded, positions),
+        GradientSpec.linear(a, end, faded, positions!));
   }
 
   Map<String, Object?> toJson() => {

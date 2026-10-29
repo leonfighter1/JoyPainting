@@ -9,18 +9,25 @@ import 'package:pdf/widgets.dart' as pw;
 import '../drawing/render/render_image.dart';
 import '../gallery/painting_file.dart';
 import '../gallery/painting_store.dart';
+import 'svg/svg_export.dart';
 
 /// The formats a painting can be sent as.
 enum ExportFormat {
   png('png', 'image/png'),
   jpg('jpg', 'image/jpeg'),
   pdf('pdf', 'application/pdf'),
+
+  /// Shapes instead of pixels: sharp at any size (logos, printing).
+  svg('svg', 'image/svg+xml'),
   painting(PaintingFile.extension, PaintingFile.mimeType);
 
   const ExportFormat(this.extension, this.mimeType);
 
   final String extension;
   final String mimeType;
+
+  /// Whether the paper's color can be left out, for a see-through picture.
+  bool get canDropPaper => this == png || this == svg;
 }
 
 class ExportedFile {
@@ -79,15 +86,21 @@ PaintingDoc withoutPhotos(PaintingDoc doc) => PaintingDoc(
     );
 
 /// [doc] as a file in [format]. Pictures and PDFs leave its photos out
-/// unless [photos]; a `.jypaint` always keeps everything.
+/// unless [photos], and PNG and SVG pictures its paper color unless
+/// [paper]; a `.jypaint` always keeps everything.
 Future<ExportedFile> exportPainting(PaintingDoc doc, ExportFormat format,
-    {bool photos = true}) async {
+    {bool photos = true, bool paper = true}) async {
   final size = paintingSize(doc);
   final picture = photos ? doc : withoutPhotos(doc);
   final Uint8List bytes = switch (format) {
     ExportFormat.png => await renderPng(
         picture.strokes, size, exportRatioFor(size),
-            paper: doc.paper, layers: doc.layers),
+            paper: doc.paper, layers: doc.layers, background: paper),
+    ExportFormat.svg => await renderSvg(picture.strokes, size,
+        paper: doc.paper,
+        background: paper,
+        layers: doc.layers,
+        title: doc.meta.name),
     ExportFormat.jpg => await _jpg(picture, size),
     ExportFormat.pdf => await buildPdf(
         await renderPng(

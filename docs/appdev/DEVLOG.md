@@ -1,5 +1,18 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-29: v6.4.0 (SVG pictures, see-through backgrounds)
+- 6.3.0: the user looked at the new coloring pages and said to push. They also said finished work no longer waits for their approval (they'll say when it should); this is now step 5 of the appdev skill and in my memory. After pushing, Web and iOS both passed (live version.json 6.3.0+29).
+- Asked: export pictures as SVG, and make an SVG logo for 上海丽扬服装定制 locally to test it.
+- Done: `SvgCanvas`, a `Canvas` that writes SVG, which every stroke paints onto through its usual code. Paths are placed on the paper, with exact corners and curves within 0.08 px. Layers become groups (opacity, blend modes), the eraser and textures become masks, blur becomes a filter, pictures are embedded. Gradients and textures describe themselves (`ShaderSpec`). Text becomes letter outlines read from the bundled TrueType files (`FontOutlines`). Plus a 带上纸的颜色 switch for see-through PNG and SVG.
+- Changed painting code, checked to be the same: thin textured lines lay their grain without a `plus` layer (at most 1/255 apart on 0.7 % of channels, rule 63).
+- Checked in Chrome: the three samples, the mandala page and a painting with every stroke kind, exported and rendered headless against the app's PNG (`local_art/svg_check/run.sh`). Mean difference 0.4–2.3 of 255. The 3,058-stroke 高级 sample makes a 5 MB SVG in about 4 s on the desktop test VM.
+- Logo (local only, `local_art/logo/`, outputs in `local_art/out/logo/`): a navy suit front with a gold tie, pick-stitched lapels and an ivory pocket square in an ivory badge, ringed by a gold thread out of a needle's eye; 丽扬 in 青柯黄油体, 服装定制 in gold between rules, SHANGHAI · LIYANG TAILOR in 快乐体. Made from the app's own strokes (bucket areas, shapes, lines, text) as a `.jypaint`, exported with the app's own SVG export, see-through and on white. Fixed after looking at it: a button outside the badge, a sliver at the neck, a pocket square that read as mountains, a kinked needle.
+- Browser tests don't run on this PC (rule 74), so `test/svg_web_test.dart` (the export with the web engine) runs in the Web workflow instead.
+- Mistakes: MISTAKES rules 73 (a layer's bounds clip) and 74 (browser tests here).
+- Harness: PASS (analyze 0 issues, 435 tests, build web ok).
+- Not tested: on a real device (share sheet with an SVG, a see-through PNG in the photo gallery); opening the SVG in Illustrator or Inkscape (only Chrome here).
+- Next: the remaining TECH_PLAN items.
+
 ## 2026-10-29: v6.3.0 (samples by choice, a coloring book for each level, clearer icons)
 - 6.2.0 after pushing: Web and iOS both passed (live version.json 6.2.0+28).
 - Asked: put the samples next to the coloring book, by level, and let the user choose; coloring books for each level at a moderate difficulty: 初级 for ages 5–8, 中级 for 12, 高级 for 18, since the samples are too hard for real people to draw. Kept separate on purpose: a 最高水准 painting for the user is not app work, and its standard stays as it is (recorded in my memory).

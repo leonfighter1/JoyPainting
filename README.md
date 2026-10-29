@@ -44,8 +44,9 @@ What it does:
   - **Coloring book** (涂色本): line drawings to color in, for each level: 8 simple ones (ages 5–8), 6 scenes (about 12) and 6 detailed pages (about 18). The lines stay locked on top, so brushes, the paint bucket and the eraser work under them.
   - **Replay** (回放作画过程): watch a painting draw itself again, stroke by stroke, at ½× to 4×, and save the replay as a looping GIF.
   - **Backup reminders** (备份提醒): My Paintings reminds you to keep a copy when the paintings haven't been backed up for a while; one tap exports them all.
-  - Download as PNG, JPG or PDF (in the apps, pictures go to the photo gallery and a PDF to the share menu).
-  - Send as PNG, JPG, PDF or an editable `.jypaint` file, named after the painting. In a browser it goes to an email as an attachment.
+  - Download as PNG, JPG, PDF or SVG (in the apps, pictures go to the photo gallery, and a PDF or SVG to the share menu).
+  - SVG (矢量图) keeps every line, shape, fill and gradient as a shape that stays sharp at any size, and text as the outlines of its letters, so a painting can become a logo or go to a printer. PNG and SVG can leave out the paper color (带上纸的颜色) for a see-through background.
+  - Send as PNG, JPG, PDF, SVG or an editable `.jypaint` file, named after the painting. In a browser it goes to an email as an attachment.
   - Print from an in-app preview with a big close button (Android's own print screen has none).
   - Open `.jypaint` files received from other apps.
 - **Background music**:
@@ -58,13 +59,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.3.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.4.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **6.3.0** | 2026-10-29 | Samples (示例) beside the coloring book, added only when picked, for any level; a coloring book for each level (8 simple pages, 6 scenes for about age 12, 6 detailed pages for about age 18); a four-arrow icon for moving the paper and a finger for select & move |
+| **6.4.0** | 2026-10-29 | Download or send a painting as an SVG (矢量图): lines, shapes, fills and text stay sharp at any size, each layer a named group; PNG and SVG can leave the paper color out for a see-through background |
+| 6.3.0 | 2026-10-29 | Samples (示例) beside the coloring book, added only when picked, for any level; a coloring book for each level (8 simple pages, 6 scenes for about age 12, 6 detailed pages for about age 18); a four-arrow icon for moving the paper and a finger for select & move |
 | 6.2.0 | 2026-10-28 | Opening a big painting shows a card with its name, a progress bar and the percentage; the painting is read and put on the paper a piece at a time, so the screen no longer freezes |
 | 6.1.1 | 2026-10-28 | The stamps are always in the drawer (picking one picks the stamp brush); the title bar reads ✋, 选择移动, 清空 (now a broom) |
 | 6.1.0 | 2026-10-28 | My own brushes (我的画笔); brushes and helpers (小帮手) apart, each starting with the basic ones; the move tool in the title bar; no save or new buttons there (paintings save themselves; new is in the ☰ menu) |
@@ -99,6 +101,22 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 6.4.0 (2026-10-29): SVG pictures, see-through backgrounds
+
+**New**
+- **Download or send as SVG (矢量图（SVG）).** In 下载图片 and 发送给别人, pick 矢量图（SVG）. Everything you drew becomes real shapes rather than pixels, so the picture stays sharp however big it's printed or shown: good for a logo, a sign, a T-shirt print or a printer.
+  - Lines, shapes, paint-bucket fills, gradients, stamps, spray, rainbow lines, mirrored and turned strokes all come out as shapes.
+  - The eraser, light & shadow (multiply, screen and the rest), soft edges and textures look as they do in the app.
+  - Text keeps its font: each letter of 快乐体, 黄油体 and 手写体 becomes its outline, so the picture looks the same on a computer without those fonts. Text in the device's own font (系统默认) stays as text.
+  - Each shown layer is a group with the layer's name, which Inkscape shows as a layer.
+  - What can't be a shape goes in as a picture: photos, and what the blender (混色) smudged.
+  - In the apps, the SVG goes to the share menu (save it to Files, or send it); in a browser it downloads.
+- **A see-through background (带上纸的颜色).** The download and send menus have a switch: turn it off and PNG and SVG pictures leave the paper's color out, so the drawing sits on whatever it's placed on. JPG and PDF always keep the paper.
+
+**Good to know**
+- An SVG of a very big painting can be large: the 3,000-stroke 高级 sample is about 5 MB.
+- Textures are repeated small pictures inside the SVG, so they soften a little when shrunk, like any picture.
 
 ### 6.3.0 (2026-10-29): samples by choice, a coloring book for each level, clearer icons
 
@@ -587,6 +605,8 @@ What the tests cover:
 - **`test/web_store_test.dart`**: saving paintings in the browser (IndexedDB), moving old localStorage data over. Browser only: `flutter test --platform chrome test/web_store_test.dart` (the Web workflow runs it).
 - **`test/model_test.dart`**: the painting store, autosave and import.
 - **`test/export_test.dart`**: real PNG, JPEG and PDF output, and `.jypaint` round trips.
+- **`test/svg_export_test.dart`**: SVG export: valid XML with the paper and named layers, every reference defined, gradients, textures, blend modes, blur, the eraser, pictures and text outlines kept; corners exact and curves close; letters read from the font file; the see-through background; the download sheet.
+- **`test/svg_web_test.dart`**: the SVG export with the web engine measuring paths and text. Browser only: `flutter test --platform chrome test/svg_web_test.dart` (the Web workflow runs it).
 - **`test/theme_test.dart`**: theme JSON and WCAG contrast.
 - **`test/widget_test.dart`**: the whole UI, including:
   - phone, tablet and landscape sizes;
