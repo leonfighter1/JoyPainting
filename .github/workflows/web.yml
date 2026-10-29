@@ -42,8 +42,19 @@ jobs:
 
       # Saving paintings in the browser (IndexedDB), and the SVG export with
       # the web engine measuring paths and text, only run in a browser.
+      # The telling lines of the output also become annotations, which show
+      # on the run page without signing in.
       - name: Browser tests (Chrome)
-        run: flutter test --platform chrome test/web_store_test.dart test/svg_web_test.dart
+        shell: bash
+        run: |
+          set +e
+          flutter test --platform chrome test/web_store_test.dart test/svg_web_test.dart 2>&1 | tee browser-tests.log
+          status=${PIPESTATUS[0]}
+          grep -E "\[E\]|Expected|Actual|Which|Error|Exception|Unsupported|SVG text" browser-tests.log \
+            | head -n 30 | while IFS= read -r line; do
+              echo "::warning::${line:0:400}"
+            done
+          exit $status
 
       # The rendering engine (CanvasKit) is served from this site too, not
       # from Google's CDN, so the app loads wherever GitHub Pages does.
