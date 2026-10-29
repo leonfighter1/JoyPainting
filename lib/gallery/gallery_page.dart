@@ -16,6 +16,7 @@ import '../theme/cute_theme.dart';
 import 'backup_reminder.dart';
 import 'coloring_book_sheet.dart';
 import 'painting_store.dart';
+import 'sample_sheet.dart';
 import 'storage_risk.dart';
 
 /// Every saved painting, newest first, filterable by the year it was started.
@@ -98,10 +99,28 @@ class _GalleryPageState extends State<GalleryPage> {
   /// A new painting from a coloring page, opened on the canvas.
   Future<void> _startColoring() async {
     final s = S.of(context);
-    final page = await pickColoringPage(context);
+    final page = await pickColoringPage(context, _settings.level);
     if (page == null) return;
     final doc = await page.load(s);
     if (await widget.session.openCopyOf(doc)) widget.onOpened();
+  }
+
+  /// The sample the kid picks, put into My Paintings, with a way to open
+  /// it from the message.
+  Future<void> _addSample() async {
+    final s = S.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final level = await pickSample(
+        context, _settings.level, widget.session.samplePreview);
+    if (level == null) return;
+    final doc = await widget.session.addSample(level);
+    if (!mounted) return;
+    messenger.showSnackBar(SnackBar(
+      content: Text(doc == null ? s.sampleFailed : s.sampleReady(doc.meta.name)),
+      action: doc == null
+          ? null
+          : SnackBarAction(label: s.openIt, onPressed: () => _open(doc.meta)),
+    ));
   }
 
   /// The backup reminder's one tap: every painting, as one file.
@@ -309,6 +328,7 @@ class _GalleryPageState extends State<GalleryPage> {
                         pickAndImport(context, widget.session, widget.onOpened),
                     onStartExport: () => _startSelecting(),
                     onColoring: _startColoring,
+                    onSamples: _addSample,
                     onCancel: _stopSelecting,
                     onToggleAll: () => _toggleAll(shown),
                     onExport: _exportPicked,
@@ -418,6 +438,7 @@ class _GalleryActions extends StatelessWidget {
     required this.onImport,
     required this.onStartExport,
     required this.onColoring,
+    required this.onSamples,
     required this.onCancel,
     required this.onToggleAll,
     required this.onExport,
@@ -432,6 +453,9 @@ class _GalleryActions extends StatelessWidget {
 
   /// Opens the coloring book.
   final VoidCallback onColoring;
+
+  /// Opens the samples, to add one.
+  final VoidCallback onSamples;
   final VoidCallback onCancel;
   final VoidCallback onToggleAll;
   final VoidCallback onExport;
@@ -472,6 +496,11 @@ class _GalleryActions extends StatelessWidget {
                 icon: const Icon(Icons.auto_stories_rounded),
                 label: Text(s.coloringBook),
                 onPressed: onColoring,
+              ),
+              FilledButton.tonalIcon(
+                icon: const Icon(Icons.collections_rounded),
+                label: Text(s.samples),
+                onPressed: onSamples,
               ),
             ],
           ),
@@ -826,30 +855,34 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cute = CuteTheme.of(context);
+    // Scrolls when big text on a small phone doesn't fit.
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 128,
-            height: 128,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: cute.headerGradient,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 128,
+              height: 128,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: cute.headerGradient,
+              ),
+              child: Icon(
+                Icons.palette_rounded,
+                size: 64,
+                color: cute.spec.primary,
+              ),
             ),
-            child: Icon(
-              Icons.palette_rounded,
-              size: 64,
-              color: cute.spec.primary,
+            const SizedBox(height: 16),
+            Text(
+              '${cute.spec.emoji} $text',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '${cute.spec.emoji} $text',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

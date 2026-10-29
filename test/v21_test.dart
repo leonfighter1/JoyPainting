@@ -174,9 +174,8 @@ void main() {
 
       expect(app.settings.kids.map((k) => k.name), ['靖瑶', '小明']);
       expect(app.settings.kidName, '小明');
-      expect([for (final m in await app.session.store.list()) m.name],
-          ['湖畔晨光（示例）'],
-          reason: "小明 starts with only the sample, none of 靖瑶's");
+      expect(await app.session.store.list(), isEmpty,
+          reason: "小明 starts with none of 靖瑶's paintings");
 
       // Back to 靖瑶: her painting is still there.
       await tester.tap(find.widgetWithText(ListTile, '靖瑶'));

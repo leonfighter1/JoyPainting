@@ -60,9 +60,6 @@ class TestApp {
 final testDefaults = <String, Object>{
   'flutter.language': 'zh',
   'flutter.onboarded': true,
-  // Most tests want an empty My Paintings; v22_test covers the sample.
-  'flutter.sampleAdded': true,
-  'flutter.samplesAdded': <String>['beginner', 'intermediate', 'advanced'],
   // Most tests use every tool; v4_test covers the levels.
   'flutter.level': 'advanced',
   // Most tests count what My Paintings shows; backup_test covers the

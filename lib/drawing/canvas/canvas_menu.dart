@@ -61,7 +61,7 @@ Future<void> showCanvasMenu(
       title: s.menuView,
       items: [
         DropMenuItem(
-          icon: Icons.pan_tool_rounded,
+          icon: Icons.open_with_rounded,
           label: s.panCanvas,
           checked: panMode.value,
           onSelected: () => panMode.value = !panMode.value,

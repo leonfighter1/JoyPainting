@@ -71,7 +71,7 @@ abstract final class AppTheme {
         BrushType.stamp => Icons.favorite_rounded,
         BrushType.bucket => Icons.format_color_fill_rounded,
         BrushType.text => Icons.text_fields_rounded,
-        BrushType.move => Icons.open_with_rounded,
+        BrushType.move => Icons.touch_app_rounded,
         BrushType.picker => Icons.colorize_rounded,
         BrushType.eraser => Icons.auto_fix_normal_rounded,
       };

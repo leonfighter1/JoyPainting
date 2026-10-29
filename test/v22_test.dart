@@ -10,6 +10,7 @@ import 'package:jingyao_paint/gallery/sample_painting.dart';
 import 'package:jingyao_paint/l10n.dart';
 import 'package:jingyao_paint/onboarding_page.dart';
 import 'package:jingyao_paint/settings.dart';
+import 'package:jingyao_paint/skill_level.dart';
 
 import 'test_helpers.dart';
 import 'widget_test.dart' show drawStroke, inGallery, openTab, pumpApp;
@@ -231,14 +232,11 @@ void main() {
   });
 
   group('Sample painting', () {
-    testWidgets('each kid gets it once, in their language', (tester) async {
-      final app = await createTestApp(
-        prefs: {
-          'flutter.level': 'beginner',
-          'flutter.samplesAdded': <String>[],
-        },
-      );
+    testWidgets('comes only when picked, in the kid\'s language', (tester) async {
+      final app = await createTestApp(prefs: {'flutter.level': 'beginner'});
       await app.session.restoreLast();
+      expect(await app.store.list(), isEmpty, reason: 'never by itself');
+      await app.session.addSample(SkillLevel.beginner);
       var paintings = await app.store.list();
       expect([for (final m in paintings) m.name], ['快乐的一天（示例）']);
       final doc = (await app.store.load(paintings.single.id))!;
@@ -252,23 +250,26 @@ void main() {
       expect(bounds.right, lessThanOrEqualTo(SamplePainting.size.width + 10));
       expect(bounds.bottom, lessThanOrEqualTo(SamplePainting.size.height + 10));
 
-      // Deleted, it stays deleted.
+      // Deleted, it stays deleted; picked again, it comes back.
       await app.session.delete(paintings.single.id);
       await app.session.restoreLast();
       paintings = await app.store.list();
       expect(paintings.where((m) => m.name == '快乐的一天（示例）'), isEmpty);
+      await app.session.addSample(SkillLevel.beginner);
+      expect(await app.store.list(), hasLength(1));
     });
 
-    testWidgets('a new install gets it after the setup, named in English', (
-      tester,
-    ) async {
+    testWidgets('a new install starts with no paintings, and the gallery '
+        'points to the samples and coloring book', (tester) async {
       final app = await createTestApp(fresh: true);
       await pumpApp(tester, app: app);
-      expect(await app.store.list(), isEmpty, reason: 'not before the setup');
       await tester.ensureVisible(find.byKey(OnboardingPage.startKey));
       await tester.tap(find.byKey(OnboardingPage.startKey));
       await tester.pumpAndSettle();
-      expect([for (final m in await app.store.list()) m.name], ['A Happy Day (sample)']);
+      expect(await app.store.list(), isEmpty);
+      await openTab(tester, 1);
+      expect(find.textContaining('Samples'), findsWidgets);
+      expect(find.textContaining('coloring book or the samples'), findsOneWidget);
     });
   });
 

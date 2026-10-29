@@ -18,7 +18,6 @@ import 'onboarding_page.dart';
 import 'painting_session.dart';
 import 'settings.dart';
 import 'settings_page.dart';
-import 'skill_level.dart';
 import 'share/import_actions.dart';
 import 'share/incoming_files.dart';
 import 'theme/cute_theme.dart';
@@ -199,24 +198,14 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     widget.session
       ..onSaveError = _showSaveError
-      ..onSampleAdded = _showSampleAdded
       ..makingSample.addListener(_onMakingSample)
       ..opening.addListener(_onOpening);
     widget.player?.onError = _showMusicError;
-    _level = widget.settings.level;
-    widget.settings.addListener(_onSettings);
-    // After the first frame, so the snackbar, the progress card and
-    // translations are ready.
+    // After the first frame, so the snackbar and translations are ready.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       IncomingFiles.listen(_openIncoming);
-      // One being added already (a kid's first start)...
-      _onMakingSample();
-      // ...or right after the first-start setup (other times it's there).
-      widget.session.addSampleOnce();
     });
   }
-
-  late SkillLevel _level;
 
   /// Says a sample painting is being added while it is: a big one takes a
   /// moment.
@@ -256,19 +245,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     Overlay.of(context, rootOverlay: true).insert(_openingCard!);
   }
 
-  void _showSampleAdded(String name) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(S.of(context).sampleReady(name))));
-  }
-
-  /// Picking another level brings that level's sample painting (once).
-  void _onSettings() {
-    if (widget.settings.level == _level) return;
-    _level = widget.settings.level;
-    widget.session.addSampleOnce();
-  }
-
   /// A painting file opened from another app (Android "open with").
   Future<void> _openIncoming(Uint8List bytes) async {
     if (!mounted) return;
@@ -284,10 +260,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    widget.settings.removeListener(_onSettings);
     widget.session
       ..onSaveError = null
-      ..onSampleAdded = null
       ..makingSample.removeListener(_onMakingSample)
       ..opening.removeListener(_onOpening);
     _sampleProgress?.remove();

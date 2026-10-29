@@ -62,6 +62,15 @@ class S {
       : _t('正在打开「$name」…', 'Opening "$name"…');
   String sampleReady(String name) =>
       _t('「$name」已经放进我的画作了', '"$name" is in My Paintings');
+  String get sampleFailed =>
+      _t('没能放进我的画作，再试一次', "Couldn't add it. Try again");
+  String get samples => _t('示例', 'Samples');
+  String get samplesHint => _t(
+      '看看每个等级的工具能画出什么样的画。喜欢就放进我的画作，可以打开看、看作画过程，也可以接着画。',
+      "See what each level's tools can paint. Put one into My Paintings to "
+          'look at it, watch how it was painted or keep drawing on it.');
+  String get addSample => _t('放进我的画作', 'Put in My Paintings');
+  String get openIt => _t('打开', 'Open');
   String get renameTitle => _t('给画作起个名字', 'Name this painting');
   String get nameLabel => _t('名字', 'Name');
   String get save => _t('保存', 'Save');
@@ -145,8 +154,8 @@ class S {
   String replayFileName(String name) => '${name}_${_t('回放', 'replay')}.gif';
   String get coloringBook => _t('涂色本', 'Coloring book');
   String get coloringBookHint => _t(
-      '选一张线稿开始涂色。线稿锁在最上面，涂色、填色都在线下面，橡皮擦不会擦掉线。',
-      'Pick a page to color. Its lines stay on top: coloring and filling go under them, and the eraser leaves them alone.');
+      '选一张线稿开始涂色，等级越高画面越细。线稿锁在最上面，涂色、填色都在线下面，橡皮擦不会擦掉线。',
+      'Pick a page to color; higher levels have more detail. Its lines stay on top: coloring and filling go under them, and the eraser leaves them alone.');
   String coloringPainting(String name) => _t('涂色：$name', 'Coloring: $name');
   String coloringName(ColoringPage page) => switch (page) {
         ColoringPage.cat => _t('小猫', 'Cat'),
@@ -157,6 +166,18 @@ class S {
         ColoringPage.butterfly => _t('蝴蝶', 'Butterfly'),
         ColoringPage.car => _t('小汽车', 'Car'),
         ColoringPage.tree => _t('大树', 'Tree'),
+        ColoringPage.lighthouse => _t('海边灯塔', 'Lighthouse'),
+        ColoringPage.castle => _t('城堡', 'Castle'),
+        ColoringPage.underwater => _t('海底世界', 'Under the Sea'),
+        ColoringPage.balloons => _t('热气球', 'Hot-Air Balloons'),
+        ColoringPage.owl => _t('猫头鹰', 'Owl'),
+        ColoringPage.panda => _t('熊猫', 'Panda'),
+        ColoringPage.mandala => _t('曼陀罗花纹', 'Mandala'),
+        ColoringPage.koi => _t('锦鲤荷塘', 'Koi Pond'),
+        ColoringPage.pavilion => _t('园林亭台', 'Garden Pavilion'),
+        ColoringPage.peacock => _t('孔雀', 'Peacock'),
+        ColoringPage.teaset => _t('茶具静物', 'Tea Set'),
+        ColoringPage.street => _t('小镇街道', 'Old Town Street'),
       };
   String get importPhoto => _t('导入照片（描着画）', 'Add a photo (to trace)');
   String get photoLayer => _t('照片', 'Photo');
@@ -556,7 +577,7 @@ class S {
         ('$command+0', _t('适应屏幕', 'Fit to screen')),
         ('$command+1', _t('实际大小', 'Real size')),
         (_t('按住空格', 'Hold Space'), _t('拖动画板', 'Move the paper')),
-        ('H', _t('✋ 拖动画板 开 / 关', '✋ Move the paper on / off')),
+        ('H', _t('拖动画板 开 / 关', 'Move the paper on / off')),
         ('P · E · T · V',
             _t('画笔 · 橡皮 · 文字 · 移动', 'Pen · Eraser · Text · Move')),
         ('I · Alt + ${_t('点按', 'click')}',
@@ -568,10 +589,10 @@ class S {
         ('?', _t('显示这张表', 'Show this list')),
       ];
   String get pinchHint => _device.desktopOs
-      ? _t('双指捏合可以放大缩小画布，双指拖动可以移动画布；用鼠标时，滚动滚轮缩放，按住空格键或点 ✋ 拖动画板',
-          'Pinch with two fingers to zoom, drag with two fingers to move; with a mouse, scroll the wheel to zoom, and hold Space or tap ✋ to move the paper')
-      : _t('双指捏合可以放大缩小画布，双指拖动可以移动画布；点 ✋ 后一根手指也能拖动画板',
-          'Pinch with two fingers to zoom, drag with two fingers to move; tap ✋ to move the paper with one finger');
+      ? _t('双指捏合可以放大缩小画布，双指拖动可以移动画布；用鼠标时，滚动滚轮缩放，按住空格键或点上方的四向箭头拖动画板',
+          'Pinch with two fingers to zoom, drag with two fingers to move; with a mouse, scroll the wheel to zoom, and hold Space or tap the four arrows at the top to move the paper')
+      : _t('双指捏合可以放大缩小画布，双指拖动可以移动画布；点上方的四向箭头后，一根手指也能拖动画板',
+          'Pinch with two fingers to zoom, drag with two fingers to move; tap the four arrows at the top to move the paper with one finger');
   String percent(double v) => '${(v * 100).round()}%';
   String get mirror => _t('对称绘画', 'Mirror drawing');
   String get paperColor => _t('画纸颜色', 'Paper color');
@@ -593,7 +614,9 @@ class S {
   String get allYears => _t('全部', 'All');
   String year(int y) => _t('$y年', '$y');
   String get emptyGallery =>
-      _t('还没有画作，去画一幅吧！', 'No paintings yet. Go draw one!');
+      _t('还没有画作。新画一幅，或者从上面的「涂色本」「示例」开始吧！',
+          'No paintings yet. Draw one, or start from the coloring book or '
+              'the samples above!');
   String get emptyYear => _t('这一年没有画作', 'No paintings this year');
   String created(String date) => _t('创建于 $date', 'Created $date');
   String updated(String date) => _t('修改于 $date', 'Edited $date');

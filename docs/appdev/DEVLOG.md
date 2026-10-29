@@ -1,5 +1,17 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-29: v6.3.0 (samples by choice, a coloring book for each level, clearer icons)
+- 6.2.0 after pushing: Web and iOS both passed (live version.json 6.2.0+28).
+- Asked: put the samples next to the coloring book, by level, and let the user choose; coloring books for each level at a moderate difficulty: 初级 for ages 5–8, 中级 for 12, 高级 for 18, since the samples are too hard for real people to draw. Kept separate on purpose: a 最高水准 painting for the user is not app work, and its standard stays as it is (recorded in my memory).
+- Asked mid-way: the title bar's icons: dragging for moving the paper, a finger for select & move. Read as "the four arrows go to 拖动画板, a finger to 选择移动".
+- Done: `SampleSheet` and `ColoringBookSheet` on a shared `LevelSheet` (opens on the kid's level, chips for the others); samples only added when picked (`addSample`, no more `addSampleOnce` or `samplesAdded`); 12 new coloring pages drawn with a hidden-line `Pen`; previews at 0.4×; the icon swap; the empty gallery scrolls.
+- Kept the three samples as they are (they show what each level's tools can do). The beginner coloring pages already suit ages 5–8, so they stayed.
+- Art: the first 高级 fox page was replaced by 茶具静物 (MISTAKES rule 72). Every page was checked whole and at zoom; fixes included coral that looked like a cactus, light beams like planks, wave lines past a dome, a panda's arms, letter-like grass, a rock with a face, and vase bands past the vase. Contact sheets: `local_art/out/coloring/sheet_*.png` (not in git).
+- Mistakes: MISTAKES rules 70 (long code through the shell), 71 (an empty state that couldn't scroll), 72 (art from code).
+- Harness: PASS (analyze 0 issues, 425 tests, build web ok).
+- Not tested: on a real device; the new sheets in Chrome by hand.
+- Next: push after the user has looked at the new pages.
+
 ## 2026-10-28: v6.2.0 (a progress bar while a painting opens)
 - 6.1.1 after pushing: Web and iOS both passed (live version.json 6.1.1+27). The iOS run passed on both simulators, so 6.1.0's two "not running" failures look like the runners after all.
 - Meanwhile (local art, not in git): a 古风 painting made with the app's own strokes, 古风揽月 (1900×1600, 10 layers, 16,869 strokes). The method and detail checks the user approved are in `local_art/guofeng/CRAFT.md`.

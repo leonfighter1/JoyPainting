@@ -2,22 +2,46 @@ import 'package:flutter/services.dart';
 
 import '../drawing/layers.dart';
 import '../l10n.dart';
+import '../skill_level.dart';
 import 'painting_file.dart';
 import 'painting_store.dart';
 
 /// The coloring pages that come with the app: line drawings whose lines
 /// are on a locked top layer, so a kid colors under them (by hand or with
-/// the paint bucket) and the eraser leaves them alone. Made by
-/// tool/coloring/make_coloring_test.dart.
+/// the paint bucket) and the eraser leaves them alone. Each level has its
+/// own pages, drawn for an age: beginner 5–8, intermediate about 12,
+/// advanced about 18 (more and smaller areas, but none too fiddly). Made
+/// by tool/coloring/make_coloring_test.dart.
 enum ColoringPage {
-  cat,
-  house,
-  flower,
-  fish,
-  rocket,
-  butterfly,
-  car,
-  tree;
+  cat(SkillLevel.beginner),
+  house(SkillLevel.beginner),
+  flower(SkillLevel.beginner),
+  fish(SkillLevel.beginner),
+  rocket(SkillLevel.beginner),
+  butterfly(SkillLevel.beginner),
+  car(SkillLevel.beginner),
+  tree(SkillLevel.beginner),
+  lighthouse(SkillLevel.intermediate),
+  castle(SkillLevel.intermediate),
+  underwater(SkillLevel.intermediate),
+  balloons(SkillLevel.intermediate),
+  owl(SkillLevel.intermediate),
+  panda(SkillLevel.intermediate),
+  mandala(SkillLevel.advanced),
+  koi(SkillLevel.advanced),
+  pavilion(SkillLevel.advanced),
+  peacock(SkillLevel.advanced),
+  teaset(SkillLevel.advanced),
+  street(SkillLevel.advanced);
+
+  const ColoringPage(this.level);
+
+  /// Who the page is drawn for.
+  final SkillLevel level;
+
+  /// The pages for [level], in book order.
+  static List<ColoringPage> of(SkillLevel level) =>
+      [for (final page in values) if (page.level == level) page];
 
   /// The layer a page's lines are on.
   static const linesLayer =

@@ -680,28 +680,6 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Whether the current kid has been given the sample painting for
-  /// [level] (once each: deleting it doesn't bring it back). Before v4
-  /// there was one sample, the beginner's.
-  bool sampleAddedFor(SkillLevel level) => _samplesAdded.contains(level.name);
-
-  void markSampleAdded(SkillLevel level) => _prefs.setStringList(
-    _samplesKey,
-    {..._samplesAdded, level.name}.toList(),
-  );
-
-  List<String> get _samplesAdded =>
-      _prefs.getStringList(_samplesKey) ??
-      [if (_prefs.getBool(_sampleKey) ?? false) SkillLevel.beginner.name];
-
-  String get _sampleKey => _currentKidId == Kid.firstId
-      ? 'sampleAdded'
-      : 'sampleAdded.$_currentKidId';
-
-  String get _samplesKey => _currentKidId == Kid.firstId
-      ? 'samplesAdded'
-      : 'samplesAdded.$_currentKidId';
-
   set lastPaintingId(String? id) {
     if (id == null) {
       _prefs.remove(_lastPaintingKey);

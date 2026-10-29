@@ -39,9 +39,9 @@ What it does:
   - Autosave, and a gallery (我的画作) with names, dates and a year filter.
   - Export: check paintings (the year filter helps) and export one as its `.jypaint` or several as one `.zip`. Import reads both.
   - Every painting gets a name ("My painting 1" / "我的画作 1"); rename or copy it from the title or its gallery card.
-  - A sample painting for each kid, matching their level: 快乐的一天 / A Happy Day (beginner: pens, shapes and stamps), 海边的晚霞 / Sunset by the Sea (intermediate: soft brush, gradients, free shapes) or 湖畔晨光 / Dawn on the Lake (advanced: a realistic painting with textures, the blender and light & shadow). Their names end in 「（示例）」 / "(sample)". Picking another level later brings that one too, once, with a card at the top while it is being made.
+  - **Samples** (示例): a sample painting for each level, shown first for the kid's own level: 快乐的一天 / A Happy Day (beginner: pens, shapes and stamps), 海边的晚霞 / Sunset by the Sea (intermediate: soft brush, gradients, free shapes) or 湖畔晨光 / Dawn on the Lake (advanced: a realistic painting with textures, the blender and light & shadow). Put one into My Paintings when you want it; their names end in 「（示例）」 / "(sample)".
   - **A photo to trace** (导入照片): put a picture under your drawing, half see-through (Intermediate and up).
-  - **Coloring book** (涂色本): 8 line drawings to color in; the lines stay locked on top, so brushes, the paint bucket and the eraser work under them.
+  - **Coloring book** (涂色本): line drawings to color in, for each level: 8 simple ones (ages 5–8), 6 scenes (about 12) and 6 detailed pages (about 18). The lines stay locked on top, so brushes, the paint bucket and the eraser work under them.
   - **Replay** (回放作画过程): watch a painting draw itself again, stroke by stroke, at ½× to 4×, and save the replay as a looping GIF.
   - **Backup reminders** (备份提醒): My Paintings reminds you to keep a copy when the paintings haven't been backed up for a while; one tap exports them all.
   - Download as PNG, JPG or PDF (in the apps, pictures go to the photo gallery and a PDF to the share menu).
@@ -58,13 +58,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.2.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.3.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **6.2.0** | 2026-10-28 | Opening a big painting shows a card with its name, a progress bar and the percentage; the painting is read and put on the paper a piece at a time, so the screen no longer freezes |
+| **6.3.0** | 2026-10-29 | Samples (示例) beside the coloring book, added only when picked, for any level; a coloring book for each level (8 simple pages, 6 scenes for about age 12, 6 detailed pages for about age 18); a four-arrow icon for moving the paper and a finger for select & move |
+| 6.2.0 | 2026-10-28 | Opening a big painting shows a card with its name, a progress bar and the percentage; the painting is read and put on the paper a piece at a time, so the screen no longer freezes |
 | 6.1.1 | 2026-10-28 | The stamps are always in the drawer (picking one picks the stamp brush); the title bar reads ✋, 选择移动, 清空 (now a broom) |
 | 6.1.0 | 2026-10-28 | My own brushes (我的画笔); brushes and helpers (小帮手) apart, each starting with the basic ones; the move tool in the title bar; no save or new buttons there (paintings save themselves; new is in the ☰ menu) |
 | 6.0.0 | 2026-10-28 | Add tools as you need them (添加工具): the drawer keeps the basic choices, and a popup adds more, several at once; 14 new shapes (arc and wave too), 4 stamps, 4 gradients, 4 kinds of light & shadow and 6 textures |
@@ -98,6 +99,20 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 6.3.0 (2026-10-29): samples by choice, a coloring book for each level, clearer icons
+
+**New**
+- **Samples (示例) beside the coloring book.** In 我的画作, tap 示例: it opens on your level's sample painting, with 初级 / 中级 / 高级 to look at the others, and says what that level's tools can do. Tap 放进我的画作 to add it, then 打开 in the message to open it.
+- **Samples come only when you pick them.** A new kid starts with an empty 我的画作, and changing the level no longer adds a sample. Samples already in 我的画作 stay.
+- **A coloring book for every level.** 涂色本 opens on your level, and you can pick another:
+  - 初级 (ages 5–8): the 8 big, simple pictures, as before.
+  - 中级 (about 12): 海边灯塔, 城堡, 海底世界, 热气球, 猫头鹰, 熊猫: whole scenes with more to color.
+  - 高级 (about 18): 曼陀罗花纹, 锦鲤荷塘, 园林亭台, 孔雀, 茶具静物, 小镇街道: detailed pages, every area still big enough for the paint bucket.
+- The pictures in the coloring book are sharper.
+
+**Changed**
+- **Clearer icons in the title bar**: 拖动画板 (move the paper) is now four arrows, and 选择移动 (select & move) is a finger.
 
 ### 6.2.0 (2026-10-28): a progress bar while a painting opens
 

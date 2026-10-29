@@ -13,6 +13,7 @@ import 'gallery/painting_file.dart';
 import 'gallery/painting_store.dart';
 import 'l10n.dart';
 import 'settings.dart';
+import 'skill_level.dart';
 
 /// Renders a thumbnail for the gallery. Swappable so widget tests can skip
 /// real image encoding, which doesn't complete under fake async.
@@ -109,7 +110,6 @@ class PaintingSession extends ChangeNotifier {
   /// v2.1, which have no names.
   Future<void> restoreLast() async {
     await store.nameUnnamed(_s.defaultPaintingName);
-    await addSampleOnce();
     final lastId = settings.lastPaintingId;
     if (lastId != null) {
       try {
@@ -316,41 +316,36 @@ class PaintingSession extends ChangeNotifier {
     return added;
   }
 
-  /// Puts the sample painting for the drawing level into the current kid's
-  /// My Paintings, the first time only (see [LevelSamples]). A kid who
-  /// moves up a level gets that level's sample too. True if one was added.
-  Future<bool> addSampleOnce() async {
-    final level = settings.level;
-    // Not before the first-start setup (after a reset, say): the language
-    // isn't chosen yet. The home page adds it then.
-    if (!settings.onboarded.value || settings.sampleAddedFor(level)) {
-      return false;
-    }
-    // Marked first, so two calls at once can't add it twice.
-    settings.markSampleAdded(level);
-    final name = LevelSamples.name(level, _s);
-    makingSample.value = name;
+  /// Puts [level]'s sample painting (see [LevelSamples]) into the current
+  /// kid's My Paintings, without opening it: only when the kid picks it,
+  /// never by itself. Returns it, or null if it couldn't be added (or one
+  /// is still being added).
+  Future<PaintingDoc?> addSample(SkillLevel level) async {
+    if (makingSample.value != null) return null;
+    makingSample.value = LevelSamples.name(level, _s);
     try {
-      final added = await _addCopy(
+      return await _addCopy(
         await LevelSamples.load(level, _s),
         thumbnail: await LevelSamples.thumbnail(level),
       );
-      if (added != null) onSampleAdded?.call(name);
-      return added != null;
     } catch (e) {
       debugPrint('Sample painting not added: $e');
-      return false;
+      return null;
     } finally {
       makingSample.value = null;
     }
   }
 
+  /// [level]'s sample as a small picture, for choosing one.
+  Future<Uint8List> samplePreview(SkillLevel level) async {
+    if (await LevelSamples.thumbnail(level) case final made?) return made;
+    final doc = await LevelSamples.load(level, _s);
+    return thumbnailer(doc.strokes, doc.paperSize!, doc.paper, doc.layers);
+  }
+
   /// The name of the sample painting being added (it can take a moment on
   /// a big one), or null.
   final makingSample = ValueNotifier<String?>(null);
-
-  /// Called with a sample painting's name once it's in My Paintings.
-  void Function(String name)? onSampleAdded;
 
   /// Adds a copy of [paintingId] named [name], next to it in My Paintings
   /// (the open one is saved first, so the copy has everything). Returns the

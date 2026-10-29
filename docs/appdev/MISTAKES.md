@@ -70,8 +70,29 @@
 67. When picking telling lines out of a log by keyword, match log levels as whole words (" Fault ", " Error "): "fault" also matches every "Default" line, and the real reason gets buried. And look where the reason is written: why iOS stopped an app is in the system's log, not the app's.
 68. Code that waits on a zero-length timer (`Future.delayed(Duration.zero)`, to let a frame through) needs `pump(Duration)` in widget tests: a bare `pump()` never moves fake time, so the wait never ends. Every such wait that falls due runs within that one pump, so record progress with a listener instead of sampling after each pump.
 69. After a scripted edit (`perl -e`, `sed`), grep the changed lines for the backslashes and `$` they should hold: the shell or perl can eat them silently (`\d` became `d`). Put patterns and regexes in with the Edit tool.
+70. Write new code files with the Write tool and change them with the Edit tool; never pass more than a few lines of code through a shell command (`node -e`, heredocs): one apostrophe in a comment breaks the whole command.
+71. Any centered Column that shows text (empty states, hints) must scroll when it doesn't fit; adding a button or lengthening a hint above it can push it past a small phone's height with big text.
+72. For art drawn from code (coloring pages, samples), choose subjects whose shapes code can get right (architecture, patterns, stylized nature); render each one and judge it whole and at zoom before keeping it, and replace it rather than patch it when the proportions are wrong.
 
 ## Log
+
+### 2026-10-29: Long code in shell commands broke on quotes
+- **Symptom:** twice a Bash command adding several hundred lines of Dart (a `node -e` script, then a `cat <<'EOF'` heredoc) failed with "unexpected EOF while looking for matching `''", and nothing was written.
+- **Root cause:** the Dart held apostrophes in comments ("cliff's", "it's") and quoted strings inside a quoted `node -e` argument; the shell parses the whole command before running it.
+- **Fix:** new Dart files went in with the Write tool (as `part` files of the same library), changes with the Edit tool.
+- **Rule:** 70.
+
+### 2026-10-29: A longer empty-gallery hint overflowed the small phone with big text
+- **Symptom:** "the largest text still fits a small phone (en)" failed: a Column overflowed by 56 pixels on My Paintings.
+- **Root cause:** the new 示例 button added a row to the buttons above, and the empty gallery's hint got longer; its centered Column couldn't scroll.
+- **Fix:** the empty state scrolls when it doesn't fit.
+- **Rule:** 71.
+
+### 2026-10-29: A coloring page that couldn't be drawn well from code
+- **Symptom:** the first 高级 fox page looked wrong at a glance: a tiny head, legs like boxes, a flat tail.
+- **Root cause:** an animal's sitting pose needs many curves that depend on each other; written as coordinates without a reference, the proportions came out wrong, and small fixes wouldn't save it.
+- **Fix:** replaced it with a subject that line art from code does well (a Chinese tea set under a moon window); every page was rendered and checked whole and at zoom before keeping it.
+- **Rule:** 72.
 
 ### 2026-10-28: A widget test waited on progress that fake time never moved
 - **Symptom:** the new test for opening a big painting saw the progress stop at 20 % for 400 frames. Later, with frames that moved time on, it saw no reading progress at all (below 40 %).

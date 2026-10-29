@@ -6,6 +6,7 @@ import 'package:jingyao_paint/drawing/render/pixel_sampler.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/gallery/coloring_pages.dart';
 import 'package:jingyao_paint/l10n.dart';
+import 'package:jingyao_paint/skill_level.dart';
 
 import 'widget_test.dart' show openTab, pumpApp;
 
@@ -19,6 +20,18 @@ const _inside = {
   ColoringPage.butterfly: Offset(610, 310),
   ColoringPage.car: Offset(240, 700),
   ColoringPage.tree: Offset(300, 330),
+  ColoringPage.lighthouse: Offset(520, 520),
+  ColoringPage.castle: Offset(400, 520),
+  ColoringPage.underwater: Offset(440, 430),
+  ColoringPage.balloons: Offset(305, 340),
+  ColoringPage.owl: Offset(400, 340),
+  ColoringPage.panda: Offset(400, 262),
+  ColoringPage.mandala: Offset(400, 500),
+  ColoringPage.koi: Offset(680, 360),
+  ColoringPage.pavilion: Offset(660, 130),
+  ColoringPage.peacock: Offset(290, 440),
+  ColoringPage.teaset: Offset(690, 530),
+  ColoringPage.street: Offset(400, 60),
 };
 
 void main() {
@@ -68,13 +81,44 @@ void main() {
     }
   });
 
-  testWidgets('My Paintings → 涂色本 → a page opens as a new painting',
-      (tester) async {
+  test('each level has its own pages, the higher ones more detailed', () async {
+    expect(ColoringPage.of(SkillLevel.beginner), hasLength(8));
+    expect(ColoringPage.of(SkillLevel.intermediate), hasLength(6));
+    expect(ColoringPage.of(SkillLevel.advanced), hasLength(6));
+    Future<double> lines(SkillLevel level) async {
+      var points = 0;
+      for (final page in ColoringPage.of(level)) {
+        final doc = await page.load(const S('zh'));
+        points += doc.strokes.fold(0, (n, s) => n + s.points.length);
+      }
+      return points / ColoringPage.of(level).length;
+    }
+
+    final beginner = await lines(SkillLevel.beginner);
+    final intermediate = await lines(SkillLevel.intermediate);
+    final advanced = await lines(SkillLevel.advanced);
+    expect(intermediate, greaterThan(beginner * 1.5));
+    expect(advanced, greaterThan(intermediate * 1.3));
+    for (final page in ColoringPage.values) {
+      expect(const S('zh').coloringName(page), isNot(page.name));
+      expect(const S('en').coloringName(page), isNot(page.name));
+    }
+  });
+
+  testWidgets('My Paintings → 涂色本: the kid\'s level first, any level '
+      'can be picked, a page opens as a new painting', (tester) async {
     final app = await pumpApp(tester);
     await openTab(tester, 1);
     await tester.tap(find.text('涂色本'));
     await tester.pumpAndSettle();
-    for (final name in ['小猫', '小房子', '大树']) {
+    expect(find.text('曼陀罗花纹'), findsOneWidget, reason: 'advanced first');
+    expect(find.text('小猫'), findsNothing);
+    await tester.tap(find.widgetWithText(ChoiceChip, '中级'));
+    await tester.pumpAndSettle();
+    expect(find.text('海边灯塔'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ChoiceChip, '初级'));
+    await tester.pumpAndSettle();
+    for (final name in ['小猫', '小房子']) {
       expect(find.text(name), findsOneWidget);
     }
     await tester.tap(find.text('小猫'));

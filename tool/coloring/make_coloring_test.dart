@@ -6,7 +6,7 @@
 // Each page's lines are on a locked top layer, so coloring (by hand or
 // with the paint bucket) goes under them and the eraser leaves them
 // alone. Big previews for checking go to local_art/out/coloring/ (not in
-// git).
+// git). Set COLORING=name,name to make only those pages.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -15,18 +15,31 @@ import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/gallery/coloring_pages.dart';
 import 'package:jingyao_paint/gallery/painting_file.dart';
 import 'package:jingyao_paint/gallery/painting_store.dart';
+import 'package:jingyao_paint/skill_level.dart';
 
 import '../samples/artist.dart';
 import 'coloring_art.dart';
+import 'pages_adv.dart';
+import 'pages_mid.dart';
+import 'pen.dart';
 
 void main() {
   test('make the coloring pages', () async {
+    final only = Platform.environment['COLORING']?.split(',');
     final out = Directory('assets/coloring')..createSync(recursive: true);
     final check = Directory('local_art/out/coloring')
       ..createSync(recursive: true);
     for (final page in ColoringPage.values) {
+      if (only != null && !only.contains(page.name)) continue;
       final a = Artist();
-      drawPage(page.name, a);
+      switch (page.level) {
+        case SkillLevel.beginner:
+          drawPage(page.name, a);
+        case SkillLevel.intermediate:
+          drawMid(page.name, Pen(a));
+        case SkillLevel.advanced:
+          drawAdv(page.name, Pen(a));
+      }
       final strokes = [
         for (final s in a.strokes) s.onLayer(ColoringPage.linesLayer.id),
       ];
@@ -47,8 +60,9 @@ void main() {
       );
       File('${out.path}/${page.name}.jypaint')
           .writeAsBytesSync(PaintingFile.encode(doc));
+      // Sharp enough for the picker's cards on a high-density screen.
       File('${out.path}/${page.name}.png').writeAsBytesSync(await renderPng(
-          strokes, pageSize, 0.25, layers: doc.layers));
+          strokes, pageSize, 0.4, layers: doc.layers));
       File('${check.path}/${page.name}.png').writeAsBytesSync(
           await renderPng(strokes, pageSize, 1, layers: doc.layers));
     }

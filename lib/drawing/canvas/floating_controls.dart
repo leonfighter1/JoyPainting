@@ -224,9 +224,10 @@ class ZoomChip extends StatelessWidget {
 
 
 /// The painting's own actions in the title bar, one tap away, in this
-/// order: ✋ (move the paper), the move tool (选择移动, from the
-/// intermediate level), clear (a broom) and the ☰ menu. Paintings save
-/// themselves; a new one is in the menu. Undo and redo float on the paper.
+/// order: move the paper (four arrows), the move tool (选择移动, a
+/// finger, from the intermediate level), clear (a broom) and the ☰
+/// menu. Paintings save themselves; a new one is in the menu. Undo and
+/// redo float on the paper.
 class CanvasBarActions extends StatelessWidget {
   const CanvasBarActions({
     super.key,
@@ -262,15 +263,15 @@ class CanvasBarActions extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ✋ Move the paper: one tap away, and in the title bar it never
-        // crowds the corner controls on a narrow phone.
+        // Move the paper (four arrows): one tap away, and in the title bar
+        // it never crowds the corner controls on a narrow phone.
         ValueListenableBuilder(
           valueListenable: panMode,
           builder: (context, panning, _) => IconButton(
             tooltip: s.panCanvas,
             isSelected: panning,
-            icon: const Icon(Icons.pan_tool_outlined),
-            selectedIcon: const Icon(Icons.pan_tool_rounded),
+            icon: const Icon(Icons.open_with_outlined),
+            selectedIcon: const Icon(Icons.open_with_rounded),
             style: on(panning),
             onPressed: () => panMode.value = !panning,
           ),

@@ -12,6 +12,7 @@ import 'package:jingyao_paint/drawing/render/render_image.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/gallery/level_samples.dart';
 import 'package:jingyao_paint/gallery/sample_progress_card.dart';
+import 'package:jingyao_paint/gallery/sample_sheet.dart';
 import 'package:jingyao_paint/l10n.dart';
 import 'package:jingyao_paint/onboarding_page.dart';
 import 'package:jingyao_paint/settings.dart';
@@ -838,34 +839,23 @@ void main() {
       expect(lake.meta.name, '湖畔晨光（示例）');
     });
 
-    testWidgets('a kid gets their level\'s sample once, and another when '
-        'they pick another level', (tester) async {
-      final app = await createTestApp(
-        prefs: {
-          'flutter.level': 'advanced',
-          'flutter.samplesAdded': <String>[],
-        },
-      );
-      await app.session.addSampleOnce();
-      await app.session.addSampleOnce();
-      var list = await app.store.list();
-      expect([for (final m in list) m.name], ['湖畔晨光（示例）'], reason: 'once');
-
+    testWidgets('a sample comes only when picked: any level, as often as '
+        'wanted, never by itself on a level change', (tester) async {
+      final app = await createTestApp(prefs: {'flutter.level': 'advanced'});
+      await app.session.restoreLast();
       app.settings.level = SkillLevel.intermediate;
-      await app.session.addSampleOnce();
-      list = await app.store.list();
-      expect({for (final m in list) m.name}, {'湖畔晨光（示例）', '海边的晚霞（示例）'});
-      expect(app.settings.sampleAddedFor(SkillLevel.beginner), isFalse);
+      expect(await app.store.list(), isEmpty);
+      await app.session.addSample(SkillLevel.advanced);
+      await app.session.addSample(SkillLevel.intermediate);
+      await app.session.addSample(SkillLevel.intermediate);
+      final names = [for (final m in await app.store.list()) m.name];
+      expect(names.where((n) => n == '海边的晚霞（示例）'), hasLength(2));
+      expect(names, contains('湖畔晨光（示例）'));
     });
 
-    testWidgets('picking another level in the app brings its sample, with a '
-        'card while it\'s made and a message once it\'s in', (tester) async {
-      final app = await createTestApp(
-        prefs: {
-          'flutter.level': 'beginner',
-          'flutter.samplesAdded': <String>['beginner'],
-        },
-      );
+    testWidgets('a card shows while a sample is being added; a new level '
+        'brings nothing', (tester) async {
+      final app = await createTestApp(prefs: {'flutter.level': 'beginner'});
       await pumpApp(tester, app: app);
 
       // While one is being made (here it's done before the next frame, so
@@ -879,50 +869,65 @@ void main() {
       expect(find.byType(SampleProgressCard), findsNothing);
 
       app.settings.level = SkillLevel.advanced;
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < 3; i++) {
         await tester.pumpAndSettle();
       }
-      expect(find.byType(SampleProgressCard), findsNothing);
-      expect(find.text('「湖畔晨光（示例）」已经放进我的画作了'), findsOneWidget);
-      final list = await app.store.list();
-      expect([for (final m in list) m.name], contains('湖畔晨光（示例）'));
-      expect(app.settings.sampleAddedFor(SkillLevel.advanced), isTrue);
+      expect(await app.store.list(), isEmpty);
     });
 
-    testWidgets('a big sample comes with its thumbnail painted beforehand', (
-      tester,
-    ) async {
-      final app = await createTestApp(
-        prefs: {
-          'flutter.level': 'advanced',
-          'flutter.samplesAdded': <String>[],
-        },
-      );
+    testWidgets('a big sample comes with its thumbnail painted beforehand, '
+        'and shows it to choose from', (tester) async {
+      final app = await createTestApp();
       final making = <String?>[];
       app.session.makingSample.addListener(
         () => making.add(app.session.makingSample.value),
       );
-      String? ready;
-      app.session.onSampleAdded = (name) => ready = name;
-      expect(await app.session.addSampleOnce(), isTrue);
+      final doc = (await app.session.addSample(SkillLevel.advanced))!;
+      expect(doc.meta.name, '湖畔晨光（示例）');
       expect(making, ['湖畔晨光（示例）', null]);
-      expect(ready, '湖畔晨光（示例）');
-      final id = (await app.store.list()).single.id;
-      final painted = await rootBundle.load('assets/samples/advanced.png');
-      expect(await app.store.thumbnail(id), painted.buffer.asUint8List());
-      expect(await app.session.addSampleOnce(), isFalse, reason: 'once');
+      final painted = (await rootBundle.load('assets/samples/advanced.png'))
+          .buffer
+          .asUint8List();
+      expect(await app.store.thumbnail(doc.meta.id), painted);
+      expect(await app.session.samplePreview(SkillLevel.advanced), painted);
       expect(
         await LevelSamples.thumbnail(SkillLevel.beginner),
         isNull,
         reason: 'its greeting follows the language: painted when added',
       );
+      expect(await app.session.samplePreview(SkillLevel.beginner), tinyPng,
+          reason: 'painted by the thumbnailer');
     });
 
-    test('kids from before v4 count as having the beginner sample', () async {
-      SharedPreferences.setMockInitialValues({'flutter.sampleAdded': true});
-      final settings = await AppSettings.load();
-      expect(settings.sampleAddedFor(SkillLevel.beginner), isTrue);
-      expect(settings.sampleAddedFor(SkillLevel.advanced), isFalse);
+    testWidgets('My Paintings → 示例: the kid\'s level first, another can be '
+        'picked, and the one added opens from the message', (tester) async {
+      final app = await pumpApp(tester);
+      await openTab(tester, 1);
+      await tester.tap(find.text('示例'));
+      await tester.pumpAndSettle();
+      expect(find.text('湖畔晨光（示例）'), findsOneWidget, reason: 'advanced');
+      await tester.tap(find.widgetWithText(ChoiceChip, '中级'));
+      await tester.pumpAndSettle();
+      expect(find.text('海边的晚霞（示例）'), findsOneWidget);
+      expect(find.text(const S('zh').levelDescription(SkillLevel.intermediate)),
+          findsOneWidget);
+      expect(
+        find.descendant(
+            of: find.byType(SampleSheet), matching: find.byType(Image)),
+        findsOneWidget,
+        reason: 'its picture',
+      );
+      await tester.tap(find.byKey(SampleSheet.addKey));
+      await tester.pumpAndSettle();
+      expect(find.byType(SampleSheet), findsNothing);
+      expect(find.text('「海边的晚霞（示例）」已经放进我的画作了'), findsOneWidget);
+      expect([for (final m in await app.store.list()) m.name], ['海边的晚霞（示例）']);
+      await tester.tap(find.widgetWithText(SnackBarAction, '打开'));
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await tester.pumpAndSettle();
+      expect(app.session.name, '海边的晚霞（示例）');
     });
   });
 }
