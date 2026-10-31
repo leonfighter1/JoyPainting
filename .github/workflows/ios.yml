@@ -41,7 +41,22 @@ jobs:
       - run: flutter --version && xcodebuild -version
       - run: flutter pub get
       - run: flutter analyze
-      - run: flutter test
+
+      # The log needs a sign-in, so failing tests and their expectations
+      # also show as annotations on the run's page.
+      - name: Run flutter test
+        run: |
+          set +e
+          flutter test 2>&1 | tee tests.log
+          status=${PIPESTATUS[0]}
+          grep -E "\[E\]" tests.log | head -n 10 | while IFS= read -r line; do
+            echo "::error::${line:0:400}"
+          done
+          grep -E "Expected:|Actual:|Which:|was thrown|Error:" tests.log \
+            | head -n 10 | while IFS= read -r line; do
+              echo "::warning::${line:0:400}"
+            done
+          exit $status
 
       - name: Build for devices (release, unsigned)
         run: flutter build ios --release --no-codesign
