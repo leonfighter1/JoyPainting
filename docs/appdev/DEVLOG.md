@@ -1,5 +1,14 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-30: v6.6.0 (the paper stays upright)
+- 6.5.0 after pushing: see its entry below; the iOS workflow change (`857241f`) was pushed afterwards.
+- Reported: with free turning of the paper the whole app lags, more so with many strokes; optimize it, or remove the feature if that can't be done.
+- Measured first (no phone attached; Chrome per my notes): a new `turnBench` in `tool/bench/drawing_bench.dart` (`web_bench.ps1 -Bench turn`) on the 3,058-stroke 高级 sample. Raster per frame: upright 1.2–2.1 ms; a quarter turn 2.7–2.8 ms; 0.5 rad 3.1–4.5 ms; turning every frame 3.8 ms; no missed frames on this PC. Nothing per stroke runs on a view change (zoom is read right, the kept picture's ratio doesn't change); the cost is the turned picture resampled every frame plus the rounded clip and shadow off their fast paths, so it can be trimmed but not removed, and even quarter turns cost about twice upright.
+- Done: turning removed (two fingers, R / Shift+R, the angle on the zoom chip, the level flag); a pinch only zooms and moves; the paper grips always show. README, FEATURES and the device checklist updated.
+- Mistakes: none new.
+- Harness: PASS (analyze 0 issues, 448 tests, build web ok).
+- Not tested: on a real phone or tablet, where the lag was seen (none attached here).
+
 ## 2026-10-30: v6.5.0 (livelier controls)
 - 6.4.0 after its last fix (`6b21d91`): Web and iOS both passed (live version.json 6.4.0+30). The user's settings commit `fcb5700` passed both too.
 - Meanwhile (local, not in git): a 命理罗盘 SVG key art for the user's separate fortune-telling app (`local_art/fortune/`), and a small fix in a file outside the project.

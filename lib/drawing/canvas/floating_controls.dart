@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -190,9 +188,8 @@ class ZoomChip extends StatelessWidget {
       valueListenable: view,
       builder: (context, matrix, _) {
         final zoom = zoomOf(matrix);
-        final degrees = (rotationOf(matrix) * 180 / math.pi).round();
         final moved = matrix.getTranslation().length > 1;
-        final show = (zoom - 1).abs() > 0.01 || moved || degrees != 0;
+        final show = (zoom - 1).abs() > 0.01 || moved;
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
           child: !show
@@ -204,11 +201,7 @@ class ZoomChip extends StatelessWidget {
                     color: cute.ink,
                     size: 18,
                   ),
-                  label: Text([
-                    '${(zoom * 100).round()}%',
-                    if (degrees != 0) '$degrees°',
-                    s.fitScreen,
-                  ].join(' · ')),
+                  label: Text('${(zoom * 100).round()}% · ${s.fitScreen}'),
                   labelStyle: TextStyle(
                     color: cute.ink,
                     fontWeight: FontWeight.w700,

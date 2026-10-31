@@ -21,8 +21,7 @@ What it does:
   - Drag to move, drag the corner knob to resize (same proportions), drag the top knob to turn.
   - A bar next to the selection copies, resizes, turns, recolors, changes opacity and deletes. Every change undoes in one step.
 - **Canvas**:
-  - Two fingers also turn the paper (Intermediate and up; it snaps straight; R / Shift+R on a computer).
-  - Pinch to zoom and pan; ✋ (or holding Space, or a drag outside the paper) moves the paper with one finger or the mouse.
+  - Pinch to zoom and pan (the paper stays upright: turning it was taken out in 6.6.0 because it slowed everything down); ✋ (or holding Space, or a drag outside the paper) moves the paper with one finger or the mouse.
   - Drag the grips on the paper's right and bottom edges to make it wider or taller (or narrower and shorter). What's drawn keeps its size, and undo puts the paper back. The ☰ menu → 画纸恢复默认大小 makes it fill the screen again.
   - Pin the palette beside the paper (a slim strip under it on an upright phone) to change brushes and colors while drawing.
   - Brushes and colors live in a drawer that opens from the "画笔 · 颜色" button. Its groups open and close with a tap on their heading: the everyday brushes, colors and shapes start open, and the extras of higher levels (more brushes, gradients, light & shadow, textures) start closed. Size and opacity sit right under the colors.
@@ -59,13 +58,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.5.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.6.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **6.5.0** | 2026-10-30 | Livelier controls: buttons give a little when pressed and spring back, ripples spread from the finger, switches with a jelly knob, sliders whose number glides with the thumb, check marks that draw themselves, rolling counts, ☰ turning into ✕, placeholders while My Paintings loads, and half/full-screen sheets for samples, the coloring book and adding tools |
+| **6.6.0** | 2026-10-30 | The paper no longer turns (two fingers, R): a turned paper made every frame two to three times as costly and the app lag; two fingers now only zoom and move it, and the edge grips always show |
+| 6.5.0 | 2026-10-30 | Livelier controls: buttons give a little when pressed and spring back, ripples spread from the finger, switches with a jelly knob, sliders whose number glides with the thumb, check marks that draw themselves, rolling counts, ☰ turning into ✕, placeholders while My Paintings loads, and half/full-screen sheets for samples, the coloring book and adding tools |
 | 6.4.0 | 2026-10-29 | Download or send a painting as an SVG (矢量图): lines, shapes, fills and text stay sharp at any size, each layer a named group; PNG and SVG can leave the paper color out for a see-through background |
 | 6.3.0 | 2026-10-29 | Samples (示例) beside the coloring book, added only when picked, for any level; a coloring book for each level (8 simple pages, 6 scenes for about age 12, 6 detailed pages for about age 18); a four-arrow icon for moving the paper and a finger for select & move |
 | 6.2.0 | 2026-10-28 | Opening a big painting shows a card with its name, a progress bar and the percentage; the painting is read and put on the paper a piece at a time, so the screen no longer freezes |
@@ -102,6 +102,18 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 6.6.0 (2026-10-30): a paper that stays upright
+
+**Changed**
+- **The paper doesn't turn any more (转动画纸 is gone).** Turning the paper with two fingers (from the Intermediate level) and with R / Shift+R on a computer made the whole app lag, more so with many strokes. Measured on the 3,000-stroke 高级 sample, every frame took two to three times as long while the paper was turned, because the turned picture has to be redrawn every frame and its rounded edge and shadow lose their fast paths. That cost comes with turning itself, so it was taken out.
+- Two fingers now only zoom and move the paper, so a pinch no longer twists it by accident.
+- The grips on the paper's right and bottom edges (for resizing it) always show; they used to hide while the paper was turned.
+- The zoom chip shows only the zoom (no angle), and the shortcut list (?) no longer has R · Shift+R.
+
+**Good to know**
+- Turning a selection (the move tool's top knob, 向左转 / 向右转) is a different thing and stays.
+- Not yet tried on a real phone or tablet.
 
 ### 6.5.0 (2026-10-30): livelier controls
 
@@ -613,7 +625,7 @@ What the tests cover:
 - **`test/layer_cache_test.dart`**: the kept picture of a painting looks the same as painting every stroke (paint, shadows, see-through paint, the eraser, the blender), and is painted again only when it must (not for new strokes, erasing, undo or redo).
 - **`test/picker_test.dart`**: the color seen at a point (paint, paper, shadows, see-through paint), the picker's loupe and its return to the last brush, and picking a color off the canvas.
 - **`test/fill_test.dart`**: filling inside and outside lines, closing gaps, holes, blank paper, the fill as a stroke (saving, moving, exact corners), and filling a drawn ring on the canvas.
-- **`test/rotation_test.dart`**: turning the paper with two fingers, snapping to a quarter turn, beginners only zooming, the R key, and a turned paper (angle on the chip, grips hidden, strokes under the finger).
+- **`test/rotation_test.dart`**: the paper staying upright (since 6.6.0): two fingers that turn only zoom and move it, R is no shortcut, and the grips stay.
 - **`test/add_tools_test.dart`**: the drawer's basic choices (brushes and helpers too), adding several at once and taking them out, 取消, what each level can add, the chosen option staying in sight; 我的画笔 (saving, picking again, deleting, kept in settings); every shape (in its box, closed ones closed, the outline saved for older versions, arc and wave), every stamp, the new gradients, and the new light & shadow and textures being saved.
 - **`test/live_stroke_test.dart`**: every brush, light & shadow and shape (each combination, then mirror drawing, a texture, low opacity and a see-through layer) shows while it is drawn as it will once finished, with the layers repainted only on their signal, as the screen does.
 - **`test/drawer_test.dart`**: the tools drawer's groups (which start open, opening and closing them, what a closed one shows, its screen reader state), size and opacity under the colors, and the layers button (next to the tools button, following it until dragged, never onto undo's corner, opening the layers).
@@ -642,6 +654,8 @@ How smooth big paintings are (frame times with and without the kept picture, and
 ```powershell
 # Chrome, on the 3,000-stroke sample; opens a separate Chrome window for a few minutes
 powershell -ExecutionPolicy Bypass -File tool\bench\web_bench.ps1
+# The same with the view turned against upright (why 6.6.0 took turning out)
+powershell -ExecutionPolicy Bypass -File tool\bench\web_bench.ps1 -Bench turn
 # A phone or emulator, in profile mode
 flutter drive --profile --driver=test_driver/integration_test.dart --target=integration_test/draw_perf_test.dart -d <device>
 ```

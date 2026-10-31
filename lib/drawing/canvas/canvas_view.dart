@@ -11,11 +11,12 @@ typedef PaperLayout = ({Offset corner, double scale});
 double zoomOf(Matrix4 m) =>
     math.sqrt(m.entry(0, 0) * m.entry(0, 0) + m.entry(1, 0) * m.entry(1, 0));
 
-/// How far the view is turned, in radians (clockwise on screen).
-double rotationOf(Matrix4 m) => math.atan2(m.entry(1, 0), m.entry(0, 0));
-
 /// How the paper is zoomed and panned on screen. Only the view changes;
 /// the painting itself is untouched.
+///
+/// The paper is never turned: a turned paper made every frame two to three
+/// times as costly (measured in 6.6.0), so two fingers zoom and move it
+/// only.
 ///
 /// Tracks every finger on the paper area (two make a pinch), drags that
 /// move the paper, zooming with the wheel, keys and menu, and the animated
@@ -42,12 +43,6 @@ class CanvasViewController {
   /// Where the paper was laid out last, before zooming.
   PaperLayout layout = (corner: Offset.zero, scale: 1);
 
-  /// Whether two fingers also turn the paper (not for beginners).
-  bool rotates = true;
-
-  /// A turn this close to a quarter turn (0°, 90°, 180°, 270°) snaps to it.
-  static const snapAngle = 7 * math.pi / 180;
-
   /// Called when a second finger lands: a pinch isn't drawing, so whatever
   /// the first finger started is dropped.
   VoidCallback? onPinchStart;
@@ -63,7 +58,7 @@ class CanvasViewController {
   /// the touch is a pinch/pan, not drawing.
   bool get pinching => _pinching;
   bool _pinching = false;
-  ({Offset focal, double distance, double angle, Matrix4 start})? _pinchStart;
+  ({Offset focal, double distance, Matrix4 start})? _pinchStart;
 
   /// A drag that started outside the paper, moving it.
   ({int pointer, Offset start, Matrix4 view})? _outsideDrag;
@@ -111,7 +106,6 @@ class CanvasViewController {
     _pinchStart = (
       focal: (pts[0] + pts[1]) / 2,
       distance: math.max(1, (pts[0] - pts[1]).distance),
-      angle: (pts[1] - pts[0]).direction,
       start: view.value.clone(),
     );
   }
@@ -123,19 +117,11 @@ class CanvasViewController {
     final base = zoomOf(start.start);
     final next = (base * (pts[0] - pts[1]).distance / start.distance)
         .clamp(minZoom, maxZoom);
-    // The fingers' turn, snapped to a quarter turn when close to one.
-    var turn = 0.0;
-    if (rotates) {
-      turn = _wrap((pts[1] - pts[0]).direction - start.angle);
-      final total = rotationOf(start.start) + turn;
-      final quarter = (total / (math.pi / 2)).round() * (math.pi / 2);
-      if ((total - quarter).abs() < snapAngle) turn += quarter - total;
-    }
-    // Scale and turn around where the fingers started, then follow their
-    // midpoint so moving both fingers together pans.
+    // Scale around where the fingers started, then follow their midpoint
+    // so moving both fingers together pans.
     final pan = focal - start.focal;
     view.value = Matrix4.translationValues(pan.dx, pan.dy, 0).multiplied(
-        _turnedAround(start.start, start.focal, next / base, turn));
+        _scaledAround(start.start, start.focal, next / base));
   }
 
   /// Moving the paper with one finger or the mouse: where the drag started
@@ -156,23 +142,6 @@ class CanvasViewController {
           .multiplied(Matrix4.diagonal3Values(k, k, 1))
           .multiplied(Matrix4.translationValues(-focal.dx, -focal.dy, 0))
           .multiplied(m);
-
-  static Matrix4 _turnedAround(
-          Matrix4 m, Offset focal, double k, double angle) =>
-      Matrix4.translationValues(focal.dx, focal.dy, 0)
-          .multiplied(Matrix4.rotationZ(angle))
-          .multiplied(Matrix4.diagonal3Values(k, k, 1))
-          .multiplied(Matrix4.translationValues(-focal.dx, -focal.dy, 0))
-          .multiplied(m);
-
-  /// [a] within -π to π.
-  static double _wrap(double a) =>
-      math.atan2(math.sin(a), math.cos(a));
-
-  /// Turns the paper by [angle] around the middle of the paper area (the R
-  /// key).
-  void rotateCenter(double angle) => view.value = _turnedAround(
-      view.value, Offset(room.width / 2, room.height / 2), 1, angle);
 
   /// Zooms by [factor] around [focal] (mouse wheel, menu buttons).
   void zoomAt(Offset focal, double factor) {

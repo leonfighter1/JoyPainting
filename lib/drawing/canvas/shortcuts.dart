@@ -35,10 +35,6 @@ enum CanvasCommand {
   text,
   move,
   picker,
-
-  /// Turn the paper 15° clockwise (R) or back (Shift+R).
-  turnRight,
-  turnLeft,
 }
 
 /// The command for a key press, or null if the key isn't a shortcut.
@@ -84,11 +80,6 @@ CanvasCommand? commandFor(KeyEvent e, {required bool hasSelection}) {
 
   if (key == LogicalKeyboardKey.bracketLeft) return CanvasCommand.smallerBrush;
   if (key == LogicalKeyboardKey.bracketRight) return CanvasCommand.biggerBrush;
-  if (key == LogicalKeyboardKey.keyR) {
-    return keys.isShiftPressed
-        ? CanvasCommand.turnLeft
-        : CanvasCommand.turnRight;
-  }
   if (repeat) return null;
   if (e.character == '?') return CanvasCommand.showShortcuts;
   if (key == LogicalKeyboardKey.delete || key == LogicalKeyboardKey.backspace) {

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:jingyao_paint/drawing/drawing_controller.dart';
@@ -79,6 +81,71 @@ Future<Map<String, Object>> drawingBench({
     };
   }
   StrokeLayerCache.enabled = true;
+  return results;
+}
+
+/// How smooth the drawing screen is on a turned paper, against an upright
+/// one, with a big painting (kept picture on): moving the paper a little
+/// every frame, drawing on it, and turning it every frame. [view] is the
+/// canvas's view matrix and [room] the paper area it applies in. The app
+/// no longer turns the paper; this measured why (6.6.0: a turned paper's
+/// frames took two to three times as long in Chrome).
+Future<Map<String, Object>> turnBench({
+  required DrawingController drawing,
+  required AppSettings settings,
+  required PaintingDoc doc,
+  required ValueNotifier<Matrix4> view,
+  required Size room,
+  required Rect Function() paper,
+  required Swipe swipe,
+}) async {
+  final results = <String, Object>{};
+  StrokeLayerCache.enabled = true;
+  drawing.load(doc.strokes, paper: doc.paper, paperSize: doc.paperSize);
+  await _wait(2000);
+  final c = room.center(Offset.zero);
+  // Turned by [angle] around the middle of the paper area, then shifted.
+  Matrix4 at(double angle, [Offset shift = Offset.zero]) =>
+      Matrix4.translationValues(c.dx + shift.dx, c.dy + shift.dy, 0)
+          .multiplied(Matrix4.rotationZ(angle))
+          .multiplied(Matrix4.translationValues(-c.dx, -c.dy, 0));
+  Future<void> everyFrame(int frames, Matrix4 Function(int i) matrix) async {
+    for (var i = 0; i < frames; i++) {
+      view.value = matrix(i);
+      await _wait(16);
+    }
+  }
+
+  for (final (name, angle) in [
+    ('upright', 0.0),
+    ('quarter', math.pi / 2),
+    ('turned', 0.5),
+  ]) {
+    view.value = at(angle);
+    await _wait(1000);
+    results['move_$name'] = await measureFrames(() => everyFrame(
+        120, (i) => at(angle, Offset(30 * math.sin(i / 8), 0))));
+    view.value = at(angle);
+    await _wait(500);
+    final r = paper();
+    settings.brush = BrushType.marker;
+    results['draw_$name'] = await measureFrames(() async {
+      for (var i = 0; i < 6; i++) {
+        final y = r.center.dy - 60 + 24 * i;
+        await swipe([
+          for (var k = 0; k <= 30; k++) Offset(r.center.dx - 90 + 6 * k, y),
+        ]);
+        await _wait(300);
+      }
+    });
+    for (var i = 0; i < 6; i++) {
+      drawing.undo();
+    }
+    await _wait(500);
+  }
+  results['turn'] = await measureFrames(
+      () => everyFrame(120, (i) => at(0.5 + i * 0.02)));
+  view.value = Matrix4.identity();
   return results;
 }
 

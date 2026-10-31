@@ -6,19 +6,21 @@
 #
 #   powershell -ExecutionPolicy Bypass -File tool\bench\web_bench.ps1
 #   powershell -ExecutionPolicy Bypass -File tool\bench\web_bench.ps1 -Sample intermediate
+#   powershell -ExecutionPolicy Bypass -File tool\bench\web_bench.ps1 -Bench turn   # a turned paper
 param(
     [string]$Root = (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent),
     [string]$Sample = 'advanced',
+    [string]$Bench = 'draw',
     [int]$Port = 8123,
     [int]$TimeoutMinutes = 15
 )
 
 Set-Location $Root
 $site = 'build\bench_web'
-$out = "build\bench\web_$Sample.json"
+$out = if ($Bench -eq 'draw') { "build\bench\web_$Sample.json" } else { "build\bench\web_${Bench}_$Sample.json" }
 Remove-Item $out -ErrorAction SilentlyContinue
 
-flutter build web --profile -t tool/bench/web_bench.dart --dart-define=SAMPLE=$Sample --no-web-resources-cdn -o $site
+flutter build web --profile -t tool/bench/web_bench.dart --dart-define=SAMPLE=$Sample --dart-define=BENCH=$Bench --no-web-resources-cdn -o $site
 if ($LASTEXITCODE -ne 0) { Write-Output 'BENCH: FAIL (build)'; exit 1 }
 
 $server = Start-Process dart -ArgumentList @('run', 'tool/bench/serve.dart', $site, $out, $Port) -PassThru -NoNewWindow

@@ -54,13 +54,24 @@ Future<void> main() async {
   final level = SkillLevel.fromName(
       const String.fromEnvironment('SAMPLE', defaultValue: 'advanced'));
   final doc = await LevelSamples.load(level, const S('zh'));
-  final results = await drawingBench(
-    drawing: session.drawing,
-    settings: settings,
-    doc: doc,
-    paper: _paperOnScreen,
-    swipe: _swipe,
-  );
+  // --dart-define=BENCH=turn measures a turned paper instead.
+  final results = const String.fromEnvironment('BENCH') == 'turn'
+      ? await turnBench(
+          drawing: session.drawing,
+          settings: settings,
+          doc: doc,
+          view: _canvas().view,
+          room: _sizeOf(CanvasPageState.zoomKey),
+          paper: _paperOnScreen,
+          swipe: _swipe,
+        )
+      : await drawingBench(
+          drawing: session.drawing,
+          settings: settings,
+          doc: doc,
+          paper: _paperOnScreen,
+          swipe: _swipe,
+        );
   final view = WidgetsBinding.instance.platformDispatcher.implicitView!;
   results['about'] = {
     'platform': 'web (Chrome)',
@@ -75,6 +86,38 @@ Future<void> main() async {
         web.RequestInit(method: 'POST', body: jsonEncode(results).toJS),
       )
       .toDart;
+}
+
+/// The drawing screen.
+CanvasPageState _canvas() {
+  CanvasPageState? found;
+  void visit(Element e) {
+    if (found != null) return;
+    if (e is StatefulElement && e.state is CanvasPageState) {
+      found = e.state as CanvasPageState;
+      return;
+    }
+    e.visitChildren(visit);
+  }
+
+  WidgetsBinding.instance.rootElement!.visitChildren(visit);
+  return found!;
+}
+
+/// The size of the widget with [key].
+Size _sizeOf(Key key) {
+  Size? found;
+  void visit(Element e) {
+    if (found != null) return;
+    if (e.widget.key == key) {
+      found = (e.renderObject! as RenderBox).size;
+      return;
+    }
+    e.visitChildren(visit);
+  }
+
+  WidgetsBinding.instance.rootElement!.visitChildren(visit);
+  return found!;
 }
 
 /// Where the paper is on screen.

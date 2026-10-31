@@ -1,17 +1,12 @@
 import 'dart:math' as math;
 
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jingyao_paint/drawing/canvas/canvas_view.dart';
 import 'package:jingyao_paint/drawing/canvas/paper_view.dart';
 import 'package:jingyao_paint/drawing/canvas/shortcuts.dart';
-import 'package:jingyao_paint/drawing/canvas_page.dart';
-import 'package:jingyao_paint/skill_level.dart';
 
-import 'widget_test.dart' show drawStroke, pumpApp;
-
-double degrees(double radians) => radians * 180 / math.pi;
+import 'widget_test.dart' show pumpApp;
 
 /// Two fingers on the paper area: down at [a0] and [b0], then moved to
 /// [a1] and [b1].
@@ -26,42 +21,42 @@ void pinch(CanvasViewController view, Offset a0, Offset b0, Offset a1,
     ..fingerUp(2);
 }
 
+/// Whether [m] keeps the paper upright: no turn, the same scale both ways.
+bool upright(Matrix4 m) =>
+    m.entry(1, 0).abs() < 1e-9 &&
+    m.entry(0, 1).abs() < 1e-9 &&
+    (m.entry(0, 0) - m.entry(1, 1)).abs() < 1e-9;
+
 void main() {
-  group('Turning the paper', () {
+  // The paper used to turn with two fingers and R (5.2.0 to 6.5.0); a
+  // turned paper made every frame two to three times as costly, so 6.6.0
+  // took turning out.
+  group('The paper stays upright', () {
     late CanvasViewController view;
     setUp(() => view = CanvasViewController(vsync: const TestVSync())
       ..animate = false
       ..room = const Size(400, 600));
     tearDown(() => view.dispose());
 
-    test('two fingers turn it as they turn, keeping the zoom', () {
-      // The second finger goes 30° round the first, at the same distance.
-      final turned = Offset.fromDirection(math.pi / 6, 100);
-      pinch(view, const Offset(100, 100), const Offset(200, 100),
-          const Offset(100, 100), const Offset(100, 100) + turned);
-      expect(degrees(rotationOf(view.view.value)), closeTo(30, 0.01));
-      expect(view.zoom, closeTo(1, 1e-9));
-    });
-
-    test('close to a quarter turn it snaps to it', () {
-      final turned = Offset.fromDirection(85 * math.pi / 180, 100);
-      pinch(view, const Offset(100, 100), const Offset(200, 100),
-          const Offset(100, 100), const Offset(100, 100) + turned);
-      expect(degrees(rotationOf(view.view.value)), closeTo(90, 1e-6));
-    });
-
-    test('beginners only pinch to zoom', () {
-      view.rotates = false;
+    test('two fingers that turn only zoom and move it', () {
+      // The second finger goes 30° round the first, twice as far away.
       final turned = Offset.fromDirection(math.pi / 6, 200);
       pinch(view, const Offset(100, 100), const Offset(200, 100),
           const Offset(100, 100), const Offset(100, 100) + turned);
-      expect(rotationOf(view.view.value), 0);
+      expect(upright(view.view.value), isTrue);
       expect(view.zoom, closeTo(2, 1e-9));
-      expect(SkillLevel.beginner.rotation, isFalse);
-      expect(SkillLevel.intermediate.rotation, isTrue);
     });
 
-    test('R turns it 15°, Shift+R back; fit to screen straightens it', () {
+    test('moving both fingers together moves it', () {
+      pinch(view, const Offset(100, 100), const Offset(200, 100),
+          const Offset(130, 140), const Offset(230, 140));
+      expect(upright(view.view.value), isTrue);
+      expect(view.zoom, closeTo(1, 1e-9));
+      expect(view.view.value.getTranslation().x, closeTo(30, 1e-9));
+      expect(view.view.value.getTranslation().y, closeTo(40, 1e-9));
+    });
+
+    test('R is not a shortcut any more', () {
       expect(
           commandFor(
               const KeyDownEvent(
@@ -70,34 +65,17 @@ void main() {
                   character: 'r',
                   timeStamp: Duration.zero),
               hasSelection: false),
-          CanvasCommand.turnRight);
-      view.rotateCenter(math.pi / 12);
-      expect(degrees(rotationOf(view.view.value)), closeTo(15, 1e-9));
-      view.reset();
-      expect(rotationOf(view.view.value), 0);
+          isNull);
     });
   });
 
-  testWidgets('a turned paper: the chip shows the angle, the grips hide, and '
-      'a stroke still lands under the finger', (tester) async {
-    final app = await pumpApp(tester);
+  testWidgets('R leaves the paper upright, its grips in place',
+      (tester) async {
+    await pumpApp(tester);
     expect(find.byType(PaperGrip), findsNWidgets(2));
     await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
     await tester.pumpAndSettle();
-    expect(find.textContaining('30°'), findsOneWidget);
-    expect(find.byType(PaperGrip), findsNothing);
-
-    const start = Offset(150, 300);
-    final paper =
-        tester.renderObject<RenderBox>(find.byKey(CanvasPageState.paperKey));
-    final expected = paper.globalToLocal(start);
-    await tester.dragFrom(start, const Offset(40, 0));
-    await tester.pump();
-    final first = app.session.drawing.strokes.single.points.first;
-    expect(first.x, closeTo(expected.dx, 1));
-    expect(first.y, closeTo(expected.dy, 1));
-    await drawStroke(tester);
-    await tester.pump(const Duration(seconds: 1));
+    expect(find.textContaining('°'), findsNothing);
+    expect(find.byType(PaperGrip), findsNWidgets(2));
   });
 }
