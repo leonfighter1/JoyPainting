@@ -21,7 +21,7 @@ import 'widgets/name_dialog.dart';
 import 'widgets/parent_gate.dart';
 import 'widgets/press_bounce.dart';
 
-const appVersion = '6.4.0';
+const appVersion = '6.5.0';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({

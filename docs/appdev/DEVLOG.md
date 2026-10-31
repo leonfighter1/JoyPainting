@@ -9,7 +9,8 @@
 - Kept as they were, on purpose: the replay timeline (a plain slider shows the true position) and the short sheets (layers, text, share, selection color).
 - Mistakes: MISTAKES rule 75 (an ink ripple cancelled before it showed used its disposed controller). Tests updated for the new widgets, a count that now rolls (settle before reading it) and items below a half-height sheet (scroll to them first).
 - Harness: PASS (analyze 0 issues, 448 tests, build web ok).
-- Not tested: on a real device (the feel of the spring and the stretch, sheets with a real flick); in Chrome by hand.
+- Asked after the push: the APK. Found `appVersion` still 6.4.0 (MISTAKES rule 76), fixed it with `test/version_test.dart` in a follow-up commit; harness PASS again (449 tests). APKs built with `tool\build_apk.ps1`: `dist\JoyPainting-v6.5.0-arm64.apk` (34.0 MB), `-armv7` (32.1 MB), `-x86_64` (35.6 MB).
+- Not tested: on a real device (the feel of the spring and the stretch, sheets with a real flick); in Chrome by hand; the APKs weren't installed on an emulator.
 - Next: the remaining TECH_PLAN items.
 
 ## 2026-10-29: v6.4.0 (SVG pictures, see-through backgrounds)
