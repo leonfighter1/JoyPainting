@@ -75,8 +75,15 @@
 72. For art drawn from code (coloring pages, samples), choose subjects whose shapes code can get right (architecture, patterns, stylized nature); render each one and judge it whole and at zoom before keeping it, and replace it rather than patch it when the proportions are wrong.
 73. A `saveLayer`'s bounds clip what is painted on it. Code that copies Flutter painting into another format (the SVG canvas) must clip to them too, at least for pictures, which can reach past a stroke; compare its output with Flutter's own render, not just its structure.
 74. `flutter test --platform chrome` doesn't run on this PC: every browser test file, even the old `web_store_test.dart`, waits about 10 minutes and fails with "Connection closed before test suite loaded". Don't spend time on it here. To check web code here, build a small page with `flutter build web -t <file> --no-web-resources-cdn` that prints its findings, serve it (`local_art/svg_check/serve.js`) and read the prints from headless Chrome (`--enable-logging=stderr --virtual-time-budget=30000 --dump-dom`), as `local_art/svg_check/web_main.dart` does. Browser-only tests still go in the Web workflow; have them print a `::notice::` line with what they found, since its log needs a sign-in.
+75. When something disposes itself as its last animation completes (an ink feature fading out), never call `forward(from:)` with a value that may already be the end: set the value, then animate only if it isn't there. Test cancelling it in the same frame it started (`tester.longPress` on an `InkWell` with both taps).
 
 ## Log
+
+### 2026-10-30: A ripple cancelled before it showed crashed
+- **Symptom:** after making `TouchRipple` the theme's ripple, three tests with a long press failed: "AnimationController.stop() called after AnimationController.dispose()" from `TouchRipple.cancel`.
+- **Root cause:** `tester.longPress` holds in one pump, so the ripple's fade-in never ticked; cancel ran `fadeOut.forward(from: 1)`, setting the value to 1 completed the fade, its listener disposed the ripple, and `forward` went on to use the disposed controller. Flutter's own `InkRipple` sets the value first and animates only below 1.
+- **Fix:** `cancel` does the same; a test long-presses an `InkWell` with tap and long press.
+- **Rule:** 75.
 
 ### 2026-10-29: Browser tests never loaded on this PC
 - **Symptom:** `flutter test --platform chrome` on the new `svg_web_test.dart` (and on the whole SVG test file) waited about 10 minutes, then failed with "Connection closed before test suite loaded". The old `web_store_test.dart`, which passes in CI, failed the same way.

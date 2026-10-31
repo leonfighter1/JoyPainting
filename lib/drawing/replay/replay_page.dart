@@ -9,6 +9,7 @@ import '../../gallery/painting_store.dart';
 import '../../l10n.dart';
 import '../../share/painting_export.dart';
 import '../../share/share_actions.dart';
+import '../../widgets/press_bounce.dart';
 import '../render/layer_cache.dart';
 import '../stroke.dart';
 import 'replay_gif.dart';
@@ -202,7 +203,7 @@ class ReplayPageState extends State<ReplayPage>
             icon: Icon(
                 playing ? Icons.pause_rounded : Icons.play_arrow_rounded),
             onPressed: playing ? _pause : _play,
-          ),
+          ).bouncy(),
           SizedBox(
             width: 260,
             child: ValueListenableBuilder(
@@ -236,7 +237,7 @@ class ReplayPageState extends State<ReplayPage>
                     icon: const Icon(Icons.gif_box_rounded),
                     label: Text(s.saveGif),
                     onPressed: widget.doc.strokes.isEmpty ? null : _saveGif,
-                  )
+                  ).bouncy()
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -249,7 +250,7 @@ class ReplayPageState extends State<ReplayPage>
                         tooltip: s.cancel,
                         icon: const Icon(Icons.close_rounded),
                         onPressed: () => _cancelSave = true,
-                      ),
+                      ).bouncy(),
                     ],
                   ),
           ),

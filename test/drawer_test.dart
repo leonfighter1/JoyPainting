@@ -6,6 +6,7 @@ import 'package:jingyao_paint/drawing/canvas/tool_section.dart';
 import 'package:jingyao_paint/drawing/canvas_page.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
 import 'package:jingyao_paint/widgets/corner_float.dart';
+import 'package:jingyao_paint/widgets/liquid_slider.dart';
 
 import 'test_helpers.dart';
 import 'widget_test.dart' show closeTools, openTools, pumpApp, scrollTools;
@@ -93,7 +94,7 @@ void main() {
       await openTools(tester);
       final colors = tester.getRect(heading(ToolSection.colors));
       final lastSwatch = tester.getRect(find.byType(Swatch).last);
-      final sliders = find.byType(Slider);
+      final sliders = find.byType(LiquidSlider);
       final size = tester.getRect(sliders.first);
       final opacity = tester.getRect(sliders.at(1));
       final shapes = tester.getRect(heading(ToolSection.shapes));
@@ -101,7 +102,8 @@ void main() {
       expect(size.top, greaterThan(lastSwatch.bottom));
       expect(size.top - lastSwatch.bottom, lessThan(40));
       expect(opacity.top, greaterThan(size.top));
-      expect(shapes.top, greaterThan(opacity.bottom));
+      // Below the opacity row, touching it at most.
+      expect(shapes.top, greaterThanOrEqualTo(opacity.bottom));
     });
   });
 

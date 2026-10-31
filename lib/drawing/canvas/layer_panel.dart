@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../l10n.dart';
 import '../../theme/cute_theme.dart';
+import '../../widgets/liquid_slider.dart';
+import '../../widgets/motion.dart';
 import '../../widgets/name_dialog.dart';
+import '../../widgets/press_bounce.dart';
 import '../drawing_controller.dart';
 import '../layers.dart';
 
@@ -203,7 +206,7 @@ class LayerSheet extends StatelessWidget {
                         onPressed: layers.length >= PaintingLayer.maxLayers
                             ? null
                             : drawing.addLayer,
-                      ),
+                      ).bouncy(),
                     ],
                   ),
                 ),
@@ -243,10 +246,10 @@ class LayerSheet extends StatelessWidget {
                         ),
                       ),
                       Expanded(
-                        child: Slider(
+                        child: LiquidSlider(
                           value: active.opacity,
                           divisions: 20,
-                          label: s.percent(active.opacity),
+                          label: s.percent,
                           semanticFormatterCallback: (v) =>
                               '${s.layerOpacity} ${s.percent(v)}',
                           // One undo for a whole drag.
@@ -260,9 +263,13 @@ class LayerSheet extends StatelessWidget {
                       ),
                       SizedBox(
                         width: 48,
-                        child: Text(
-                          s.percent(active.opacity),
-                          style: TextStyle(color: cute.ink),
+                        child: RollingNumber(
+                          value: active.opacity,
+                          duration: Motion.settle,
+                          builder: (context, v) => Text(
+                            s.percent(v),
+                            style: TextStyle(color: cute.ink),
+                          ),
                         ),
                       ),
                     ],
@@ -320,11 +327,11 @@ class _LayerTile extends StatelessWidget {
             TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: Text(s.cancel),
-            ),
+            ).bouncy(),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               child: Text(s.delete),
-            ),
+            ).bouncy(),
           ],
         ),
       );
@@ -373,7 +380,7 @@ class _LayerTile extends StatelessWidget {
               ),
               onPressed: () =>
                   drawing.updateLayer(layer.copyWith(visible: !layer.visible)),
-            ),
+            ).bouncy(),
             IconButton(
               tooltip: layer.locked ? s.unlockLayer : s.lockLayer,
               icon: Icon(
@@ -381,7 +388,7 @@ class _LayerTile extends StatelessWidget {
               ),
               onPressed: () =>
                   drawing.updateLayer(layer.copyWith(locked: !layer.locked)),
-            ),
+            ).bouncy(),
             PopupMenuButton<VoidCallback>(
               tooltip: s.more,
               onSelected: (action) => action(),

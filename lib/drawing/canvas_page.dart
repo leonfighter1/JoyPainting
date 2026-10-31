@@ -16,6 +16,7 @@ import '../share/share_actions.dart';
 import '../theme/cute_theme.dart';
 import '../widgets/corner_float.dart';
 import '../widgets/name_dialog.dart';
+import '../widgets/press_bounce.dart';
 import 'canvas/canvas_keys.dart';
 import 'canvas/canvas_menu.dart';
 import 'canvas/canvas_view.dart';
@@ -847,7 +848,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                           drawing: _drawing,
                           hide: slide,
                           onOpen: _openLayers,
-                        ),
+                        ).bouncy(),
                       ),
                     if (!locked)
                       CornerFloat(
@@ -865,7 +866,7 @@ class CanvasPageState extends State<CanvasPage> with TickerProviderStateMixin {
                           // Fades and shrinks away as the drawer slides in.
                           hide: slide,
                           onTap: _openTools,
-                        ),
+                        ).bouncy(),
                       ),
                     if ((!locked || strip) && _toolsShown)
                       Positioned.fill(

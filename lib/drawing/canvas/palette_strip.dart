@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../l10n.dart';
 import '../../settings.dart';
 import '../../theme/cute_theme.dart';
+import '../../widgets/press_bounce.dart';
 import '../stroke.dart';
 import 'brush_tile.dart';
 import 'color_widgets.dart';
@@ -110,13 +111,13 @@ class PaletteStrip extends StatelessWidget {
                     icon: const Icon(Icons.tune_rounded),
                     color: cute.ink,
                     onPressed: onMore,
-                  ),
+                  ).bouncy(),
                   IconButton(
                     tooltip: s.unpinPalette,
                     icon: const Icon(Icons.push_pin_rounded),
                     color: cute.spec.primary,
                     onPressed: onUnpin,
-                  ),
+                  ).bouncy(),
                 ],
               ),
             ],

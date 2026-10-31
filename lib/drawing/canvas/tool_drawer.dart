@@ -7,6 +7,8 @@ import '../../app_theme.dart';
 import '../../l10n.dart';
 import '../../settings.dart';
 import '../../theme/cute_theme.dart';
+import '../../widgets/liquid_slider.dart';
+import '../../widgets/press_bounce.dart';
 import '../stroke.dart';
 import 'brush_tile.dart';
 import 'canvas_keys.dart';
@@ -95,13 +97,13 @@ class ToolDrawer extends StatelessWidget {
                       color: pinned ? cute.spec.primary : null,
                       isSelected: pinned,
                       onPressed: onToggleLock,
-                    ),
+                    ).bouncy(),
                     if (!locked)
                       IconButton(
                         tooltip: s.closeTools,
                         icon: const Icon(Icons.close_rounded),
                         onPressed: onClose,
-                      ),
+                      ).bouncy(),
                   ],
                 ),
               ),
@@ -308,13 +310,13 @@ class ToolPanel extends StatelessWidget {
                   color: accent,
                 ),
                 Expanded(
-                  child: Slider(
+                  child: LiquidSlider(
                     min: 0,
                     max: AppSettings.maxFillGap.toDouble(),
                     divisions: AppSettings.maxFillGap,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     value: settings.fillGap.toDouble(),
-                    label: settings.fillGap.toString(),
+                    label: (v) => v.round().toString(),
                     semanticFormatterCallback: (v) =>
                         '${s.fillGap} ${v.round()}',
                     activeColor: accent,
@@ -332,13 +334,13 @@ class ToolPanel extends StatelessWidget {
                   color: accent,
                 ),
                 Expanded(
-                  child: Slider(
+                  child: LiquidSlider(
                     min: 1,
                     max: 60,
                     divisions: 59,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     value: settings.size.clamp(1, 60),
-                    label: settings.size.round().toString(),
+                    label: (v) => v.round().toString(),
                     semanticFormatterCallback: (v) =>
                         '${s.brushSize} ${v.round()}',
                     activeColor: accent,
@@ -357,13 +359,13 @@ class ToolPanel extends StatelessWidget {
                   color: accent,
                 ),
                 Expanded(
-                  child: Slider(
+                  child: LiquidSlider(
                     min: AppSettings.minOpacity,
                     max: 1,
                     divisions: 19,
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     value: settings.opacity,
-                    label: s.percent(settings.opacity),
+                    label: s.percent,
                     semanticFormatterCallback: (v) =>
                         '${s.opacity} ${s.percent(v)}',
                     activeColor: accent,
@@ -438,7 +440,7 @@ class ToolPanel extends StatelessWidget {
             icon: const Icon(Icons.add_box_rounded),
             label: Text(s.addTools),
             onPressed: () => showAddToolsSheet(context, settings),
-          ),
+          ).bouncy(),
         ),
         const Divider(height: 28),
         Row(
@@ -487,16 +489,19 @@ class ToolChip extends StatelessWidget {
     final fg = selected ? scheme.onPrimary : cute.ink;
     return Padding(
       padding: const EdgeInsets.only(right: 6),
-      child: ChoiceChip(
-        avatar: glyph?.call(fg) ?? Icon(icon, size: 18, color: fg),
-        label: Text(label),
-        selected: selected && enabled,
-        showCheckmark: false,
-        selectedColor: scheme.primary,
-        backgroundColor: scheme.surface,
-        side: BorderSide(color: scheme.primary.withValues(alpha: 0.35)),
-        labelStyle: TextStyle(color: fg, fontWeight: FontWeight.w600),
-        onSelected: enabled ? (_) => onTap() : null,
+      child: PressBounce(
+        enabled: enabled,
+        child: ChoiceChip(
+          avatar: glyph?.call(fg) ?? Icon(icon, size: 18, color: fg),
+          label: Text(label),
+          selected: selected && enabled,
+          showCheckmark: false,
+          selectedColor: scheme.primary,
+          backgroundColor: scheme.surface,
+          side: BorderSide(color: scheme.primary.withValues(alpha: 0.35)),
+          labelStyle: TextStyle(color: fg, fontWeight: FontWeight.w600),
+          onSelected: enabled ? (_) => onTap() : null,
+        ),
       ),
     );
   }

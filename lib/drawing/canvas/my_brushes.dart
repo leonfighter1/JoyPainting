@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n.dart';
 import '../../settings.dart';
 import '../../widgets/name_dialog.dart';
+import '../../widgets/press_bounce.dart';
 import '../brush_preset.dart';
 
 /// 我的画笔: saves the brush in use, with its settings, under a name the
@@ -41,7 +42,7 @@ Future<void> deleteMyBrush(
         TextButton(
           onPressed: () => Navigator.pop(context, false),
           child: Text(s.cancel),
-        ),
+        ).bouncy(),
         FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
@@ -49,7 +50,7 @@ Future<void> deleteMyBrush(
           ),
           onPressed: () => Navigator.pop(context, true),
           child: Text(s.delete),
-        ),
+        ).bouncy(),
       ],
     ),
   );
@@ -86,7 +87,7 @@ class SaveBrushChip extends StatelessWidget {
         side: BorderSide(color: scheme.primary.withValues(alpha: 0.6)),
         backgroundColor: scheme.surface,
         onPressed: () => saveMyBrush(context, settings),
-      ),
+      ).bouncy(),
     );
   }
 }

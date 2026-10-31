@@ -12,6 +12,7 @@ import 'package:jingyao_paint/share/painting_export.dart';
 import 'package:jingyao_paint/share/photo_import.dart';
 import 'package:jingyao_paint/share/share_actions.dart';
 import 'package:jingyao_paint/skill_level.dart';
+import 'package:jingyao_paint/widgets/elastic_switch.dart';
 import 'package:jingyao_paint/widgets/menu_button.dart';
 
 import 'test_helpers.dart';
@@ -168,13 +169,13 @@ void main() {
       final toggle = find.byKey(const ValueKey('exportPhotos'));
       expect(find.text('照片也放进去'), findsOneWidget);
       expect(
-        tester.widget<SwitchListTile>(toggle).value,
+        tester.widget<ElasticSwitchTile>(toggle).value,
         isTrue,
         reason: 'what is seen, unless turned off',
       );
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+      expect(tester.widget<ElasticSwitchTile>(toggle).value, isFalse);
       await tester.tapAt(const Offset(5, 5));
       await tester.pumpAndSettle();
     });
@@ -185,7 +186,7 @@ void main() {
   ) async {
     final app = await pumpApp(tester);
     Future<bool> offered() async {
-      await tester.tap(find.byIcon(MenuButton.icon));
+      await tester.tap(find.byType(MenuButton));
       await tester.pumpAndSettle();
       final found = find
           .text('导入照片（描着画）', skipOffstage: false)

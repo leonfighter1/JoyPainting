@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../app_theme.dart';
 import '../l10n.dart';
+import '../widgets/liquid_slider.dart';
+import '../widgets/motion.dart';
+import '../widgets/press_bounce.dart';
 import 'stroke.dart';
 
 /// What the user chose in the text editor.
@@ -84,7 +87,7 @@ class _TextEditorSheetState extends State<_TextEditorSheet> {
       isSelected: on,
       icon: Icon(icon),
       onPressed: () => setState(() => _style = set(!on)),
-    );
+    ).bouncy();
   }
 
   @override
@@ -126,13 +129,13 @@ class _TextEditorSheetState extends State<_TextEditorSheet> {
                           color: scheme.error),
                       onPressed: () =>
                           Navigator.pop(context, const TextEditResult.delete()),
-                    ),
+                    ).bouncy(),
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: _done,
                     icon: const Icon(Icons.check_rounded),
                     label: Text(s.done),
-                  ),
+                  ).bouncy(),
                 ],
               ),
               const SizedBox(height: 12),
@@ -198,12 +201,12 @@ class _TextEditorSheetState extends State<_TextEditorSheet> {
                 children: [
                   Text(s.fontSize),
                   Expanded(
-                    child: Slider(
+                    child: LiquidSlider(
                       min: 12,
                       max: 120,
                       divisions: 108,
                       value: _style.fontSize.clamp(12, 120).toDouble(),
-                      label: _style.fontSize.round().toString(),
+                      label: (v) => v.round().toString(),
                       semanticFormatterCallback: (v) =>
                           '${s.fontSize} ${v.round()}',
                       onChanged: (v) =>
@@ -212,8 +215,12 @@ class _TextEditorSheetState extends State<_TextEditorSheet> {
                   ),
                   SizedBox(
                     width: 36,
-                    child: Text(_style.fontSize.round().toString(),
-                        textAlign: TextAlign.end),
+                    child: RollingNumber(
+                      value: _style.fontSize,
+                      duration: Motion.settle,
+                      builder: (context, v) => Text(v.round().toString(),
+                          textAlign: TextAlign.end),
+                    ),
                   ),
                 ],
               ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../app_theme.dart';
 import '../../theme/cute_theme.dart';
+import '../../widgets/press_bounce.dart';
 import '../stroke.dart';
 
 /// A large, round, colorful brush button with its name underneath. A
@@ -90,7 +91,7 @@ class BrushTile extends StatelessWidget {
             ),
           ),
         ),
-      ),
+      ).bouncy(),
     );
   }
 }

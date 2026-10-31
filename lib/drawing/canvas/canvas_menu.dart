@@ -7,6 +7,7 @@ import '../../painting_session.dart';
 import '../../settings.dart';
 import '../../share/share_actions.dart';
 import '../../widgets/drop_menu.dart';
+import '../../widgets/press_bounce.dart';
 import 'color_widgets.dart';
 
 /// The ☰ menu on the drawing screen: a grouped list that unfolds from the
@@ -194,11 +195,11 @@ Future<bool> confirmClear(BuildContext context) async {
         TextButton(
           onPressed: () => Navigator.pop(context, false),
           child: Text(s.cancel),
-        ),
+        ).bouncy(),
         FilledButton(
           onPressed: () => Navigator.pop(context, true),
           child: Text(s.confirm),
-        ),
+        ).bouncy(),
       ],
     ),
   );
@@ -217,7 +218,7 @@ Future<bool> confirmDeletePainting(BuildContext context) async {
         TextButton(
           onPressed: () => Navigator.pop(context, false),
           child: Text(s.cancel),
-        ),
+        ).bouncy(),
         FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
@@ -225,7 +226,7 @@ Future<bool> confirmDeletePainting(BuildContext context) async {
           ),
           onPressed: () => Navigator.pop(context, true),
           child: Text(s.delete),
-        ),
+        ).bouncy(),
       ],
     ),
   );

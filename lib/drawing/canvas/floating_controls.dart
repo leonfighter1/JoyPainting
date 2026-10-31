@@ -8,6 +8,7 @@ import '../../l10n.dart';
 import '../../settings.dart';
 import '../../theme/cute_theme.dart';
 import '../../widgets/menu_button.dart';
+import '../../widgets/press_bounce.dart';
 import '../drawing_controller.dart';
 import '../stroke.dart';
 import 'canvas_view.dart';
@@ -158,13 +159,13 @@ class UndoRedoBar extends StatelessWidget {
                 icon: const Icon(Icons.undo_rounded),
                 color: cute.ink,
                 onPressed: drawing.canUndo ? drawing.undo : null,
-              ),
+              ).bouncy(),
               IconButton(
                 tooltip: s.redo,
                 icon: const Icon(Icons.redo_rounded),
                 color: cute.ink,
                 onPressed: drawing.canRedo ? drawing.redo : null,
-              ),
+              ).bouncy(),
             ],
           ),
         ),
@@ -249,7 +250,8 @@ class CanvasBarActions extends StatelessWidget {
   /// Picks the move tool, or goes back to the brush used before it.
   final VoidCallback onMove;
   final VoidCallback onClear;
-  final VoidCallback onMenu;
+  /// Opens the menu; completes when it has closed.
+  final Future<void> Function() onMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +276,7 @@ class CanvasBarActions extends StatelessWidget {
             selectedIcon: const Icon(Icons.open_with_rounded),
             style: on(panning),
             onPressed: () => panMode.value = !panning,
-          ),
+          ).bouncy(),
         ),
         ListenableBuilder(
           listenable: changes,
@@ -291,13 +293,13 @@ class CanvasBarActions extends StatelessWidget {
                     icon: Icon(AppTheme.brushIcon(BrushType.move)),
                     style: on(moving),
                     onPressed: onMove,
-                  ),
+                  ).bouncy(),
                 IconButton(
                   key: const ValueKey('clearButton'),
                   tooltip: s.clear,
                   icon: const Icon(Icons.cleaning_services_rounded),
                   onPressed: canClear() ? onClear : null,
-                ),
+                ).bouncy(),
               ],
             );
           },

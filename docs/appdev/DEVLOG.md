@@ -1,5 +1,17 @@
 # Dev log: JoyPainting (快乐涂鸦), formerly JingyaoPaint
 
+## 2026-10-30: v6.5.0 (livelier controls)
+- 6.4.0 after its last fix (`6b21d91`): Web and iOS both passed (live version.json 6.4.0+30). The user's settings commit `fcb5700` passed both too.
+- Meanwhile (local, not in git): a 命理罗盘 SVG key art for the user's separate fortune-telling app (`local_art/fortune/`), and a small fix in a file outside the project.
+- Asked: a checklist of 12 UI motions; check which kinds of control exist and improve those.
+- Checked first: buttons, ripples, switches, sliders, numbers that change, loading spinners, the ☰ button and bottom sheets exist; the export choosing is the only checkbox; there are no like/favorite buttons, flipping cards or card stacks, so those three were left out.
+- Done: press bounce on every button (`.bouncy()` on 67 Material buttons, added by a bracket-matching script and checked in the diff, plus the custom buttons), `TouchRipple` as the theme's ripple, `ElasticSwitch`, `LiquidSlider`, `DrawnCheck`, `RollingNumber`, skeletons in My Paintings and the samples, ☰→✕, and `SnapSheet` for the samples, coloring book and adding tools. Looked at rendered frames of the switch, slider, menu button, check and skeleton card (scratch only); shortened the switch's capsule after seeing it nearly fill the track.
+- Kept as they were, on purpose: the replay timeline (a plain slider shows the true position) and the short sheets (layers, text, share, selection color).
+- Mistakes: MISTAKES rule 75 (an ink ripple cancelled before it showed used its disposed controller). Tests updated for the new widgets, a count that now rolls (settle before reading it) and items below a half-height sheet (scroll to them first).
+- Harness: PASS (analyze 0 issues, 448 tests, build web ok).
+- Not tested: on a real device (the feel of the spring and the stretch, sheets with a real flick); in Chrome by hand.
+- Next: the remaining TECH_PLAN items.
+
 ## 2026-10-29: v6.4.0 (SVG pictures, see-through backgrounds)
 - 6.3.0: the user looked at the new coloring pages and said to push. They also said finished work no longer waits for their approval (they'll say when it should); this is now step 5 of the appdev skill and in my memory. After pushing, Web and iOS both passed (live version.json 6.3.0+29).
 - Asked: export pictures as SVG, and make an SVG logo for 上海丽扬服装定制 locally to test it.

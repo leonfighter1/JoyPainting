@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n.dart';
 import '../theme/cute_theme.dart';
+import '../widgets/press_bounce.dart';
 import 'painting_store.dart';
 
 /// When to remind a grown-up to back up a kid's paintings: they live only
@@ -105,12 +106,12 @@ class BackupBanner extends StatelessWidget {
               alignment: WrapAlignment.end,
               spacing: 8,
               children: [
-                TextButton(onPressed: onLater, child: Text(s.later)),
+                TextButton(onPressed: onLater, child: Text(s.later)).bouncy(),
                 FilledButton.icon(
                   icon: const Icon(Icons.save_alt_rounded),
                   label: Text(s.backupNow),
                   onPressed: onBackup,
-                ),
+                ).bouncy(),
               ],
             ),
           ],

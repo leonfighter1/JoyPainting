@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../l10n.dart';
 import '../../settings.dart';
 import '../../theme/cute_theme.dart';
+import '../../widgets/press_bounce.dart';
+import '../../widgets/snap_sheet.dart';
 import 'tool_catalog.dart';
 
 /// 添加工具: everything the level offers beyond the basic options, by
@@ -13,10 +15,8 @@ Future<void> showAddToolsSheet(
   BuildContext context,
   AppSettings settings, {
   ToolGroup? first,
-}) => showModalBottomSheet<void>(
+}) => showSnapSheet<void>(
   context: context,
-  showDragHandle: true,
-  isScrollControlled: true,
   builder: (_) => AddToolsSheet(settings: settings, first: first),
 );
 
@@ -48,63 +48,53 @@ class _AddToolsSheetState extends State<AddToolsSheet> {
       for (final g in ToolGroup.values)
         if (g != widget.first) g,
     ].where((g) => g.allowedAt(level));
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+    return SnapSheet(
+      key: const ValueKey('addToolsList'),
+      header: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+        child: Text(
+          s.addTools,
+          style: TextStyle(
+            color: cute.ink,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+          ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      ),
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          sliver: SliverList.list(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                child: Text(s.addToolsHint, style: TextStyle(color: cute.ink)),
+              ),
+              for (final group in groups)
+                ..._group(context, group, s, cute, scheme),
+            ],
+          ),
+        ),
+      ],
+      footer: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-              child: Text(
-                s.addTools,
-                style: TextStyle(
-                  color: cute.ink,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(s.addToolsHint, style: TextStyle(color: cute.ink)),
-            ),
-            Flexible(
-              child: ListView(
-                key: const ValueKey('addToolsList'),
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                children: [
-                  for (final group in groups)
-                    ..._group(context, group, s, cute, scheme),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(s.cancel),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    key: const ValueKey('addToolsDone'),
-                    icon: const Icon(Icons.check_rounded),
-                    label: Text(s.done),
-                    onPressed: () {
-                      widget.settings.addedTools = _picked;
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
-            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(s.cancel),
+            ).bouncy(),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              key: const ValueKey('addToolsDone'),
+              icon: const Icon(Icons.check_rounded),
+              label: Text(s.done),
+              onPressed: () {
+                widget.settings.addedTools = _picked;
+                Navigator.pop(context);
+              },
+            ).bouncy(),
           ],
         ),
       ),
@@ -144,7 +134,7 @@ class _AddToolsSheetState extends State<AddToolsSheet> {
               }
             }),
             child: Text(all ? s.pickNone : s.pickAll),
-          ),
+          ).bouncy(),
         ],
       ),
       Wrap(
@@ -196,6 +186,6 @@ class AddToolChip extends StatelessWidget {
       side: BorderSide(color: scheme.primary.withValues(alpha: 0.6)),
       backgroundColor: scheme.surface,
       onPressed: onTap,
-    );
+    ).bouncy();
   }
 }

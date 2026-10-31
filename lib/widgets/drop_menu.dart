@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/cute_theme.dart';
+import 'elastic_switch.dart';
 
 /// One row in a [showDropMenu] menu.
 class DropMenuItem {
@@ -87,13 +88,13 @@ class _DropMenuPanel extends StatelessWidget {
               style: item.enabled && color != null
                   ? TextStyle(color: color)
                   : null),
+          // The row takes the tap; the switch shows the setting.
           trailing: item.checked == null
               ? null
-              : Switch(
+              : ElasticSwitch(
                   value: item.checked!,
-                  onChanged: item.enabled
-                      ? (_) => Navigator.pop(context, item.onSelected)
-                      : null,
+                  onChanged: item.enabled ? (_) {} : null,
+                  interactive: false,
                 ),
           onTap: () => Navigator.pop(context, item.onSelected),
         ));

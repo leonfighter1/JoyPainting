@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../l10n.dart';
+import '../../widgets/press_bounce.dart';
 
 /// What a keyboard shortcut on the drawing screen does.
 enum CanvasCommand {
@@ -164,7 +165,7 @@ Future<void> showShortcutsDialog(BuildContext context) {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(s.confirm),
-          ),
+          ).bouncy(),
         ],
       );
     },

@@ -536,7 +536,7 @@ void main() {
     testWidgets('View has no zoom buttons (pinch, the wheel or Ctrl +/−)',
         (tester) async {
       await pumpApp(tester);
-      await tester.tap(find.byIcon(MenuButton.icon));
+      await tester.tap(find.byType(MenuButton));
       await tester.pumpAndSettle();
       expect(find.text('拖动画板'), findsOneWidget);
       for (final gone in ['放大画布', '缩小画布', '适应屏幕', '画纸大小']) {

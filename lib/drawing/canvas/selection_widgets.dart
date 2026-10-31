@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import '../../l10n.dart';
 import '../../settings.dart';
 import '../../theme/cute_theme.dart';
+import '../../widgets/liquid_slider.dart';
+import '../../widgets/press_bounce.dart';
 import '../stroke.dart';
 import 'canvas_keys.dart';
 import 'overlay_painter.dart';
@@ -79,7 +81,7 @@ class SelectionBar extends StatelessWidget {
                       icon: Icon(icon),
                       color: cute.ink,
                       onPressed: onTap,
-                    ),
+                    ).bouncy(),
                 ],
               ),
             ),
@@ -177,12 +179,12 @@ class _SelectionStyleSheetState extends State<SelectionStyleSheet> {
                   color: accent,
                 ),
                 Expanded(
-                  child: Slider(
+                  child: LiquidSlider(
                     min: AppSettings.minOpacity,
                     max: 1,
                     divisions: 19,
                     value: _opacity.clamp(AppSettings.minOpacity, 1),
-                    label: s.percent(_opacity),
+                    label: s.percent,
                     semanticFormatterCallback: (v) =>
                         '${s.opacity} ${s.percent(v)}',
                     activeColor: accent,

@@ -14,6 +14,7 @@ import 'package:jingyao_paint/skill_level.dart';
 import 'package:jingyao_paint/theme/cute_theme.dart';
 import 'package:jingyao_paint/theme/theme_spec.dart';
 import 'package:jingyao_paint/widgets/corner_float.dart';
+import 'package:jingyao_paint/widgets/liquid_slider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_helpers.dart';
@@ -71,7 +72,7 @@ Future<void> tapMenu(WidgetTester tester, String label) =>
 /// Opens the ⋮ menu and taps [item]. The menu unfolds downward and
 /// scrolls on short screens, so the item is scrolled into view first.
 Future<void> _tapMenuItem(WidgetTester tester, Finder item) async {
-  await tester.tap(find.byIcon(MenuButton.icon));
+  await tester.tap(find.byType(MenuButton));
   await tester.pumpAndSettle();
   await tester.ensureVisible(item);
   await tester.pumpAndSettle();
@@ -157,7 +158,7 @@ void main() {
     testWidgets('is hidden until the button is tapped, then slides in',
         (tester) async {
       await pumpApp(tester);
-      expect(find.byType(Slider), findsNothing, reason: 'hidden at first');
+      expect(find.byType(LiquidSlider), findsNothing, reason: 'hidden at first');
 
       await tester.tap(find.byKey(CanvasPageState.toolsButtonKey));
       await tester.pump(const Duration(milliseconds: 120));
@@ -169,7 +170,7 @@ void main() {
       expect(endX, lessThan(midX), reason: 'slides in from the right');
       expect(find.text('钢笔'), findsOneWidget);
       await scrollTools(tester, find.byTooltip('笔刷大小'));
-      expect(find.byType(Slider), findsWidgets);
+      expect(find.byType(LiquidSlider), findsWidgets);
     });
 
     testWidgets('closes with the close button, the backdrop, Back or a swipe',
@@ -381,7 +382,7 @@ void main() {
       app.settings.brush = BrushType.move;
       await tester.pumpAndSettle();
       expect(find.text('形状'), findsNothing);
-      expect(find.byType(Slider), findsNothing);
+      expect(find.byType(LiquidSlider), findsNothing);
       app.settings.brush = BrushType.pen;
       await tester.pumpAndSettle();
       expect(find.text('颜料'), findsOneWidget);
@@ -731,7 +732,7 @@ void main() {
     final app = await createTestApp();
     await app.store.save(sampleDoc('p', DateTime(2026, 2, 2)), tinyPng);
     await pumpApp(tester, app: app);
-    await tester.tap(find.byIcon(MenuButton.icon));
+    await tester.tap(find.byType(MenuButton));
     await tester.pumpAndSettle();
     expect(find.text('打印'), findsOneWidget);
     await tester.tapAt(const Offset(10, 400));
@@ -777,7 +778,7 @@ void main() {
       }
       // Nothing to clear on a blank page yet.
       expect(button(tester, '清空画布').onPressed, isNull);
-      await tester.tap(find.byIcon(MenuButton.icon));
+      await tester.tap(find.byType(MenuButton));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(ListTile, '新建画作'), findsOneWidget);
       final delete = find.widgetWithText(ListTile, '删除这幅画');
@@ -811,7 +812,7 @@ void main() {
 
     testWidgets('the ⋮ menu unfolds from the top, in groups', (tester) async {
       await pumpApp(tester);
-      await tester.tap(find.byIcon(MenuButton.icon));
+      await tester.tap(find.byType(MenuButton));
       await tester.pump(); // first frame of the animation
       await tester.pump(const Duration(milliseconds: 100));
       final menu = find.ancestor(
@@ -897,7 +898,7 @@ void main() {
     testWidgets('settings is also in the gallery ⋮ menu', (tester) async {
       await pumpApp(tester);
       await openTab(tester, 1);
-      await tester.tap(find.byIcon(MenuButton.icon));
+      await tester.tap(find.byType(MenuButton));
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
     });

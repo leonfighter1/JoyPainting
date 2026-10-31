@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n.dart';
 import '../skill_level.dart';
 import '../theme/cute_theme.dart';
+import '../widgets/snap_sheet.dart';
 import 'coloring_pages.dart';
 import 'level_sheet.dart';
 
@@ -12,10 +13,8 @@ Future<ColoringPage?> pickColoringPage(
   BuildContext context,
   SkillLevel level,
 ) =>
-    showModalBottomSheet<ColoringPage>(
+    showSnapSheet<ColoringPage>(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
       builder: (_) => ColoringBookSheet(level: level),
     );
 
@@ -34,43 +33,46 @@ class ColoringBookSheet extends StatelessWidget {
       title: s.coloringBook,
       hint: s.coloringBookHint,
       initial: level,
-      builder: (context, level) => GridView.extent(
-        // A new level starts at the top.
-        key: ValueKey(level),
-        shrinkWrap: true,
-        maxCrossAxisExtent: 170,
-        childAspectRatio: 0.72,
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        children: [
-          for (final page in ColoringPage.of(level))
-            Card(
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: () => Navigator.pop(context, page),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Image.asset(page.preview,
-                            excludeFromSemantics: true),
-                      ),
+      builder: (context, level) => [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+          sliver: SliverGrid.extent(
+            maxCrossAxisExtent: 170,
+            childAspectRatio: 0.72,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            children: [
+              for (final page in ColoringPage.of(level))
+                Card(
+                  key: ValueKey(page),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => Navigator.pop(context, page),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Image.asset(page.preview,
+                                excludeFromSemantics: true),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                          child: Text(s.coloringName(page),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: cute.ink,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                      ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-                      child: Text(s.coloringName(page),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: cute.ink, fontWeight: FontWeight.w700)),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-        ],
-      ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

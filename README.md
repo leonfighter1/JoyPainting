@@ -59,13 +59,14 @@ What it does:
   - A clear menu button at the top right (☰ ▾) on the canvas and My Paintings.
   - Works on tablets in both orientations.
 
-Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.4.0**).
+Package name `com.personal.jingyaopaint`, Dart package `jingyao_paint`. The version is in `pubspec.yaml` (current: **6.5.0**).
 
 ## Versions
 
 | Version | Date | Highlights |
 |---|---|---|
-| **6.4.0** | 2026-10-29 | Download or send a painting as an SVG (矢量图): lines, shapes, fills and text stay sharp at any size, each layer a named group; PNG and SVG can leave the paper color out for a see-through background |
+| **6.5.0** | 2026-10-30 | Livelier controls: buttons give a little when pressed and spring back, ripples spread from the finger, switches with a jelly knob, sliders whose number glides with the thumb, check marks that draw themselves, rolling counts, ☰ turning into ✕, placeholders while My Paintings loads, and half/full-screen sheets for samples, the coloring book and adding tools |
+| 6.4.0 | 2026-10-29 | Download or send a painting as an SVG (矢量图): lines, shapes, fills and text stay sharp at any size, each layer a named group; PNG and SVG can leave the paper color out for a see-through background |
 | 6.3.0 | 2026-10-29 | Samples (示例) beside the coloring book, added only when picked, for any level; a coloring book for each level (8 simple pages, 6 scenes for about age 12, 6 detailed pages for about age 18); a four-arrow icon for moving the paper and a finger for select & move |
 | 6.2.0 | 2026-10-28 | Opening a big painting shows a card with its name, a progress bar and the percentage; the painting is read and put on the paper a piece at a time, so the screen no longer freezes |
 | 6.1.1 | 2026-10-28 | The stamps are always in the drawer (picking one picks the stamp brush); the title bar reads ✋, 选择移动, 清空 (now a broom) |
@@ -101,6 +102,25 @@ The full list of what each version added, with the code and tests behind it, is 
 ## Release notes
 
 What changed in each version, newest first, in the app's own words (Chinese UI names in brackets). After each release, [docs/appdev/DEVICE_CHECKLIST.md](docs/appdev/DEVICE_CHECKLIST.md) lists what to try on a real phone or tablet.
+
+### 6.5.0 (2026-10-30): livelier controls
+
+**New**
+- **Buttons you can feel.** Every button (the title bar's, the tools and layers buttons, brushes, colors, the tool chips, and the buttons in menus, sheets and dialogs) shrinks a little while it's held and springs back, just past its size, when let go. A button that can't be used stays still.
+- **Ripples from the finger.** Tapping a button or a card starts its ripple exactly where the finger touched, and it spreads from there until it covers the button.
+- **Jelly switches.** The switches (播放背景音乐 / Play background music, 备份提醒 / Backup reminders, the download sheet's 照片也放进去 / Include the photo and 带上纸的颜色 / Keep the paper color, 对称绘画 / Mirror drawing in the ☰ menu) have a knob that stretches into a capsule as it slides, squashes against the end and rounds up again.
+- **Sliders that glide.** Brush size (笔刷大小), opacity (不透明度), the paint bucket's 补缝隙 (Close gaps), layer opacity, text size, volume and the text tool's font size: the filled track, the thumb and the number in the bubble above it move to the new value together, on one animation, so the number never runs ahead. The numbers beside the sliders (volume, text size, layer opacity, font size) move with them.
+- **A check mark that draws itself.** Choosing paintings to export (导出) in My Paintings (我的画作): the check is drawn stroke by stroke, from its lower left up to its upper right, in about 0.2 s.
+- **Rolling numbers.** How many paintings are chosen (已选 N 幅 and 导出 N 幅), the count in My Paintings' title, and the percentage while a painting opens roll to their new value, slowing down as they get there.
+- **☰ turns into ✕.** While the ☰ menu is open, its top and bottom lines swing into a cross, the middle one fades and the little arrow turns up; closing turns them back.
+- **Placeholders while loading.** While My Paintings reads the list of paintings, grey cards the size of the real ones (with lines where the name and date go) stand in the same grid, and each picture waits behind a grey block; when they arrive, they take the placeholders' places and nothing moves. The samples (示例) show a grey block until their picture is painted.
+- **Sheets with two heights.** The samples (示例), the coloring book (涂色本) and adding tools (添加工具) open at half the screen. Pull up for the whole screen; pull down past half the sheet's height (or flick down) to close it. Tapping the little bar at the top switches between half and whole.
+
+**Good to know**
+- With the system's reduce-motion setting on, buttons, switches, sliders, check marks, numbers and ☰ go straight to where they end up. Ripples and the sheets' snapping still move.
+- The replay's timeline (回放作画过程) is still a plain slider, so it shows exactly where the replay is.
+- The layers, text, share and selection-color sheets keep fitting their content: they're short, and a full-screen stop would only add empty space.
+- There is no like or favorite button, card flipping or card stack in the app, so those effects weren't added.
 
 ### 6.4.0 (2026-10-29): SVG pictures, see-through backgrounds
 
@@ -597,6 +617,7 @@ What the tests cover:
 - **`test/add_tools_test.dart`**: the drawer's basic choices (brushes and helpers too), adding several at once and taking them out, 取消, what each level can add, the chosen option staying in sight; 我的画笔 (saving, picking again, deleting, kept in settings); every shape (in its box, closed ones closed, the outline saved for older versions, arc and wave), every stamp, the new gradients, and the new light & shadow and textures being saved.
 - **`test/live_stroke_test.dart`**: every brush, light & shadow and shape (each combination, then mirror drawing, a texture, low opacity and a see-through layer) shows while it is drawn as it will once finished, with the layers repainted only on their signal, as the screen does.
 - **`test/drawer_test.dart`**: the tools drawer's groups (which start open, opening and closing them, what a closed one shows, its screen reader state), size and opacity under the colors, and the layers button (next to the tools button, following it until dragged, never onto undo's corner, opening the layers).
+- **`test/ui_motion_test.dart`**: the control motions: buttons shrinking to 96 % and springing past their size (not when disabled), the switch's knob stretching, squashing and rounding up, ripples staying under the finger (and a long press cancelling one), the check drawing itself, the slider's thumb, fill and number moving together (and stepping by screen reader), numbers rolling slower near the end, My Paintings' placeholders replaced in place, ☰ becoming ✕ and back, and sheets resting at half and whole and closing when pulled down.
 - **`test/coloring_test.dart`**: every coloring page (lines on a locked top layer, the layer under them active, the lines never picked up, closed areas the paint bucket fills without leaking) and opening one from My Paintings.
 - **`test/photo_test.dart`**: a photo on the paper (saved with its picture, moved, hit inside its box), painted at its opacity, made smaller and fitted, refused when unreadable, put under the drawing or on a locked layer at the bottom, the menu item by level, and leaving the photo out of pictures (the switch in the format sheet).
 - **`test/layers_test.dart`**: layers in the drawing (adding above the active one, keeping strokes in layer order, moving, merging, deleting, undo), picking only from the active shown and unlocked layer, saving layers, painting them (the eraser on its own layer, hidden and see-through layers, one kept picture per layer), the layers panel, and refusing to draw on a hidden layer.
@@ -703,7 +724,7 @@ lib/
   music/               background music: track library, saved uploads, looping player
   share/               send, print preview, import, .jypaint format
   theme/               portable JSON themes, contrast math, fonts (see theme/README.md)
-  widgets/             drop-down menu and its button, draggable corner controls
+  widgets/             drop-down menu and its button, draggable corner controls, the control motions (press bounce, elastic switch, liquid slider, drawn check, rolling numbers, skeletons, half/full sheets)
   l10n.dart            all UI text, zh and en
   settings.dart        remembered choices (brush, colors, corners, theme, level, text size…)
   skill_level.dart     what each drawing level shows

@@ -48,6 +48,9 @@ Future<void> tapInSheet(WidgetTester tester, String key) async {
         )
         .first,
   );
+  // Built is not yet on screen (MISTAKES rule 37).
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
   await tester.tap(target);
   await tester.pump();
 }

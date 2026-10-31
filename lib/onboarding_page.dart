@@ -7,6 +7,7 @@ import 'settings.dart';
 import 'settings_page.dart' show SkillLevelCard, ThemeCard;
 import 'theme/cute_theme.dart';
 import 'theme/theme_spec.dart';
+import 'widgets/press_bounce.dart';
 
 /// The first screen on a new install: pick a language (English to start),
 /// a theme and a drawing level, and give the little artist's name. Every
@@ -169,7 +170,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 icon: const Icon(Icons.brush_rounded),
                 label: Text(s.startDrawing),
                 onPressed: _start,
-              ),
+              ).bouncy(),
             ],
           ),
         ),

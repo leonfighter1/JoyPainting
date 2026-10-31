@@ -9,6 +9,7 @@ import '../gallery/painting_store.dart';
 import '../image_saver.dart';
 import '../l10n.dart';
 import '../theme/cute_theme.dart';
+import '../widgets/elastic_switch.dart';
 import 'painting_export.dart';
 import 'print_preview_page.dart';
 import 'web_send.dart';
@@ -61,7 +62,7 @@ Future<ExportFormat?> pickExportFormat(
               if (photos != null)
                 ValueListenableBuilder<bool>(
                   valueListenable: photos,
-                  builder: (context, on, _) => SwitchListTile(
+                  builder: (context, on, _) => ElasticSwitchTile(
                     key: const ValueKey('exportPhotos'),
                     secondary: Icon(
                       Icons.photo_library_rounded,
@@ -76,7 +77,7 @@ Future<ExportFormat?> pickExportFormat(
               if (paper != null)
                 ValueListenableBuilder<bool>(
                   valueListenable: paper,
-                  builder: (context, on, _) => SwitchListTile(
+                  builder: (context, on, _) => ElasticSwitchTile(
                     key: const ValueKey('exportPaper'),
                     secondary: Icon(
                       Icons.texture_rounded,

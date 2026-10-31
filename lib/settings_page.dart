@@ -14,8 +14,12 @@ import 'skill_level.dart';
 import 'theme/cute_font.dart';
 import 'theme/cute_theme.dart';
 import 'theme/theme_spec.dart';
+import 'widgets/elastic_switch.dart';
+import 'widgets/liquid_slider.dart';
+import 'widgets/motion.dart';
 import 'widgets/name_dialog.dart';
 import 'widgets/parent_gate.dart';
+import 'widgets/press_bounce.dart';
 
 const appVersion = '6.4.0';
 
@@ -55,7 +59,7 @@ class SettingsPage extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(s.cancel),
-          ),
+          ).bouncy(),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
@@ -63,7 +67,7 @@ class SettingsPage extends StatelessWidget {
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(s.reset),
-          ),
+          ).bouncy(),
         ],
       ),
     );
@@ -186,7 +190,7 @@ class SettingsPage extends StatelessWidget {
           Card(
             child: Column(
               children: [
-                SwitchListTile(
+                ElasticSwitchTile(
                   secondary: Icon(Icons.cloud_upload_rounded,
                       color: cute.spec.primary),
                   title: Text(s.backupReminders),
@@ -415,15 +419,15 @@ class TextSizeCard extends StatelessWidget {
                       onPressed: scale > AppSettings.minTextScale + 0.01
                           ? () => step(-1)
                           : null,
-                    ),
+                    ).bouncy(),
                     Expanded(
-                      child: Slider(
+                      child: LiquidSlider(
                         key: sliderKey,
                         min: AppSettings.minTextScale,
                         max: AppSettings.maxTextScale,
                         divisions: 7,
                         value: scale,
-                        label: s.percent(scale),
+                        label: s.percent,
                         semanticFormatterCallback: (v) =>
                             '${s.textSize} ${s.percent(v)}',
                         onChanged: (v) => settings.textSize = v,
@@ -436,13 +440,18 @@ class TextSizeCard extends StatelessWidget {
                       onPressed: scale < AppSettings.maxTextScale - 0.01
                           ? () => step(1)
                           : null,
-                    ),
+                    ).bouncy(),
                   ],
                 ),
-                Text(
-                  s.percent(scale),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: cute.ink, fontWeight: FontWeight.w800),
+                RollingNumber(
+                  value: scale,
+                  duration: Motion.settle,
+                  builder: (context, v) => Text(
+                    s.percent(v),
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(color: cute.ink, fontWeight: FontWeight.w800),
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Padding(
@@ -575,11 +584,11 @@ class _MusicSettings extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(s.cancel),
-          ),
+          ).bouncy(),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(s.delete),
-          ),
+          ).bouncy(),
         ],
       ),
     );
@@ -601,7 +610,7 @@ class _MusicSettings extends StatelessWidget {
         return Card(
           child: Column(
             children: [
-              SwitchListTile(
+              ElasticSwitchTile(
                 secondary:
                     Icon(Icons.music_note_rounded, color: cute.spec.primary),
                 title: Text(s.playMusic),
@@ -622,10 +631,10 @@ class _MusicSettings extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      child: Slider(
+                      child: LiquidSlider(
                         value: settings.musicVolume,
                         divisions: 20,
-                        label: s.percent(settings.musicVolume),
+                        label: s.percent,
                         semanticFormatterCallback: (v) =>
                             '${s.musicVolume} ${s.percent(v)}',
                         onChanged: (v) => settings.musicVolume = v,
@@ -633,7 +642,11 @@ class _MusicSettings extends StatelessWidget {
                     ),
                     SizedBox(
                       width: 48,
-                      child: Text(s.percent(settings.musicVolume)),
+                      child: RollingNumber(
+                        value: settings.musicVolume,
+                        duration: Motion.settle,
+                        builder: (context, v) => Text(s.percent(v)),
+                      ),
                     ),
                   ],
                 ),
@@ -691,7 +704,7 @@ class _MusicSettings extends StatelessWidget {
                           tooltip: s.delete,
                           icon: const Icon(Icons.delete_outline_rounded),
                           onPressed: () => _confirmRemove(context, track),
-                        ),
+                        ).bouncy(),
                 ),
               ListTile(
                 leading:
@@ -757,7 +770,7 @@ class _KidsSettings extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(s.cancel),
-          ),
+          ).bouncy(),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
@@ -765,7 +778,7 @@ class _KidsSettings extends StatelessWidget {
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(s.delete),
-          ),
+          ).bouncy(),
         ],
       ),
     );
@@ -815,13 +828,13 @@ class _KidsSettings extends StatelessWidget {
                         tooltip: s.changeKidName,
                         icon: const Icon(Icons.edit_rounded),
                         onPressed: () => _rename(context, kid),
-                      ),
+                      ).bouncy(),
                       if (kids.length > 1)
                         IconButton(
                           tooltip: s.delete,
                           icon: const Icon(Icons.delete_outline_rounded),
                           onPressed: () => _delete(context, kid),
-                        ),
+                        ).bouncy(),
                     ],
                   ),
                 ),

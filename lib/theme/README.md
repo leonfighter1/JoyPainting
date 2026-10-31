@@ -9,6 +9,7 @@ into any Flutter project.
 | `theme_spec.dart` | `ThemeSpec`, a theme template read from JSON, with `contrastIssues()` |
 | `cute_theme.dart` | `CuteTheme.build(spec, fontFamily: ...)` → `ThemeData`, plus the `CuteTheme` extension (header gradient, tab colors) |
 | `cute_font.dart` | `CuteFont`, a selectable font (pubspec family, names, license asset) |
+| `touch_ripple.dart` | `TouchRipple`, an ink ripple that spreads from where the finger went down; `CuteTheme.build` makes it the theme's `splashFactory` |
 
 ### Fonts
 

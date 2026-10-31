@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n.dart';
 import '../painting_session.dart';
 import '../theme/cute_theme.dart';
+import '../widgets/motion.dart';
 
 /// A card at the top of the screen, over every page, while the sample
 /// painting [name] is being put into My Paintings: a big one takes a
@@ -69,9 +70,13 @@ class ProgressCard extends StatelessWidget {
                         Row(
                           children: [
                             Flexible(child: Text(text, style: style)),
-                            if (percent != null) ...[
+                            if (value case final value?) ...[
                               const SizedBox(width: 12),
-                              Text(percent, style: style),
+                              RollingNumber(
+                                value: value.clamp(0, 1),
+                                builder: (context, v) =>
+                                    Text('${(v * 100).round()}%', style: style),
+                              ),
                             ],
                           ],
                         ),

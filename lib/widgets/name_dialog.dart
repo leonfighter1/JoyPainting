@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n.dart';
+import 'press_bounce.dart';
 
 /// Asks for a name (a painting's or a kid's). Returns the trimmed name, or
 /// null if cancelled. With [allowEmpty] false, Save stays off until
@@ -83,11 +84,11 @@ class _NameDialogState extends State<_NameDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(s.cancel),
-        ),
+        ).bouncy(),
         FilledButton(
           onPressed: _canSave ? _save : null,
           child: Text(s.save),
-        ),
+        ).bouncy(),
       ],
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 import '../../l10n.dart';
+import '../../widgets/press_bounce.dart';
 
 /// The everyday colors offered for brushes, text and the selection.
 abstract final class AppPalette {
@@ -43,11 +44,11 @@ Future<Color?> showAppColorPicker(BuildContext context, Color initial) async {
         TextButton(
           onPressed: () => Navigator.pop(context, false),
           child: Text(s.cancel),
-        ),
+        ).bouncy(),
         FilledButton(
           onPressed: () => Navigator.pop(context, true),
           child: Text(s.useColor),
-        ),
+        ).bouncy(),
       ],
     ),
   );
@@ -108,7 +109,7 @@ class Swatch extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ).bouncy();
   }
 }
 
@@ -157,7 +158,7 @@ class MoreColorsButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
+      ).bouncy(),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n.dart';
+import '../widgets/press_bounce.dart';
 import 'storage_risk.dart';
 
 /// In a browser: whether it promised to keep the paintings, with a button
@@ -75,7 +76,7 @@ class _StorageStatusTileState extends State<StorageStatusTile> {
             child: FilledButton.tonal(
               onPressed: _asking ? null : _ask,
               child: Text(s.askToKeep),
-            ),
+            ).bouncy(),
           ),
         ],
       ),

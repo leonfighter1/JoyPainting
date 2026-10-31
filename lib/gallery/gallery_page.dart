@@ -9,9 +9,13 @@ import '../painting_session.dart';
 import '../settings.dart';
 import '../share/import_actions.dart';
 import '../share/share_actions.dart';
+import '../widgets/drawn_check.dart';
 import '../widgets/drop_menu.dart';
 import '../widgets/menu_button.dart';
+import '../widgets/motion.dart';
 import '../widgets/name_dialog.dart';
+import '../widgets/press_bounce.dart';
+import '../widgets/skeleton.dart';
 import '../theme/cute_theme.dart';
 import 'backup_reminder.dart';
 import 'coloring_book_sheet.dart';
@@ -223,14 +227,14 @@ class _GalleryPageState extends State<GalleryPage> {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(s.cancel),
-          ),
+          ).bouncy(),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             onPressed: () => Navigator.pop(context, true),
             child: Text(s.delete),
-          ),
+          ).bouncy(),
         ],
       ),
     );
@@ -274,6 +278,20 @@ class _GalleryPageState extends State<GalleryPage> {
     ];
 
     final cute = CuteTheme.of(context);
+    final actions = _GalleryActions(
+      selecting: _selecting,
+      picked: _picked.length,
+      allShownPicked:
+          shown.isNotEmpty && shown.every((p) => _picked.contains(p.id)),
+      canExport: all?.isNotEmpty ?? false,
+      onImport: () => pickAndImport(context, widget.session, widget.onOpened),
+      onStartExport: () => _startSelecting(),
+      onColoring: _startColoring,
+      onSamples: _addSample,
+      onCancel: _stopSelecting,
+      onToggleAll: () => _toggleAll(shown),
+      onExport: _exportPicked,
+    );
     return PopScope(
       // Back leaves choosing before it leaves the page.
       canPop: !_selecting,
@@ -282,10 +300,14 @@ class _GalleryPageState extends State<GalleryPage> {
       },
       child: Scaffold(
         appBar: GradientAppBar(
-          title: AppLogoTitle(
-            text: all == null
-                ? s.navGallery
-                : '${s.navGallery} (${all.length})',
+          // The count rolls up when the paintings have loaded.
+          title: RollingNumber(
+            value: (all?.length ?? 0).toDouble(),
+            builder: (context, n) => AppLogoTitle(
+              text: all == null
+                  ? s.navGallery
+                  : '${s.navGallery} (${n.round()})',
+            ),
           ),
           actions: [
             // Same unfolding menu as the canvas page.
@@ -312,27 +334,14 @@ class _GalleryPageState extends State<GalleryPage> {
                 onPressed: _newPainting,
                 icon: const Icon(Icons.add_rounded),
                 label: Text(s.newPainting),
-              ),
+              ).bouncy(),
         body: all == null
-            ? const Center(child: CircularProgressIndicator())
+            ? Column(
+                children: [actions, const Expanded(child: _GallerySkeleton())],
+              )
             : Column(
                 children: [
-                  _GalleryActions(
-                    selecting: _selecting,
-                    picked: _picked.length,
-                    allShownPicked:
-                        shown.isNotEmpty &&
-                        shown.every((p) => _picked.contains(p.id)),
-                    canExport: all.isNotEmpty,
-                    onImport: () =>
-                        pickAndImport(context, widget.session, widget.onOpened),
-                    onStartExport: () => _startSelecting(),
-                    onColoring: _startColoring,
-                    onSamples: _addSample,
-                    onCancel: _stopSelecting,
-                    onToggleAll: () => _toggleAll(shown),
-                    onExport: _exportPicked,
-                  ),
+                  actions,
                   // Paintings live only here: a reminder to keep a copy.
                   ListenableBuilder(
                     listenable: _settings,
@@ -391,14 +400,8 @@ class _GalleryPageState extends State<GalleryPage> {
                             text: all.isEmpty ? s.emptyGallery : s.emptyYear,
                           )
                         : GridView.builder(
-                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
-                            gridDelegate:
-                                const SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 240,
-                                  mainAxisSpacing: 12,
-                                  crossAxisSpacing: 12,
-                                  childAspectRatio: 0.72,
-                                ),
+                            padding: _PaintingCard.gridPadding,
+                            gridDelegate: _PaintingCard.grid,
                             itemCount: shown.length,
                             itemBuilder: (context, i) => _PaintingCard(
                               meta: shown[i],
@@ -484,24 +487,24 @@ class _GalleryActions extends StatelessWidget {
                   icon: const Icon(Icons.file_open_rounded),
                   label: Text(s.importButton),
                   onPressed: onImport,
-                ),
+                ).bouncy(),
               ),
               OutlinedButton.icon(
                 key: exportKey,
                 icon: const Icon(Icons.ios_share_rounded),
                 label: Text(s.exportButton),
                 onPressed: canExport ? onStartExport : null,
-              ),
+              ).bouncy(),
               FilledButton.tonalIcon(
                 icon: const Icon(Icons.auto_stories_rounded),
                 label: Text(s.coloringBook),
                 onPressed: onColoring,
-              ),
+              ).bouncy(),
               FilledButton.tonalIcon(
                 icon: const Icon(Icons.collections_rounded),
                 label: Text(s.samples),
                 onPressed: onSamples,
-              ),
+              ).bouncy(),
             ],
           ),
         ),
@@ -515,16 +518,19 @@ class _GalleryActions extends StatelessWidget {
             tooltip: s.cancel,
             icon: const Icon(Icons.close_rounded),
             onPressed: onCancel,
-          ),
+          ).bouncy(),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  s.paintingsSelected(picked),
-                  style: TextStyle(
-                    color: cute.ink,
-                    fontWeight: FontWeight.w800,
+                RollingNumber(
+                  value: picked.toDouble(),
+                  builder: (context, n) => Text(
+                    s.paintingsSelected(n.round()),
+                    style: TextStyle(
+                      color: cute.ink,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 Text(
@@ -539,13 +545,16 @@ class _GalleryActions extends StatelessWidget {
           TextButton(
             onPressed: onToggleAll,
             child: Text(allShownPicked ? s.selectNone : s.selectAll),
-          ),
+          ).bouncy(),
           const SizedBox(width: 4),
           FilledButton.icon(
             icon: const Icon(Icons.ios_share_rounded),
-            label: Text(s.exportSelected(picked)),
+            label: RollingNumber(
+              value: picked.toDouble(),
+              builder: (context, n) => Text(s.exportSelected(n.round())),
+            ),
             onPressed: picked > 0 ? onExport : null,
-          ),
+          ).bouncy(),
         ],
       ),
     );
@@ -626,6 +635,19 @@ class _PaintingCard extends StatefulWidget {
   /// Starts choosing, with this painting checked.
   final VoidCallback? onLongPress;
 
+  /// The grid the cards sit in; the loading placeholders use it too.
+  static const grid = SliverGridDelegateWithMaxCrossAxisExtent(
+    maxCrossAxisExtent: 240,
+    mainAxisSpacing: 12,
+    crossAxisSpacing: 12,
+    childAspectRatio: 0.72,
+  );
+  static const gridPadding = EdgeInsets.fromLTRB(12, 4, 12, 96);
+  static const captionPadding = EdgeInsets.fromLTRB(10, 6, 0, 6);
+
+  static TextStyle? nameStyle(ThemeData theme) =>
+      theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700);
+
   @override
   State<_PaintingCard> createState() => _PaintingCardState();
 }
@@ -676,19 +698,25 @@ class _PaintingCardState extends State<_PaintingCard> {
                     color: Colors.white,
                     child: FutureBuilder(
                       future: _thumbnail,
-                      builder: (context, snap) => snap.data == null
-                          ? Icon(
-                              Icons.image_outlined,
-                              size: 48,
-                              color: theme.colorScheme.outlineVariant,
-                            )
-                          : Image.memory(
-                              snap.data!,
-                              fit: BoxFit.contain,
-                              gaplessPlayback: true,
-                              errorBuilder: (_, _, _) =>
-                                  const Icon(Icons.broken_image_outlined),
-                            ),
+                      builder: (context, snap) => switch (snap) {
+                        // A newer picture keeps the old one up meanwhile.
+                        AsyncSnapshot(:final data?) => Image.memory(
+                          data,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                          errorBuilder: (_, _, _) =>
+                              const Icon(Icons.broken_image_outlined),
+                        ),
+                        AsyncSnapshot(
+                          connectionState: ConnectionState.waiting,
+                        ) =>
+                          const Skeleton(child: SkeletonBox(radius: 0)),
+                        _ => Icon(
+                          Icons.image_outlined,
+                          size: 48,
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                      },
                     ),
                   ),
                   if (widget.selecting)
@@ -701,6 +729,7 @@ class _PaintingCardState extends State<_PaintingCard> {
                           duration: const Duration(milliseconds: 150),
                           width: 30,
                           height: 30,
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: widget.picked
@@ -711,13 +740,11 @@ class _PaintingCardState extends State<_PaintingCard> {
                               width: 2,
                             ),
                           ),
-                          child: widget.picked
-                              ? Icon(
-                                  Icons.check_rounded,
-                                  size: 20,
-                                  color: theme.colorScheme.onPrimary,
-                                )
-                              : null,
+                          // Drawn stroke by stroke when checked.
+                          child: DrawnCheck(
+                            checked: widget.picked,
+                            color: theme.colorScheme.onPrimary,
+                          ),
                         ),
                       ),
                     ),
@@ -750,7 +777,7 @@ class _PaintingCardState extends State<_PaintingCard> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 6, 0, 6),
+              padding: _PaintingCard.captionPadding,
               child: Row(
                 children: [
                   Expanded(
@@ -759,9 +786,7 @@ class _PaintingCardState extends State<_PaintingCard> {
                       children: [
                         Text(
                           meta.name,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: _PaintingCard.nameStyle(theme),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -842,6 +867,80 @@ class _PaintingCardState extends State<_PaintingCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// My Paintings while the list loads: the year chips and the cards as
+/// placeholders the size of the real ones, in the same grid, so nothing
+/// moves when they arrive.
+class _GallerySkeleton extends StatelessWidget {
+  const _GallerySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Skeleton(
+      child: Column(
+        children: [
+          // The year chips: 32 high in a 60 high row.
+          SizedBox(
+            height: 60,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  for (final width in const [96.0, 80.0, 80.0])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: SkeletonBox(width: width, height: 32, radius: 16),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              padding: _PaintingCard.gridPadding,
+              gridDelegate: _PaintingCard.grid,
+              itemCount: 12,
+              itemBuilder: (context, _) => Card(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Expanded(child: SkeletonBox(radius: 0)),
+                    Padding(
+                      padding: _PaintingCard.captionPadding,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SkeletonLine(
+                                  style: _PaintingCard.nameStyle(theme),
+                                  widthFactor: 0.7,
+                                ),
+                                SkeletonLine(
+                                  style: theme.textTheme.bodySmall,
+                                  widthFactor: 0.45,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Where the card's menu button is.
+                          const SizedBox(width: 48, height: 48),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

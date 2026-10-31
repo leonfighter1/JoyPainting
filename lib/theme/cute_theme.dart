@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'theme_spec.dart';
+import 'touch_ripple.dart';
 
 /// Theme values Material's [ThemeData] has no slot for: the header gradient,
 /// per-tab navigation colors and readable text colors for each of them.
@@ -51,6 +52,8 @@ class CuteTheme extends ThemeExtension<CuteTheme> {
     return base.copyWith(
       scaffoldBackgroundColor: spec.background,
       extensions: [CuteTheme(spec)],
+      // Ripples spread from the finger, not from the button's middle.
+      splashFactory: TouchRipple.splashFactory,
       textTheme: base.textTheme.apply(
         bodyColor: spec.ink,
         displayColor: spec.ink,

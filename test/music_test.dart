@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jingyao_paint/music/background_music.dart';
 import 'package:jingyao_paint/music/music_library.dart';
 import 'package:jingyao_paint/settings.dart';
+import 'package:jingyao_paint/widgets/elastic_switch.dart';
+import 'package:jingyao_paint/widgets/liquid_slider.dart';
 
 import 'test_helpers.dart';
 import 'widget_test.dart' show openSettings, pumpApp, tapMenu;
@@ -235,12 +237,12 @@ void main() {
       expect(find.text('my song.mp3'), findsOneWidget);
       expect(find.textContaining('MP3'), findsOneWidget, reason: 'formats');
 
-      await tester.ensureVisible(find.widgetWithText(SwitchListTile, '播放背景音乐'));
+      await tester.ensureVisible(find.widgetWithText(ElasticSwitchTile, '播放背景音乐'));
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(SwitchListTile, '播放背景音乐'));
+      await tester.tap(find.widgetWithText(ElasticSwitchTile, '播放背景音乐'));
       await tester.pumpAndSettle();
       expect(app.settings.musicOn, isTrue);
-      await tester.tap(find.widgetWithText(SwitchListTile, '播放背景音乐'));
+      await tester.tap(find.widgetWithText(ElasticSwitchTile, '播放背景音乐'));
       await tester.pumpAndSettle();
       expect(app.settings.musicOn, isFalse);
 
@@ -253,7 +255,7 @@ void main() {
       final volume = find.descendant(
           of: find.ancestor(
               of: find.byIcon(Icons.volume_up_rounded), matching: find.byType(Row)),
-          matching: find.byType(Slider));
+          matching: find.byType(LiquidSlider));
       await tester.drag(volume, const Offset(200, 0));
       await tester.pumpAndSettle();
       expect(app.settings.musicVolume, greaterThan(0.4));

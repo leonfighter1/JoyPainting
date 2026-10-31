@@ -6,6 +6,7 @@ import 'package:printing/printing.dart';
 import '../app_theme.dart';
 import '../l10n.dart';
 import '../theme/cute_theme.dart';
+import '../widgets/press_bounce.dart';
 import 'painting_export.dart';
 
 /// Sends a PDF to the system print screen; true if it was printed.
@@ -87,7 +88,7 @@ class _PrintPreviewPageState extends State<PrintPreviewPage> {
           iconSize: 30,
           icon: const Icon(Icons.close_rounded),
           onPressed: () => Navigator.of(context).pop(),
-        ),
+        ).bouncy(),
         title: AppLogoTitle(text: s.printPreview),
       ),
       body: SafeArea(
@@ -143,7 +144,7 @@ class _PrintPreviewPageState extends State<PrintPreviewPage> {
                       icon: const Icon(Icons.close_rounded),
                       label: Text(s.closePrint),
                       onPressed: () => Navigator.of(context).pop(),
-                    ),
+                    ).bouncy(),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -160,7 +161,7 @@ class _PrintPreviewPageState extends State<PrintPreviewPage> {
                           : const Icon(Icons.print_rounded),
                       label: Text(s.printNow),
                       onPressed: _busy ? null : _print,
-                    ),
+                    ).bouncy(),
                   ),
                 ],
               ),

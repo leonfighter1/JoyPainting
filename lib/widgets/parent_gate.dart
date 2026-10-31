@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n.dart';
+import 'press_bounce.dart';
 
 /// Checks that a grown-up is there before adding or deleting a kid or
 /// resetting the app: a multiplication of two numbers from 11 to 19, like
@@ -102,8 +103,8 @@ class _ParentGateState extends State<ParentGate> {
         TextButton(
           onPressed: () => Navigator.pop(context, false),
           child: Text(s.cancel),
-        ),
-        FilledButton(onPressed: _check, child: Text(s.confirm)),
+        ).bouncy(),
+        FilledButton(onPressed: _check, child: Text(s.confirm)).bouncy(),
       ],
     );
   }

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jingyao_paint/drawing/canvas_page.dart';
 import 'package:jingyao_paint/drawing/drawing_controller.dart';
 import 'package:jingyao_paint/drawing/stroke.dart';
+import 'package:jingyao_paint/widgets/liquid_slider.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 
 import 'brush_test.dart' show red, render;
@@ -338,7 +339,7 @@ void main() {
 
       // One drag of the slider is one undo step.
       final slider = find.descendant(
-          of: find.byType(BottomSheet), matching: find.byType(Slider));
+          of: find.byType(BottomSheet), matching: find.byType(LiquidSlider));
       await tester.drag(slider, const Offset(-120, 0));
       await tester.pumpAndSettle();
       final faded = drawing.strokes[0].opacity;

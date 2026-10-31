@@ -11,6 +11,7 @@ import 'package:jingyao_paint/share/painting_export.dart';
 import 'package:jingyao_paint/share/share_actions.dart';
 import 'package:jingyao_paint/share/svg/font_outlines.dart';
 import 'package:jingyao_paint/share/svg/svg_canvas.dart';
+import 'package:jingyao_paint/widgets/elastic_switch.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
 import 'package:xml/xml.dart';
 
@@ -324,10 +325,10 @@ void main() {
     await tapMenu(tester, '下载图片');
     final paper = find.byKey(const ValueKey('exportPaper'));
     expect(find.text('带上纸的颜色'), findsOneWidget);
-    expect(tester.widget<SwitchListTile>(paper).value, isTrue);
+    expect(tester.widget<ElasticSwitchTile>(paper).value, isTrue);
     await tester.tap(paper);
     await tester.pumpAndSettle();
-    expect(tester.widget<SwitchListTile>(paper).value, isFalse);
+    expect(tester.widget<ElasticSwitchTile>(paper).value, isFalse);
     final svg = find.widgetWithText(ListTile, '矢量图（SVG）');
     await tester.ensureVisible(svg);
     await tester.pumpAndSettle();

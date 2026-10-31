@@ -112,7 +112,8 @@ void main() {
 
       await tester.tap(inGallery(find.text('小猫')));
       await tester.tap(inGallery(find.text('小鸟')));
-      await tester.pump();
+      // The count rolls to its new number.
+      await tester.pumpAndSettle();
       expect(find.text('已选 2 幅'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, '导出 2 幅'));
       await tester.pumpAndSettle();
@@ -147,11 +148,11 @@ void main() {
       await tester.tap(find.widgetWithText(OutlinedButton, '导出'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('全选'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('已选 2 幅'), findsOneWidget, reason: 'only 2026');
       expect(find.text('全不选'), findsOneWidget);
       await tester.tap(find.text('全不选'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('已选 0 幅'), findsOneWidget);
 
       await tester.binding.handlePopRoute();

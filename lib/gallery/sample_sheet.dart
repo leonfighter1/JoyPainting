@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import '../l10n.dart';
 import '../skill_level.dart';
 import '../theme/cute_theme.dart';
+import '../widgets/press_bounce.dart';
+import '../widgets/skeleton.dart';
+import '../widgets/snap_sheet.dart';
 import 'level_sheet.dart';
 import 'level_samples.dart';
 
@@ -16,10 +19,8 @@ Future<SkillLevel?> pickSample(
   SkillLevel level,
   Future<Uint8List> Function(SkillLevel level) preview,
 ) =>
-    showModalBottomSheet<SkillLevel>(
+    showSnapSheet<SkillLevel>(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
       builder: (_) => SampleSheet(level: level, preview: preview),
     );
 
@@ -49,20 +50,25 @@ class _SampleSheetState extends State<SampleSheet> {
       title: s.samples,
       hint: s.samplesHint,
       initial: widget.level,
-      builder: (context, level) => SingleChildScrollView(
-        key: ValueKey(level),
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-        child: _SampleCard(
-          level: level,
-          preview: _previews.putIfAbsent(level, () => widget.preview(level)),
+      builder: (context, level) => [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+          sliver: SliverToBoxAdapter(
+            child: _SampleCard(
+              key: ValueKey(level),
+              level: level,
+              preview:
+                  _previews.putIfAbsent(level, () => widget.preview(level)),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
 
 class _SampleCard extends StatelessWidget {
-  const _SampleCard({required this.level, required this.preview});
+  const _SampleCard({super.key, required this.level, required this.preview});
 
   final SkillLevel level;
   final Future<Uint8List> preview;
@@ -89,7 +95,8 @@ class _SampleCard extends StatelessWidget {
                       fit: BoxFit.cover, excludeFromSemantics: true),
                   null when shot.hasError =>
                     const Icon(Icons.broken_image_outlined),
-                  null => const Center(child: CircularProgressIndicator()),
+                  // The picture's own size, until it's painted.
+                  null => const Skeleton(child: SkeletonBox(radius: 0)),
                 },
               ),
             ),
@@ -115,7 +122,7 @@ class _SampleCard extends StatelessWidget {
                   icon: const Icon(Icons.add_photo_alternate_rounded),
                   label: Text(s.addSample),
                   onPressed: add,
-                ),
+                ).bouncy(),
               ),
             ),
           ],

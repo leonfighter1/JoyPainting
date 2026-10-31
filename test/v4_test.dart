@@ -636,11 +636,11 @@ void main() {
   group('Menu button', () {
     testWidgets('stands out on both pages and opens the menu', (tester) async {
       await pumpApp(tester);
-      expect(find.byIcon(MenuButton.icon), findsOneWidget);
+      expect(find.byType(MenuButton), findsOneWidget);
       expect(find.byIcon(Icons.more_vert_rounded), findsNothing);
       final size = tester.getSize(find.byType(MenuButton));
       expect(size.height, greaterThanOrEqualTo(48), reason: 'easy to tap');
-      await tester.tap(find.byIcon(MenuButton.icon));
+      await tester.tap(find.byType(MenuButton));
       await tester.pumpAndSettle();
       expect(
         find.widgetWithIcon(ListTile, Icons.settings_rounded),
@@ -651,7 +651,7 @@ void main() {
 
       await openTab(tester, 1);
       expect(
-        find.byIcon(MenuButton.icon),
+        find.byType(MenuButton),
         findsOneWidget,
         reason: 'My Paintings has the same button',
       );
@@ -917,6 +917,9 @@ void main() {
         findsOneWidget,
         reason: 'its picture',
       );
+      // The sheet opens at half the screen; the button is further down.
+      await tester.ensureVisible(find.byKey(SampleSheet.addKey));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(SampleSheet.addKey));
       await tester.pumpAndSettle();
       expect(find.byType(SampleSheet), findsNothing);
